@@ -12,9 +12,11 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@better-auth/drizzle-adapter": "^1.7.10",
     "@libsql/client": "^0.18.0",
     "@tanstack/react-router": "^1.170.44",
     "@tanstack/react-start": "^1.169.2",
+    "better-auth": "^1.7.10",
     "dotenv": "^18.0.8",
     "drizzle-orm": "^0.45.4",
     "react": "^19.3.1",
