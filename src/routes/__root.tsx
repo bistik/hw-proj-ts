@@ -23,6 +23,17 @@ export const Route = createRootRoute({
     ],
   }),
   component: RootComponent,
+  errorComponent: ({ error }) => {
+    const errorMessage =
+      error instanceof Error ? error.message : "An unknown error occurred.";
+    return (
+      <div className="p-4 alert alert-danger">
+        <h3>Oops! Something went wrong</h3>
+        <p>{errorMessage}</p>
+        <button onClick={() => window.location.reload()}>Try Again</button>
+      </div>
+    );
+  },
 });
 
 function RootComponent() {
