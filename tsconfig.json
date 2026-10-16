@@ -6,8 +6,10 @@
     "target": "ES2022",
     "skipLibCheck": true,
     "strictNullChecks": true,
+    "types": ["node"],
     "paths": {
       "@/*": ["./src/*"]
     }
-  }
+  },
+  "include": ["src/**/*", "src/global.d.ts"]
 }
