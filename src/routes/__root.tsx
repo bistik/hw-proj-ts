@@ -32,7 +32,9 @@ export const Route = createRootRoute({
       <div className="p-4 alert alert-danger">
         <h3>Oops! Something went wrong</h3>
         <p>{errorMessage}</p>
-        <button onClick={() => window.location.reload()}>Try Again</button>
+        <button onClick={() => window.location.reload()} className="btn">
+          Try Again
+        </button>
       </div>
     );
   },
@@ -48,7 +50,7 @@ function RootComponent() {
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html>
+    <html data-theme="dracula">
       <head>
         <HeadContent />
       </head>
