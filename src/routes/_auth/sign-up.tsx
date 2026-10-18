@@ -22,17 +22,26 @@ const defaultCredentials: FormCredentials = {
   confirmPassword: "",
 };
 
-const formValidators = {
-  onChange: ({ value }: { value: string }) => {
-    const result = z.email("Invalid email address").safeParse(value);
-    return result.success ? undefined : result.error.issues[0].message;
-  },
-};
+const formSchema = z
+  .object({
+    email: z.email(),
+    password: z
+      .string()
+      .min(8, { message: "Password must be atleast 8 characters" }),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 function RouteComponent() {
   const form = useForm({
     defaultValues: defaultCredentials,
     onSubmit: createUser,
+    validators: {
+      onSubmit: formSchema,
+    },
   });
   return (
     <form
@@ -43,14 +52,11 @@ function RouteComponent() {
       }}
     >
       <h2 className="text-2xl my-4">Sign up</h2>
-      <form.Field
-        name="email"
-        validators={formValidators}
-        children={(field) => (
+      <form.Field name="email">
+        {(field) => (
           <fieldset className="fieldset">
             <legend className="fieldset-legend">Email</legend>
             <input
-              name={field.name}
               value={field.state.value}
               onChange={(e) => field.handleChange(e.target.value)}
               type="email"
@@ -58,23 +64,49 @@ function RouteComponent() {
               placeholder="Email"
             />
             {field.state.meta.errors.length > 0 && (
-              <p className="label">{field.state.meta.errors.join(", ")}</p>
+              <p className="label">{field.state.meta.errors[0]?.message}</p>
             )}
           </fieldset>
         )}
-      />
-      <fieldset className="fieldset">
-        <legend className="fieldset-legend">
-          <span>Password</span>
-        </legend>
-        <input type="password" className="input" placeholder="Password" />
-      </fieldset>
-      <fieldset className="fieldset">
-        <legend className="fieldset-legend">
-          <span>Confirm Password</span>
-        </legend>
-        <input type="password" className="input" placeholder="Password" />
-      </fieldset>
+      </form.Field>
+      <form.Field name="password">
+        {(field) => (
+          <fieldset className="fieldset">
+            <legend className="fieldset-legend">
+              <span>Password</span>
+            </legend>
+            <input
+              value={field.state.value}
+              onChange={(e) => field.handleChange(e.target.value)}
+              type="password"
+              className="input"
+              placeholder="Password"
+            />
+            {field.state.meta.errors.length > 0 && (
+              <p className="label">{field.state.meta.errors[0]?.message}</p>
+            )}
+          </fieldset>
+        )}
+      </form.Field>
+      <form.Field name="confirmPassword">
+        {(field) => (
+          <fieldset className="fieldset">
+            <legend className="fieldset-legend">
+              <span>Confirm Password</span>
+            </legend>
+            <input
+              value={field.state.value}
+              onChange={(e) => field.handleChange(e.target.value)}
+              type="password"
+              className="input"
+              placeholder="Password"
+            />
+            {field.state.meta.errors.length > 0 && (
+              <p className="label">{field.state.meta.errors[0]?.message}</p>
+            )}
+          </fieldset>
+        )}
+      </form.Field>
       <button className="btn bg-primary mt-2">Signup</button>
     </form>
   );
