@@ -1,14 +1,18 @@
 import { authClient } from "@/lib/auth-client";
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { getSession } from "@/lib/auth-functions";
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  redirect,
+  useNavigate,
+} from "@tanstack/react-router";
+import { router } from "better-auth/api";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ location }) => {
-    const { data, error } = await authClient.getSession();
-    if (error) {
-      console.error("Auth check failed:", error);
-      throw new Error("Auth service is unavailable.");
-    }
-    if (!data) {
+    const session = await getSession();
+    if (!session) {
       throw redirect({
         to: "/login",
         search: {
@@ -16,13 +20,30 @@ export const Route = createFileRoute("/_authenticated")({
         },
       });
     }
+    return { user: session.user };
   },
+  component: RouteComponent,
 });
 
 function RouteComponent() {
+  const navigate = useNavigate();
+  const { user } = Route.useRouteContext();
+  const handleLogout = async () => {
+    await authClient.signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          navigate({ to: "/login" });
+        },
+      },
+    });
+  };
   return (
     <div>
-      Hello "/_authenticated"!
+      {user && (
+        <button className="btn" onClick={handleLogout}>
+          Signout
+        </button>
+      )}
       <Outlet />
     </div>
   );
