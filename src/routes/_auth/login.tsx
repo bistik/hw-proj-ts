@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_auth/login")({
   component: RouteComponent,
@@ -6,18 +6,29 @@ export const Route = createFileRoute("/_auth/login")({
 
 function RouteComponent() {
   return (
-    // <div className="p-6 bg-base-200 rounded-box shadow-md w-full max-w-md">
     <form>
       <fieldset className="fieldset">
         <legend className="fieldset-legend">Email</legend>
         <input type="text" className="input" placeholder="Email" />
       </fieldset>
       <fieldset className="fieldset">
-        <legend className="fieldset-legend">Password</legend>
+        <legend className="fieldset-legend flex justify-between items-center w-full">
+          <span>Password</span>
+          <a href="#" className="link">
+            Forgot password
+          </a>
+        </legend>
         <input type="password" className="input" placeholder="Password" />
       </fieldset>
-      <button className="btn bg-primary mt-2">Login</button>
+      <div className="flex justify-between items-center w-full">
+        <button className="btn bg-primary mt-2">Login</button>
+        <Link
+          to="/sign-up"
+          className="link link-hover text-xs font-semibold underline"
+        >
+          Sign up
+        </Link>
+      </div>
     </form>
-    // </div>
   );
 }
