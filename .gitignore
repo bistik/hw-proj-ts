@@ -13,3 +13,4 @@ __unconfig*
 todos.json
 count.txt
 .env.production
+docs/

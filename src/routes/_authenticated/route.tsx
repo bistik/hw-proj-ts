@@ -1,13 +1,6 @@
-import { authClient } from "@/lib/auth-client";
+import Navbar from "@/components/navbar";
 import { getSession } from "@/lib/auth-functions";
-import {
-  createFileRoute,
-  Link,
-  Outlet,
-  redirect,
-  useNavigate,
-} from "@tanstack/react-router";
-import { router } from "better-auth/api";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ location }) => {
@@ -26,24 +19,10 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function RouteComponent() {
-  const navigate = useNavigate();
   const { user } = Route.useRouteContext();
-  const handleLogout = async () => {
-    await authClient.signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          navigate({ to: "/login" });
-        },
-      },
-    });
-  };
   return (
     <div>
-      {user && (
-        <button className="btn" onClick={handleLogout}>
-          Signout
-        </button>
-      )}
+      {user && <Navbar />}
       <Outlet />
     </div>
   );
