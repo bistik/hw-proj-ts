@@ -15,6 +15,9 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAssignmentsNewRouteImport } from './routes/_authenticated/assignments/new'
+import { Route as AuthenticatedCoursesNewRouteImport } from './routes/_authenticated/courses/new'
+import { Route as AuthenticatedLessonsNewRouteImport } from './routes/_authenticated/lessons/new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -45,6 +48,22 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAssignmentsNewRoute =
+  AuthenticatedAssignmentsNewRouteImport.update({
+    id: '/assignments/new',
+    path: '/assignments/new',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCoursesNewRoute = AuthenticatedCoursesNewRouteImport.update({
+  id: '/courses/new',
+  path: '/courses/new',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLessonsNewRoute = AuthenticatedLessonsNewRouteImport.update({
+  id: '/lessons/new',
+  path: '/lessons/new',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -56,6 +75,9 @@ export interface FileRoutesByFullPath {
   '/login': typeof AuthLoginRoute
   '/sign-up': typeof AuthSignUpRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/assignments/new': typeof AuthenticatedAssignmentsNewRoute
+  '/courses/new': typeof AuthenticatedCoursesNewRoute
+  '/lessons/new': typeof AuthenticatedLessonsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
@@ -63,6 +85,9 @@ export interface FileRoutesByTo {
   '/login': typeof AuthLoginRoute
   '/sign-up': typeof AuthSignUpRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/assignments/new': typeof AuthenticatedAssignmentsNewRoute
+  '/courses/new': typeof AuthenticatedCoursesNewRoute
+  '/lessons/new': typeof AuthenticatedLessonsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -73,13 +98,32 @@ export interface FileRoutesById {
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/sign-up': typeof AuthSignUpRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/assignments/new': typeof AuthenticatedAssignmentsNewRoute
+  '/_authenticated/courses/new': typeof AuthenticatedCoursesNewRoute
+  '/_authenticated/lessons/new': typeof AuthenticatedLessonsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/sign-up' | '/dashboard' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/sign-up'
+    | '/dashboard'
+    | '/assignments/new'
+    | '/courses/new'
+    | '/lessons/new'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/sign-up' | '/dashboard' | '/api/auth/$'
+  to:
+    | '/'
+    | '/login'
+    | '/sign-up'
+    | '/dashboard'
+    | '/assignments/new'
+    | '/courses/new'
+    | '/lessons/new'
+    | '/api/auth/$'
   id:
     | '__root__'
     | '/'
@@ -88,6 +132,9 @@ export interface FileRouteTypes {
     | '/_auth/login'
     | '/_auth/sign-up'
     | '/_authenticated/dashboard'
+    | '/_authenticated/assignments/new'
+    | '/_authenticated/courses/new'
+    | '/_authenticated/lessons/new'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
@@ -142,6 +189,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/assignments/new': {
+      id: '/_authenticated/assignments/new'
+      path: '/assignments/new'
+      fullPath: '/assignments/new'
+      preLoaderRoute: typeof AuthenticatedAssignmentsNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/courses/new': {
+      id: '/_authenticated/courses/new'
+      path: '/courses/new'
+      fullPath: '/courses/new'
+      preLoaderRoute: typeof AuthenticatedCoursesNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/lessons/new': {
+      id: '/_authenticated/lessons/new'
+      path: '/lessons/new'
+      fullPath: '/lessons/new'
+      preLoaderRoute: typeof AuthenticatedLessonsNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -168,10 +236,16 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedAssignmentsNewRoute: typeof AuthenticatedAssignmentsNewRoute
+  AuthenticatedCoursesNewRoute: typeof AuthenticatedCoursesNewRoute
+  AuthenticatedLessonsNewRoute: typeof AuthenticatedLessonsNewRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedAssignmentsNewRoute: AuthenticatedAssignmentsNewRoute,
+  AuthenticatedCoursesNewRoute: AuthenticatedCoursesNewRoute,
+  AuthenticatedLessonsNewRoute: AuthenticatedLessonsNewRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
