@@ -4,6 +4,7 @@ import { db } from "@/db";
 import * as authSchema from "@/db/auth-schema";
 import { env } from "@/lib/env";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
+import { getRequestHeaders } from "@tanstack/react-start/server";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -26,3 +27,15 @@ export const auth = betterAuth({
   },
   plugins: [tanstackStartCookies()],
 });
+
+export async function getCurrentUser() {
+  const headers = getRequestHeaders();
+
+  const session = await auth.api.getSession({ headers });
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  return session.user;
+}
