@@ -65,9 +65,9 @@ function RouteComponent() {
                 onBlur={(e) => field.handleBlur()}
                 onChange={(e) => field.handleChange(e.target.value)}
                 className="textarea"
-              >
-                {field.state.value}
-              </textarea>
+                value={field.state.value}
+              />
+
               {errors.length > 0 && isTouched && (
                 <p className="label text-error">{errors[0]?.message}</p>
               )}
