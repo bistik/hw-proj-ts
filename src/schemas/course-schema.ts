@@ -13,10 +13,11 @@ export const defaultCourse: z.input<typeof courseFormSchema> = {
 export const lessonFormSchema = z.object({
   title: z.string().min(1, { message: "Title is required" }),
   content: z.string().min(1, { message: "Content is required" }),
-  courseId: z.coerce
+  courseId: z
     .number({
       error: "Please select a course",
     })
+    .int()
     .positive("Please select a valid course"),
 });
 

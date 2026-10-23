@@ -1,7 +1,9 @@
 import { defaultValuesLesson, lessonFormSchema } from "@/schemas/course-schema";
 import { getCoursesByUser } from "@/server/courses/get-course";
+import { createLesson } from "@/server/lessons/create-lesson";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import z from "zod";
 
 export const Route = createFileRoute("/_authenticated/lessons/new")({
   loader: async ({ context }) => {
@@ -11,10 +13,15 @@ export const Route = createFileRoute("/_authenticated/lessons/new")({
   component: RouteComponent,
 });
 
+type LessonInput = z.infer<typeof lessonFormSchema>;
+
 function RouteComponent() {
   const { courses } = Route.useLoaderData();
-  const handleSubmit = async () => {
-    // TODO hanlde create lesson
+  const handleSubmit = async ({ value }: { value: LessonInput }) => {
+    const result = await createLesson({ data: value });
+    if (result) {
+      console.log("Successful create lesson");
+    }
   };
   const form = useForm({
     defaultValues: defaultValuesLesson,
@@ -24,7 +31,7 @@ function RouteComponent() {
     },
     onSubmit: handleSubmit,
   });
-  if (!courses) {
+  if (!courses || courses.length === 0) {
     return (
       <div>
         Please create a course first{" "}
@@ -81,7 +88,12 @@ function RouteComponent() {
             );
           }}
         </form.Field>
-        <form.Field name="courseId">
+        <form.Field
+          name="courseId"
+          validators={{
+            onChange: lessonFormSchema.shape.courseId,
+          }}
+        >
           {(field) => {
             const { errors, isTouched } = field.state.meta;
             return (
@@ -89,8 +101,11 @@ function RouteComponent() {
                 <legend className="fieldset-legend">Course</legend>
                 <select
                   // If state is 0, this evaluates to '' which selects the placeholder option
-                  value={(field.state.value || "") as string | number}
-                  onChange={(e) => field.handleChange(e.target.value as any)}
+                  value={field.state.value || ""}
+                  onBlur={() => field.handleBlur()}
+                  onChange={(e) =>
+                    field.handleChange(Number(e.target.value) || 0)
+                  }
                   className="select"
                 >
                   <option value="" disabled>

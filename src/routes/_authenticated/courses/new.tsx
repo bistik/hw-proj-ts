@@ -11,7 +11,7 @@ export const Route = createFileRoute("/_authenticated/courses/new")({
 type CourseInput = z.infer<typeof courseFormSchema>;
 
 function RouteComponent() {
-  const submitHandler = async ({ value }: { value: CourseInput }) => {
+  const handleSubmit = async ({ value }: { value: CourseInput }) => {
     const result = await createCourse({ data: value });
     if (result) {
       console.log("successful create course");
@@ -19,7 +19,7 @@ function RouteComponent() {
   };
   const form = useForm({
     defaultValues: defaultCourse,
-    onSubmit: submitHandler,
+    onSubmit: handleSubmit,
     validators: {
       onSubmit: courseFormSchema,
       onBlur: courseFormSchema,
