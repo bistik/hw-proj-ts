@@ -117,3 +117,5 @@ export const submissionAnswersTable = sqliteTable("submission_answers", {
     .notNull()
     .$onUpdate(() => new Date()),
 });
+
+export * from "./auth-schema";

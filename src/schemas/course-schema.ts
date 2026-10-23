@@ -41,3 +41,14 @@ export const defaultValuesAssignment: z.input<typeof assignmentFormSchema> = {
   title: "",
   courseId: 0,
 };
+
+export const questionFormSchema = z.object({
+  questionText: z.string().min(1, { message: "Question text is required" }),
+  answer: z.string().min(1, { message: "Answer is required" }),
+  assignmentId: z
+    .number({
+      error: "Please select a course",
+    })
+    .int()
+    .positive("Please select a valid course"),
+});
