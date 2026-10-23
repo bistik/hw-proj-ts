@@ -1,4 +1,4 @@
-import { db } from "..";
+import { db } from "@/db/";
 import { lessonsTable } from "../schema";
 
 export const dbCreateLesson = async function (data: {
