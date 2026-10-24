@@ -9,8 +9,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import z from "zod";
 
 export const Route = createFileRoute("/_authenticated/assignments/new")({
-  loader: async ({ context }) => {
-    const courses = await getCoursesByUser({ data: context.user.id });
+  loader: async () => {
+    const courses = await getCoursesByUser();
     return { courses };
   },
   component: RouteComponent,

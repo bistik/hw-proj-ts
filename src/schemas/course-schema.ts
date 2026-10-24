@@ -52,3 +52,7 @@ export const questionFormSchema = z.object({
     .int()
     .positive("Please select a valid course"),
 });
+
+export const courseByIdSchema = z.object({
+  courseId: z.number().int().positive("Invalid course id"),
+});
