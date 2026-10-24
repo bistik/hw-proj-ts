@@ -38,7 +38,7 @@ const formSchema = z
 function RouteComponent() {
   const navigate = useNavigate();
   const createUser = async ({ value }: { value: FormCredentials }) => {
-    const { data, error } = await authClient.signUp.email(
+    await authClient.signUp.email(
       {
         email: value.email,
         name: value.name,

@@ -1,3 +1,4 @@
+import { TextField } from "@/components/text-field";
 import { questionFormSchema } from "@/schemas/course-schema";
 import { getAssignmentById } from "@/server/assignments/get-assignment";
 import { createQuestion } from "@/server/questions/create-question";
@@ -54,44 +55,10 @@ function RouteComponent() {
         }}
       >
         <form.Field name="questionText">
-          {(field) => {
-            const { errors, isTouched } = field.state.meta;
-            return (
-              <fieldset className="fieldset">
-                <legend className="fieldset-legend">Question</legend>
-                <textarea
-                  onBlur={(e) => field.handleBlur()}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  className="textarea"
-                  value={field.state.value}
-                />
-
-                {errors.length > 0 && isTouched && (
-                  <p className="label text-error">{errors[0]?.message}</p>
-                )}
-              </fieldset>
-            );
-          }}
+          {(field) => <TextField field={field} label="Question" multiline />}
         </form.Field>
         <form.Field name="answer">
-          {(field) => {
-            const { errors, isTouched } = field.state.meta;
-            return (
-              <fieldset className="fieldset">
-                <legend className="fieldset-legend">Answer</legend>
-                <textarea
-                  onBlur={(e) => field.handleBlur()}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  className="textarea"
-                  value={field.state.value}
-                />
-
-                {errors.length > 0 && isTouched && (
-                  <p className="label text-error">{errors[0]?.message}</p>
-                )}
-              </fieldset>
-            );
-          }}
+          {(field) => <TextField field={field} label="Answer" multiline />}
         </form.Field>
         <button type="submit" className="btn">
           Add question

@@ -6,6 +6,7 @@
     "target": "ES2022",
     "skipLibCheck": true,
     "strictNullChecks": true,
+    "noUnusedLocals": true,
     "types": ["node", "vite/client"],
     "paths": {
       "@/*": ["./src/*"]

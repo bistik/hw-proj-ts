@@ -1,7 +1,6 @@
 import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { string } from "zod";
 
 export const Route = createFileRoute("/_auth/login")({
   component: RouteComponent,
