@@ -1,4 +1,4 @@
-import { db } from "..";
+import { db } from "@/db/";
 import { questionsTable } from "../schema";
 
 export async function dbCreateQuestion(data: {

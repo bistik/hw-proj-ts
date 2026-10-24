@@ -2,12 +2,13 @@ import { TextField } from "@/components/text-field";
 import { questionFormSchema } from "@/schemas/course-schema";
 import { getAssignmentById } from "@/server/assignments/get-assignment";
 import { createQuestion } from "@/server/questions/create-question";
+import { getQuestions } from "@/server/questions/get-questions";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import z from "zod";
 
 export const Route = createFileRoute(
-  "/_authenticated/assignments/$assignmentId",
+  "/_authenticated/assignments/$assignmentId/",
 )({
   loader: async ({ params }) => {
     const assignment = await getAssignmentById({
@@ -16,7 +17,8 @@ export const Route = createFileRoute(
     if (!assignment) {
       throw notFound();
     }
-    return { assignment };
+    const questions = await getQuestions({ data: Number(params.assignmentId) });
+    return { assignment, questions };
   },
   component: RouteComponent,
 });
@@ -24,7 +26,7 @@ export const Route = createFileRoute(
 type QuestionInput = z.infer<typeof questionFormSchema>;
 
 function RouteComponent() {
-  const { assignment } = Route.useLoaderData();
+  const { assignment, questions } = Route.useLoaderData();
   const handleSubmit = async function ({ value }: { value: QuestionInput }) {
     const result = await createQuestion({ data: value });
     if (result) {
@@ -47,6 +49,16 @@ function RouteComponent() {
     <div>
       Hello "/_authenticated/assignments/$assignmentId"!
       <h2>Assignment title: {assignment.title}</h2>
+      {questions && (
+        <>
+          <h2>Questions:</h2>
+          <ul>
+            {questions?.map((question) => {
+              return <li key={question.id}>{question.questionText}</li>;
+            })}
+          </ul>
+        </>
+      )}
       <form
         onSubmit={(e) => {
           e.preventDefault();
