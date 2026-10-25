@@ -6,11 +6,9 @@ export async function dbCreateCourse(data: {
   description: string;
   authorId: string;
 }) {
-  try {
-    await db.insert(coursesTable).values(data);
-    return true;
-  } catch (err) {
-    console.error("Error inserting new course record", err);
-    return false;
-  }
+  return db
+    .insert(coursesTable)
+    .values(data)
+    .returning({ courseId: coursesTable.id })
+    .then((res) => res[0]);
 }

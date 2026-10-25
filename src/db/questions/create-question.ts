@@ -6,11 +6,9 @@ export async function dbCreateQuestion(data: {
   answer: string;
   assignmentId: number;
 }) {
-  try {
-    await db.insert(questionsTable).values(data);
-    return true;
-  } catch (err) {
-    console.error("Error in inserting question record", err);
-    return false;
-  }
+  return db
+    .insert(questionsTable)
+    .values(data)
+    .returning({ questionId: questionsTable.id })
+    .then((res) => res[0]);
 }

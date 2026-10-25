@@ -6,11 +6,9 @@ export const dbCreateLesson = async function (data: {
   courseId: number;
   content: string;
 }) {
-  try {
-    await db.insert(lessonsTable).values(data);
-    return true;
-  } catch (err) {
-    console.error("Error in inserting lesson", err);
-    return false;
-  }
+  return db
+    .insert(lessonsTable)
+    .values(data)
+    .returning({ lessonId: lessonsTable.id })
+    .then((res) => res[0]);
 };

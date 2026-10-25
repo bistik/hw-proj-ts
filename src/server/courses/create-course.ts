@@ -9,10 +9,15 @@ export const createCourse = createServerFn({
   .validator(courseFormSchema)
   .handler(async ({ data }) => {
     const user = await getCurrentUser();
-    const result = await dbCreateCourse({
-      title: data.title,
-      description: data.description,
-      authorId: user.id,
-    });
-    return result;
+    try {
+      const result = await dbCreateCourse({
+        title: data.title,
+        description: data.description,
+        authorId: user.id,
+      });
+      return result;
+    } catch (err) {
+      console.error("Error in inserting a course record", err);
+      throw new Error("Could not create a course.");
+    }
   });

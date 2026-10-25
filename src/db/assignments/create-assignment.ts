@@ -5,11 +5,9 @@ export async function dbCreateAssignment(data: {
   title: string;
   courseId: number;
 }) {
-  try {
-    await db.insert(assignmentsTable).values(data);
-    return true;
-  } catch (err) {
-    console.error("Error in inserting assignment record", err);
-    return false;
-  }
+  return db
+    .insert(assignmentsTable)
+    .values(data)
+    .returning({ assignmentId: assignmentsTable.id })
+    .then((res) => res[0]);
 }

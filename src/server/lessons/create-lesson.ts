@@ -1,4 +1,5 @@
 import { dbCreateLesson } from "@/db/lessons/create-lesson";
+import { getCurrentUser } from "@/lib/auth";
 import { lessonFormSchema } from "@/schemas/course-schema";
 import { createServerFn } from "@tanstack/react-start";
 
@@ -7,6 +8,12 @@ export const createLesson = createServerFn({
 })
   .validator(lessonFormSchema)
   .handler(async ({ data }) => {
-    const result = await dbCreateLesson({ ...data });
-    return result;
+    await getCurrentUser();
+    try {
+      const result = await dbCreateLesson({ ...data });
+      return result;
+    } catch (err) {
+      console.error(`Error in creating lesson record`, err);
+      throw new Error("Could not create a lesson.");
+    }
   });
