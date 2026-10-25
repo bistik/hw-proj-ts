@@ -47,10 +47,10 @@ export const questionFormSchema = z.object({
   answer: z.string().min(1, { message: "Answer is required" }),
   assignmentId: z
     .number({
-      error: "Please select a course",
+      error: "Please select an assignment",
     })
     .int()
-    .positive("Please select a valid course"),
+    .positive("Please select a valid assignment"),
 });
 
 export const courseByIdSchema = z.object({

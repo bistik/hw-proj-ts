@@ -1,4 +1,5 @@
 import { dbCreateAssignment } from "@/db/assignments/create-assignment";
+import { requireUserOwnsCourse } from "@/db/authz";
 import { getCurrentUser } from "@/lib/auth";
 import { assignmentFormSchema } from "@/schemas/course-schema";
 import { createServerFn } from "@tanstack/react-start";
@@ -6,7 +7,8 @@ import { createServerFn } from "@tanstack/react-start";
 export const createAssignment = createServerFn({ method: "POST" })
   .validator(assignmentFormSchema)
   .handler(async ({ data }) => {
-    await getCurrentUser();
+    const user = await getCurrentUser();
+    await requireUserOwnsCourse(data.courseId, user.id);
     try {
       const result = await dbCreateAssignment({ ...data });
       return result;
