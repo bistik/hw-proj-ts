@@ -35,3 +35,15 @@ export async function dbGetCourseByIdAndAuthor(
     return null;
   }
 }
+
+export async function dbGetCompleteCourseByUser(authorId: string) {
+  return db.query.coursesTable.findMany({
+    where: (coursesTable, { eq }) => eq(coursesTable.authorId, authorId),
+    with: {
+      lessons: { columns: { id: true, title: true } },
+      assignments: { columns: { id: true, title: true } },
+    },
+    orderBy: (coursesTable, { desc }) => desc(coursesTable.id),
+    limit: 50,
+  });
+}

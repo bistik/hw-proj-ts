@@ -1,4 +1,5 @@
 import {
+  dbGetCompleteCourseByUser,
   dbGetCourseByIdAndAuthor,
   dbGetCoursesByUser,
 } from "@/db/courses/get-course";
@@ -21,3 +22,16 @@ export const getCourseByIdAndAuthor = createServerFn({
     const user = await getCurrentUser();
     return dbGetCourseByIdAndAuthor(data.courseId, user.id);
   });
+
+export const getCompleteCourseByUser = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  const user = await getCurrentUser();
+  try {
+    const result = await dbGetCompleteCourseByUser(user.id);
+    return result;
+  } catch (err) {
+    console.error(`Error in fetching course of user ${user.id}`, err);
+    throw new Error("Could not fetch courses", { cause: err });
+  }
+});

@@ -23,7 +23,9 @@ function RouteComponent() {
   return (
     <div>
       {user && <Navbar />}
-      <Outlet />
+      <div className="w-4/5 mx-auto my-8 border-2 border-amber-100">
+        <Outlet />
+      </div>
     </div>
   );
 }

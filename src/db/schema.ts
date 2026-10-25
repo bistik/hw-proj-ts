@@ -1,5 +1,6 @@
 import { int, sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { users } from "./auth-schema";
+import { relations } from "drizzle-orm";
 
 export const settingsTable = sqliteTable("settings", {
   id: int().primaryKey({ autoIncrement: true }),
@@ -117,5 +118,24 @@ export const submissionAnswersTable = sqliteTable("submission_answers", {
     .notNull()
     .$onUpdate(() => new Date()),
 });
+
+export const coursesRelations = relations(coursesTable, ({ many }) => ({
+  lessons: many(lessonsTable),
+  assignments: many(assignmentsTable),
+}));
+
+export const lessonsRelations = relations(lessonsTable, ({ one }) => ({
+  course: one(coursesTable, {
+    fields: [lessonsTable.courseId],
+    references: [coursesTable.id],
+  }),
+}));
+
+export const assignmentsRelations = relations(assignmentsTable, ({ one }) => ({
+  course: one(coursesTable, {
+    fields: [assignmentsTable.courseId],
+    references: [coursesTable.id],
+  }),
+}));
 
 export * from "./auth-schema";
