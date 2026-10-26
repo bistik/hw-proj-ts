@@ -65,7 +65,7 @@ function RouteComponent() {
       <form.Field name="answer">
         {(field) => <TextField field={field} label="Answer" multiline />}
       </form.Field>
-      <button type="submit" className="btn">
+      <button type="submit" className="btn btn-primary">
         Update question
       </button>
     </form>

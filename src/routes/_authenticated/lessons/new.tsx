@@ -1,8 +1,9 @@
+import { TextField } from "@/components/text-field";
 import { defaultValuesLesson, lessonFormSchema } from "@/schemas/course-schema";
 import { getCoursesByUser } from "@/server/courses/get-course";
 import { createLesson } from "@/server/lessons/create-lesson";
 import { useForm } from "@tanstack/react-form";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import z from "zod";
 
 export const Route = createFileRoute("/_authenticated/lessons/new")({
@@ -13,15 +14,18 @@ export const Route = createFileRoute("/_authenticated/lessons/new")({
   component: RouteComponent,
 });
 
-type LessonInput = z.infer<typeof lessonFormSchema>;
-
 function RouteComponent() {
   const { courses } = Route.useLoaderData();
-  const handleSubmit = async ({ value }: { value: LessonInput }) => {
-    const result = await createLesson({ data: value });
-    if (result) {
-      console.log("Successful create lesson");
-    }
+  const navigate = useNavigate();
+  const handleSubmit = async ({
+    value,
+  }: {
+    value: z.infer<typeof lessonFormSchema>;
+  }) => {
+    await createLesson({ data: value });
+    navigate({
+      to: "/courses",
+    });
   };
   const form = useForm({
     defaultValues: defaultValuesLesson,
@@ -48,45 +52,10 @@ function RouteComponent() {
         }}
       >
         <form.Field name="title">
-          {(field) => {
-            const { errors, isTouched } = field.state.meta;
-            return (
-              <fieldset className="fieldset">
-                <legend className="fieldset-legend">Title</legend>
-                <input
-                  value={field.state.value}
-                  onBlur={(e) => field.handleBlur()}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  type="text"
-                  className="input"
-                  placeholder="Title"
-                />
-                {errors.length > 0 && isTouched && (
-                  <p className="label text-error">{errors[0]?.message}</p>
-                )}
-              </fieldset>
-            );
-          }}
+          {(field) => <TextField field={field} label="Title" />}
         </form.Field>
         <form.Field name="content">
-          {(field) => {
-            const { errors, isTouched } = field.state.meta;
-            return (
-              <fieldset className="fieldset">
-                <legend className="fieldset-legend">Content</legend>
-                <textarea
-                  onBlur={(e) => field.handleBlur()}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  className="textarea"
-                  value={field.state.value}
-                />
-
-                {errors.length > 0 && isTouched && (
-                  <p className="label text-error">{errors[0]?.message}</p>
-                )}
-              </fieldset>
-            );
-          }}
+          {(field) => <TextField field={field} label="Content" multiline />}
         </form.Field>
         <form.Field
           name="courseId"
@@ -125,7 +94,7 @@ function RouteComponent() {
             );
           }}
         </form.Field>
-        <button type="submit" className="btn">
+        <button type="submit" className="btn btn-primary">
           Save Lesson
         </button>
       </form>

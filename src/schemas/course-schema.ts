@@ -21,6 +21,17 @@ export const lessonFormSchema = z.object({
     .positive("Please select a valid course"),
 });
 
+export const lessonUpdateFormSchema = lessonFormSchema
+  .omit({ courseId: true })
+  .extend({
+    lessonId: z
+      .number({
+        error: "Please select a lesson",
+      })
+      .int()
+      .positive("Please select a valid lesson"),
+  });
+
 export const defaultValuesLesson: z.input<typeof lessonFormSchema> = {
   title: "",
   content: "",

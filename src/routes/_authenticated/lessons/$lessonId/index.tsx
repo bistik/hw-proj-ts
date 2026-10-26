@@ -1,5 +1,5 @@
 import { getLesson } from "@/server/lessons/get-lesson";
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/lessons/$lessonId/")({
   loader: async ({ params }) => {
@@ -20,6 +20,15 @@ function RouteComponent() {
       <div className="card-body">
         <h2 className="card-title">{lesson.title}</h2>
         <p className="whitespace-pre-wrap">{lesson.content}</p>
+        <div className="justify-end card-actions">
+          <Link
+            className="btn btn-primary"
+            to="/lessons/$lessonId/edit"
+            params={{ lessonId: String(lesson.id) }}
+          >
+            Edit this lesson
+          </Link>
+        </div>
       </div>
     </div>
   );
