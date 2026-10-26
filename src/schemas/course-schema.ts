@@ -53,6 +53,17 @@ export const questionFormSchema = z.object({
     .positive("Please select a valid assignment"),
 });
 
+export const questionUpdateFormSchema = questionFormSchema
+  .pick({ questionText: true, answer: true })
+  .extend({
+    questionId: z
+      .number({
+        error: "Please select a question",
+      })
+      .int()
+      .positive("Please select a valid question"),
+  });
+
 export const courseByIdSchema = z.object({
   courseId: z.number().int().positive("Invalid course id"),
 });

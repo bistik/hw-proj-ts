@@ -21,12 +21,14 @@ function RouteComponent() {
             <p>{course.description}</p>
             <ul className="list">
               {course.lessons.map((lesson) => (
-                <li className="list-row">{lesson.title}</li>
+                <li className="list-row" key={lesson.id}>
+                  {lesson.title}
+                </li>
               ))}
             </ul>
             <ul className="list">
               {course.assignments.map((assignment) => (
-                <li className="list-row">
+                <li className="list-row" key={assignment.id}>
                   <Link
                     to="/assignments/$assignmentId"
                     params={{ assignmentId: String(assignment.id) }}

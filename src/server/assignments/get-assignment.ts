@@ -6,6 +6,11 @@ export const getAssignmentById = createServerFn({
 })
   .validator((assignmentId: number) => assignmentId)
   .handler(async ({ data: assignmentId }) => {
-    const result = await dbGetAssignment(assignmentId);
-    return result;
+    try {
+      const result = await dbGetAssignment(assignmentId);
+      return result;
+    } catch (err) {
+      console.error(`Error fetching assignment ${assignmentId}`, err);
+      throw new Error(`Error in fetching assignment`, { cause: err });
+    }
   });

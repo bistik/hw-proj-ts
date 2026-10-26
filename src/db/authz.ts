@@ -1,4 +1,4 @@
-import { db } from ".";
+import { db } from "@/db/";
 
 export async function requireUserOwnsCourse(courseId: number, userId: string) {
   const course = await db.query.coursesTable.findFirst({

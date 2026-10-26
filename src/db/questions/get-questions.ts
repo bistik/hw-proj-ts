@@ -1,20 +1,34 @@
 import { db } from "@/db/";
-import { questionsTable } from "../schema";
-import { desc, eq } from "drizzle-orm";
+import { assignmentsTable, coursesTable, questionsTable } from "../schema";
+import { and, desc, eq } from "drizzle-orm";
 
 export async function dbGetQuestionsByAssignment(assignmentId: number) {
-  try {
-    const result = await db
-      .select()
-      .from(questionsTable)
-      .where(eq(questionsTable.assignmentId, assignmentId))
-      .orderBy(desc(questionsTable.id));
-    return result;
-  } catch (err) {
-    console.error(
-      `Error in fetching questions for assignment ${assignmentId}`,
-      err,
-    );
-    return null;
-  }
+  return db
+    .select()
+    .from(questionsTable)
+    .where(eq(questionsTable.assignmentId, assignmentId))
+    .orderBy(desc(questionsTable.id));
+}
+
+export async function dbGetQuestionByIdAndAuthor(
+  questionId: number,
+  authorId: string,
+) {
+  const rows = await db
+    .select({ question: questionsTable })
+    .from(questionsTable)
+    .innerJoin(
+      assignmentsTable,
+      eq(assignmentsTable.id, questionsTable.assignmentId),
+    )
+    .innerJoin(coursesTable, eq(coursesTable.id, assignmentsTable.courseId))
+    .where(
+      and(
+        eq(questionsTable.id, questionId),
+        eq(coursesTable.authorId, authorId),
+      ),
+    )
+    .limit(1);
+
+  return rows[0]?.question;
 }

@@ -4,33 +4,45 @@ import { getAssignmentById } from "@/server/assignments/get-assignment";
 import { createQuestion } from "@/server/questions/create-question";
 import { getQuestions } from "@/server/questions/get-questions";
 import { useForm } from "@tanstack/react-form";
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  notFound,
+  useRouter,
+} from "@tanstack/react-router";
 import z from "zod";
 
 export const Route = createFileRoute(
   "/_authenticated/assignments/$assignmentId/",
 )({
   loader: async ({ params }) => {
+    const assignmentId = Number(params.assignmentId);
+    if (!assignmentId) throw notFound();
     const assignment = await getAssignmentById({
-      data: Number(params.assignmentId),
+      data: assignmentId,
     });
-    if (!assignment) {
-      throw notFound();
-    }
+    if (!assignment) throw notFound();
     const questions = await getQuestions({ data: Number(params.assignmentId) });
     return { assignment, questions };
   },
   component: RouteComponent,
 });
 
-type QuestionInput = z.infer<typeof questionFormSchema>;
-
 function RouteComponent() {
   const { assignment, questions } = Route.useLoaderData();
-  const handleSubmit = async function ({ value }: { value: QuestionInput }) {
-    const result = await createQuestion({ data: value });
-    if (result) {
-      console.log("Question successfully added");
+  const router = useRouter();
+  const handleSubmit = async function ({
+    value,
+  }: {
+    value: z.infer<typeof questionFormSchema>;
+  }) {
+    try {
+      await createQuestion({ data: value });
+      form.reset();
+      router.invalidate();
+    } catch (err) {
+      console.error("Error in creating a question", err);
+      throw new Error("Could not create a question", { cause: err });
     }
   };
   const form = useForm({
@@ -47,14 +59,27 @@ function RouteComponent() {
   });
   return (
     <div>
-      Hello "/_authenticated/assignments/$assignmentId"!
       <h2>Assignment title: {assignment.title}</h2>
       {questions && (
         <>
           <h2>Questions:</h2>
           <ul>
             {questions?.map((question) => {
-              return <li key={question.id}>{question.questionText}</li>;
+              return (
+                <li key={question.id}>
+                  {question.questionText}
+                  <Link
+                    to="/assignments/$assignmentId/questions/$questionId/edit"
+                    className="link ml-2"
+                    params={{
+                      questionId: String(question.id),
+                      assignmentId: String(assignment.id),
+                    }}
+                  >
+                    Edit question
+                  </Link>
+                </li>
+              );
             })}
           </ul>
         </>
