@@ -19,13 +19,23 @@ function RouteComponent() {
           <div className="card-body">
             <h2 className="card-title">{course.title}</h2>
             <p>{course.description}</p>
+            {course.lessons.length > 0 && <p className="font-bold">Lessons</p>}
             <ul className="list">
               {course.lessons.map((lesson) => (
                 <li className="list-row" key={lesson.id}>
-                  {lesson.title}
+                  <Link
+                    to="/lessons/$lessonId"
+                    params={{ lessonId: String(lesson.id) }}
+                    className="link"
+                  >
+                    {lesson.title}
+                  </Link>
                 </li>
               ))}
             </ul>
+            {course.assignments.length > 0 && (
+              <p className="font-bold">Assignments</p>
+            )}
             <ul className="list">
               {course.assignments.map((assignment) => (
                 <li className="list-row" key={assignment.id}>
