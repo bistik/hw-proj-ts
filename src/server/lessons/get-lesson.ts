@@ -1,14 +1,14 @@
 import { dbGetLesson } from "@/db/lessons/get-lesson";
-import { getCurrentUser } from "@/lib/auth";
+import { authMiddleware } from "@/middlewares/auth-middleware";
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 
 export const getLesson = createServerFn({ method: "GET" })
   .validator(z.number().int().positive("Invalid lesson id"))
-  .handler(async ({ data: lessonId }) => {
-    const user = await getCurrentUser();
+  .middleware([authMiddleware])
+  .handler(async ({ data: lessonId, context }) => {
     try {
-      return await dbGetLesson(lessonId, user.id);
+      return await dbGetLesson(lessonId, context.user.id);
     } catch (err) {
       console.error(`Error fetching lesson ${lessonId}`, err);
       throw new Error(`Could not load lesson`, { cause: err });

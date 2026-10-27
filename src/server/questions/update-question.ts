@@ -1,14 +1,17 @@
 import { dbGetQuestionByIdAndAuthor } from "@/db/questions/get-questions";
 import { dbUpdateQuestion } from "@/db/questions/update-question";
-import { getCurrentUser } from "@/lib/auth";
+import { authMiddleware } from "@/middlewares/auth-middleware";
 import { questionUpdateFormSchema } from "@/schemas/course-schema";
 import { createServerFn } from "@tanstack/react-start";
 
 export const updateQuestion = createServerFn({ method: "POST" })
   .validator(questionUpdateFormSchema)
-  .handler(async ({ data }) => {
-    const user = await getCurrentUser();
-    const question = await dbGetQuestionByIdAndAuthor(data.questionId, user.id);
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    const question = await dbGetQuestionByIdAndAuthor(
+      data.questionId,
+      context.user.id,
+    );
     if (!question) throw new Error("Question not found");
     try {
       return await dbUpdateQuestion(

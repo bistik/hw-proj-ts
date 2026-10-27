@@ -1,5 +1,5 @@
 import { dbCreateCourse } from "@/db/courses/create-course";
-import { getCurrentUser } from "@/lib/auth";
+import { authMiddleware } from "@/middlewares/auth-middleware";
 import { courseFormSchema } from "@/schemas/course-schema";
 import { createServerFn } from "@tanstack/react-start";
 
@@ -7,13 +7,13 @@ export const createCourse = createServerFn({
   method: "POST",
 })
   .validator(courseFormSchema)
-  .handler(async ({ data }) => {
-    const user = await getCurrentUser();
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
     try {
       const result = await dbCreateCourse({
         title: data.title,
         description: data.description,
-        authorId: user.id,
+        authorId: context.user.id,
       });
       return result;
     } catch (err) {

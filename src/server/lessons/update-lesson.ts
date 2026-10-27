@@ -1,14 +1,14 @@
 import { dbGetLesson } from "@/db/lessons/get-lesson";
 import { dbUpdateLesson } from "@/db/lessons/update-lesson";
-import { getCurrentUser } from "@/lib/auth";
+import { authMiddleware } from "@/middlewares/auth-middleware";
 import { lessonUpdateFormSchema } from "@/schemas/course-schema";
 import { createServerFn } from "@tanstack/react-start";
 
 export const updateLesson = createServerFn({ method: "POST" })
   .validator(lessonUpdateFormSchema)
-  .handler(async ({ data }) => {
-    const user = await getCurrentUser();
-    const lesson = await dbGetLesson(data.lessonId, user.id);
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    const lesson = await dbGetLesson(data.lessonId, context.user.id);
     if (!lesson) throw new Error("Lesson not found");
     try {
       return await dbUpdateLesson(

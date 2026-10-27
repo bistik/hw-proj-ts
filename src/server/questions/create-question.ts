@@ -1,19 +1,19 @@
 import { dbGetAssignment } from "@/db/assignments/get-assignment";
 import { requireUserOwnsCourse } from "@/db/authz";
 import { dbCreateQuestion } from "@/db/questions/create-question";
-import { getCurrentUser } from "@/lib/auth";
+import { authMiddleware } from "@/middlewares/auth-middleware";
 import { questionFormSchema } from "@/schemas/course-schema";
 import { createServerFn } from "@tanstack/react-start";
 
 export const createQuestion = createServerFn({ method: "POST" })
   .validator(questionFormSchema)
-  .handler(async ({ data }) => {
-    const user = await getCurrentUser();
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
     const assignment = await dbGetAssignment(data.assignmentId);
     if (!assignment?.courseId) {
       throw new Error("Course not found");
     }
-    await requireUserOwnsCourse(assignment.courseId, user.id);
+    await requireUserOwnsCourse(assignment.courseId, context.user.id);
     try {
       const result = await dbCreateQuestion({ ...data });
       return result;

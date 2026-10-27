@@ -1,4 +1,3 @@
-// src/routes/__root.tsx
 import type { ReactNode } from "react";
 import {
   Outlet,
@@ -7,6 +6,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import globalCss from "@/styles/global.css?url";
+import { isUnauthorized } from "@/lib/errors";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -26,6 +26,16 @@ export const Route = createRootRoute({
   }),
   component: RootComponent,
   errorComponent: ({ error }) => {
+    if (isUnauthorized(error)) {
+      return (
+        <div className="p-4 alert alert-warning">
+          <h3>Please login</h3>
+          <a href="/login" className="btn">
+            Sign in again
+          </a>
+        </div>
+      );
+    }
     const errorMessage =
       error instanceof Error ? error.message : "An unknown error occurred.";
     return (

@@ -2,7 +2,7 @@ import {
   dbGetQuestionByIdAndAuthor,
   dbGetQuestionsByAssignment,
 } from "@/db/questions/get-questions";
-import { getCurrentUser } from "@/lib/auth";
+import { authMiddleware } from "@/middlewares/auth-middleware";
 import { createServerFn } from "@tanstack/react-start";
 
 export const getQuestions = createServerFn({
@@ -24,10 +24,10 @@ export const getQuestions = createServerFn({
 
 export const getQuestion = createServerFn({ method: "GET" })
   .validator((questionId: number) => questionId)
-  .handler(async ({ data: questionId }) => {
-    const user = await getCurrentUser();
+  .middleware([authMiddleware])
+  .handler(async ({ data: questionId, context }) => {
     try {
-      return await dbGetQuestionByIdAndAuthor(questionId, user.id);
+      return await dbGetQuestionByIdAndAuthor(questionId, context.user.id);
     } catch (err) {
       console.error(`Error in fetching question ${questionId}`, err);
       throw new Error("Could not retrieve question", { cause: err });
