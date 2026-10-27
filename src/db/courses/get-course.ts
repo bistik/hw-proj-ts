@@ -47,3 +47,14 @@ export async function dbGetCompleteCourseByUser(authorId: string) {
     limit: 50,
   });
 }
+
+export async function dbGetEnrolledCourses(studentId: string) {
+  return db.query.enrollmentsTable.findMany({
+    where: (enrollmentsTable, { eq }) => eq(enrollmentsTable.userId, studentId),
+    with: {
+      course: { columns: { id: true, title: true, description: true } },
+    },
+    orderBy: (enrollmentsTable, { desc }) => desc(enrollmentsTable.enrolledAt),
+    limit: 50,
+  });
+}

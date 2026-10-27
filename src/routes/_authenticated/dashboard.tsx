@@ -12,6 +12,9 @@ function RouteComponent() {
       <p>dashboard"!</p>
       <ul>
         <li className="space-x-2">
+          <Link to="/student/courses" className="link">
+            Enrolled courses
+          </Link>
           <Link to="/courses" className="link">
             Courses
           </Link>

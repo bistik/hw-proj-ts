@@ -2,6 +2,7 @@ import {
   dbGetCompleteCourseByUser,
   dbGetCourseByIdAndAuthor,
   dbGetCoursesByUser,
+  dbGetEnrolledCourses,
 } from "@/db/courses/get-course";
 import { authMiddleware } from "@/middlewares/auth-middleware";
 import { courseByIdSchema } from "@/schemas/course-schema";
@@ -35,5 +36,20 @@ export const getCompleteCourseByUser = createServerFn({
     } catch (err) {
       console.error(`Error in fetching course of user ${context.user.id}`, err);
       throw new Error("Could not fetch courses", { cause: err });
+    }
+  });
+
+export const getEnrolledCourses = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    try {
+      const result = await dbGetEnrolledCourses(context.user.id);
+      return result;
+    } catch (err) {
+      console.error(
+        `Error in fetching enrolled course of user ${context.user.id}`,
+        err,
+      );
+      throw new Error("Could not fetch enrolled courses", { cause: err });
     }
   });
