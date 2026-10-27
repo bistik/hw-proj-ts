@@ -1,6 +1,14 @@
-import { int, sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import {
+  int,
+  sqliteTable,
+  text,
+  integer,
+  index,
+  uniqueIndex,
+  check,
+} from "drizzle-orm/sqlite-core";
 import { users } from "./auth-schema";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 export const settingsTable = sqliteTable("settings", {
   id: int().primaryKey({ autoIncrement: true }),
@@ -119,9 +127,49 @@ export const submissionAnswersTable = sqliteTable("submission_answers", {
     .$onUpdate(() => new Date()),
 });
 
+export const enrollmentsTable = sqliteTable(
+  "enrollments",
+  {
+    id: int().primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    courseId: int("course_id")
+      .notNull()
+      .references(() => coursesTable.id, { onDelete: "cascade" }),
+    status: text("status", { enum: ["active", "completed", "dropped"] })
+      .notNull()
+      .default("active"),
+    enrolledAt: integer("enrolled_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    completedAt: integer("completed_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    // one enrollment per user/course; re-enrolling = flip status back to active
+    uniqueIndex("enrollments_user_course_unique").on(
+      table.userId,
+      table.courseId,
+    ),
+    // "who is enrolled in this course?" — the composite index above can't serve this
+    index("enrollments_courseId_idx").on(table.courseId),
+    check(
+      "enrollments_status_check",
+      sql`${table.status} in ('active', 'completed', 'dropped')`,
+    ),
+  ],
+);
+
 export const coursesRelations = relations(coursesTable, ({ many }) => ({
   lessons: many(lessonsTable),
   assignments: many(assignmentsTable),
+  enrollments: many(enrollmentsTable),
 }));
 
 export const lessonsRelations = relations(lessonsTable, ({ one }) => ({
@@ -137,5 +185,19 @@ export const assignmentsRelations = relations(assignmentsTable, ({ one }) => ({
     references: [coursesTable.id],
   }),
 }));
+
+export const enrollmentsRelations = relations(
+  enrollmentsTable,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [enrollmentsTable.userId],
+      references: [users.id],
+    }),
+    course: one(coursesTable, {
+      fields: [enrollmentsTable.courseId],
+      references: [coursesTable.id],
+    }),
+  }),
+);
 
 export * from "./auth-schema";
