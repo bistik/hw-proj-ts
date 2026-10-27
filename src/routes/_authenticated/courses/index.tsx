@@ -17,7 +17,15 @@ function RouteComponent() {
         <div className="card card-side" key={course.id}>
           <figure></figure>
           <div className="card-body">
-            <h2 className="card-title">{course.title}</h2>
+            <h2 className="card-title">
+              <Link
+                to="/courses/$courseId"
+                params={{ courseId: String(course.id) }}
+                className="link"
+              >
+                {course.title}
+              </Link>
+            </h2>
             <p>{course.description}</p>
             {course.lessons.length > 0 && <p className="font-bold">Lessons</p>}
             <ul className="list">

@@ -152,7 +152,7 @@ export const enrollmentsTable = sqliteTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
-    // one enrollment per user/course; re-enrolling = flip status back to active
+    // one enrollment per user/course; re-enrolling is ignored
     uniqueIndex("enrollments_user_course_unique").on(
       table.userId,
       table.courseId,
@@ -186,18 +186,15 @@ export const assignmentsRelations = relations(assignmentsTable, ({ one }) => ({
   }),
 }));
 
-export const enrollmentsRelations = relations(
-  enrollmentsTable,
-  ({ one }) => ({
-    user: one(users, {
-      fields: [enrollmentsTable.userId],
-      references: [users.id],
-    }),
-    course: one(coursesTable, {
-      fields: [enrollmentsTable.courseId],
-      references: [coursesTable.id],
-    }),
+export const enrollmentsRelations = relations(enrollmentsTable, ({ one }) => ({
+  user: one(users, {
+    fields: [enrollmentsTable.userId],
+    references: [users.id],
   }),
-);
+  course: one(coursesTable, {
+    fields: [enrollmentsTable.courseId],
+    references: [coursesTable.id],
+  }),
+}));
 
 export * from "./auth-schema";
