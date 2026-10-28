@@ -1,5 +1,5 @@
 import { getEnrolledCourses } from "@/server/courses/get-course";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/student/courses/")({
   loader: async () => {
@@ -15,15 +15,20 @@ function RouteComponent() {
     return <div>You're not enrolled in any courses yet.</div>;
   }
   return (
-    <>
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-4">
       {enrollments.map((enrollment) => (
-        <div className="card card-side" key={enrollment.id}>
+        <Link
+          to="/student/courses/$courseId"
+          params={{ courseId: String(enrollment.course.id) }}
+          className="card border rounded-md border-solid border-accent/40 hover:border-accent block transition-all duration-300 ease-out shadow-sm hover:shadow-md hover:shadow-accent/20"
+          key={enrollment.id}
+        >
           <div className="card-body">
             <h2 className="card-title">{enrollment.course.title}</h2>
             <p>{enrollment.course.description}</p>
           </div>
-        </div>
+        </Link>
       ))}
-    </>
+    </div>
   );
 }

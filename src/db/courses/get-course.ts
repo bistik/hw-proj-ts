@@ -58,3 +58,24 @@ export async function dbGetEnrolledCourses(studentId: string) {
     limit: 50,
   });
 }
+
+export async function dbGetEnrollmentByCourseAndStudent(
+  courseId: number,
+  studentId: string,
+) {
+  return db.query.enrollmentsTable.findFirst({
+    where: (enrollmentsTable, { and, eq }) =>
+      and(
+        eq(enrollmentsTable.courseId, courseId),
+        eq(enrollmentsTable.userId, studentId),
+      ),
+    with: {
+      course: {
+        with: {
+          lessons: { columns: { id: true, title: true } },
+          assignments: { columns: { id: true, title: true } },
+        },
+      },
+    },
+  });
+}
