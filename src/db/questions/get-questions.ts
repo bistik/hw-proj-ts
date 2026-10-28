@@ -32,3 +32,15 @@ export async function dbGetQuestionByIdAndAuthor(
 
   return rows[0]?.question;
 }
+
+export async function dbGetQuestionsForStudent(assignmentId: number) {
+  return db
+    .select({
+      id: questionsTable.id,
+      questionText: questionsTable.questionText,
+      assignmentId: questionsTable.assignmentId,
+    })
+    .from(questionsTable)
+    .where(eq(questionsTable.assignmentId, assignmentId))
+    .orderBy(desc(questionsTable.id));
+}

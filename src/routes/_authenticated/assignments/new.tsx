@@ -16,11 +16,13 @@ export const Route = createFileRoute("/_authenticated/assignments/new")({
   component: RouteComponent,
 });
 
-type AssignmentInput = z.infer<typeof assignmentFormSchema>;
-
 function RouteComponent() {
   const { courses } = Route.useLoaderData();
-  const handleSubmit = async ({ value }: { value: AssignmentInput }) => {
+  const handleSubmit = async ({
+    value,
+  }: {
+    value: z.infer<typeof assignmentFormSchema>;
+  }) => {
     const result = await createAssignment({ data: value });
     if (result) {
       console.log("successfully created assignment");

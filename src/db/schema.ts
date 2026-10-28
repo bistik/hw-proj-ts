@@ -104,28 +104,43 @@ export const assignmentSubmissionsTable = sqliteTable(
       .notNull()
       .$onUpdate(() => new Date()),
   },
+  (table) => [
+    uniqueIndex("assignment_submissions_assignment_assignee_unique").on(
+      table.assignmentId,
+      table.assigneeId,
+    ),
+  ],
 );
 
-export const submissionAnswersTable = sqliteTable("submission_answers", {
-  id: int().primaryKey({ autoIncrement: true }),
-  answer: text().notNull(),
-  points: int().default(0),
-  isCorrect: int("is_correct", { mode: "boolean" }),
-  comment: text(),
-  questionId: int("question_id").references(() => questionsTable.id, {
-    onDelete: "cascade",
-  }),
-  submissionId: int("submission_id").references(
-    () => assignmentSubmissionsTable.id,
-    { onDelete: "cascade" },
-  ),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const submissionAnswersTable = sqliteTable(
+  "submission_answers",
+  {
+    id: int().primaryKey({ autoIncrement: true }),
+    answer: text().notNull(),
+    points: int().default(0),
+    isCorrect: int("is_correct", { mode: "boolean" }),
+    comment: text(),
+    questionId: int("question_id").references(() => questionsTable.id, {
+      onDelete: "cascade",
+    }),
+    submissionId: int("submission_id").references(
+      () => assignmentSubmissionsTable.id,
+      { onDelete: "cascade" },
+    ),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("submission_answers_question_submission_unique").on(
+      table.questionId,
+      table.submissionId,
+    ),
+  ],
+);
 
 export const enrollmentsTable = sqliteTable(
   "enrollments",

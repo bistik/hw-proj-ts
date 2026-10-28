@@ -83,3 +83,14 @@ export const enrollmentFormSchema = z.object({
   courseId: z.number().int().positive("Invalid course id"),
   userId: z.string().trim().min(1, { message: "User id is required" }),
 });
+
+export const submitAnswerFormSchema = z.object({
+  assignmentId: z.number().int().positive("Invalid assignment id"),
+  submissionId: z
+    .number()
+    .int()
+    .positive("Invalid assignment-submission id")
+    .optional(),
+  questionId: z.number().int().positive("Invalid question id"),
+  answer: z.string().trim().min(1, { message: "Answer is required" }),
+});

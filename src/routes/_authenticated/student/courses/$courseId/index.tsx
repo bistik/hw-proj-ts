@@ -1,5 +1,5 @@
 import { getStudentCourse } from "@/server/courses/get-course";
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 export const Route = createFileRoute(
   "/_authenticated/student/courses/$courseId/",
@@ -33,8 +33,13 @@ function RouteComponent() {
       <ul>
         {course.assignments.map((assignment) => (
           <li key={assignment.id}>
-            {assignment.title}
-            <a href="#">Placeholder link to go to assignment</a>
+            <Link
+              to="/student/assignments/$assignmentId"
+              params={{ assignmentId: String(assignment.id) }}
+              className="link"
+            >
+              {assignment.title}
+            </Link>
           </li>
         ))}
       </ul>
