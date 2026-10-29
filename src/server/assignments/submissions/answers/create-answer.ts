@@ -8,7 +8,6 @@ export const upsertAnswer = createServerFn({ method: "POST" })
   .validator(submitAnswerFormSchema)
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
-    console.log("(server) about to submit answer");
     try {
       const submission = await dbCreateSubmission({
         assignmentId: data.assignmentId,

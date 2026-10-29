@@ -59,6 +59,25 @@ function RouteComponent() {
   });
   return (
     <div>
+      <div className="breadcrumbs text-sm">
+        <ul>
+          <li>
+            <Link to="/courses" className="link">
+              All courses
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/courses/$courseId"
+              params={{ courseId: String(assignment.courseId) }}
+              className="link"
+            >
+              Course
+            </Link>
+          </li>
+          <li>Assignment: {assignment.title}</li>
+        </ul>
+      </div>
       <h2>Assignment title: {assignment.title}</h2>
       {questions && (
         <>

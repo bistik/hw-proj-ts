@@ -6,7 +6,6 @@ export async function dbUpsertAnswer(data: {
   submissionId: number;
   answer: string;
 }) {
-  console.log("(db) about to submit answer");
   return db
     .insert(submissionAnswersTable)
     .values(data)

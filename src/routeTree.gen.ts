@@ -30,6 +30,7 @@ import { Route as AuthenticatedStudentAssignmentsAssignmentIdIndexRouteImport } 
 import { Route as AuthenticatedStudentCoursesCourseIdIndexRouteImport } from './routes/_authenticated/student/courses/$courseId/index'
 import { Route as AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdIndexRouteImport } from './routes/_authenticated/assignments/$assignmentId/questions/$questionId/index'
 import { Route as AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdEditRouteImport } from './routes/_authenticated/assignments/$assignmentId/questions/$questionId/edit'
+import { Route as AuthenticatedStudentAssignmentsAssignmentIdQuestionsQuestionIdRouteImport } from './routes/_authenticated/student/assignments/$assignmentId/questions/$questionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -150,6 +151,14 @@ const AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdEditRoute =
       getParentRoute: () => AuthenticatedRouteRoute,
     } as any,
   )
+const AuthenticatedStudentAssignmentsAssignmentIdQuestionsQuestionIdRoute =
+  AuthenticatedStudentAssignmentsAssignmentIdQuestionsQuestionIdRouteImport.update(
+    {
+      id: '/student/assignments/$assignmentId/questions/$questionId',
+      path: '/student/assignments/$assignmentId/questions/$questionId',
+      getParentRoute: () => AuthenticatedRouteRoute,
+    } as any,
+  )
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -170,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/student/assignments/$assignmentId/': typeof AuthenticatedStudentAssignmentsAssignmentIdIndexRoute
   '/student/courses/$courseId/': typeof AuthenticatedStudentCoursesCourseIdIndexRoute
   '/assignments/$assignmentId/questions/$questionId/edit': typeof AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdEditRoute
+  '/student/assignments/$assignmentId/questions/$questionId': typeof AuthenticatedStudentAssignmentsAssignmentIdQuestionsQuestionIdRoute
   '/assignments/$assignmentId/questions/$questionId/': typeof AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -191,6 +201,7 @@ export interface FileRoutesByTo {
   '/student/assignments/$assignmentId': typeof AuthenticatedStudentAssignmentsAssignmentIdIndexRoute
   '/student/courses/$courseId': typeof AuthenticatedStudentCoursesCourseIdIndexRoute
   '/assignments/$assignmentId/questions/$questionId/edit': typeof AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdEditRoute
+  '/student/assignments/$assignmentId/questions/$questionId': typeof AuthenticatedStudentAssignmentsAssignmentIdQuestionsQuestionIdRoute
   '/assignments/$assignmentId/questions/$questionId': typeof AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdIndexRoute
 }
 export interface FileRoutesById {
@@ -215,6 +226,7 @@ export interface FileRoutesById {
   '/_authenticated/student/assignments/$assignmentId/': typeof AuthenticatedStudentAssignmentsAssignmentIdIndexRoute
   '/_authenticated/student/courses/$courseId/': typeof AuthenticatedStudentCoursesCourseIdIndexRoute
   '/_authenticated/assignments/$assignmentId/questions/$questionId/edit': typeof AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdEditRoute
+  '/_authenticated/student/assignments/$assignmentId/questions/$questionId': typeof AuthenticatedStudentAssignmentsAssignmentIdQuestionsQuestionIdRoute
   '/_authenticated/assignments/$assignmentId/questions/$questionId/': typeof AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -238,6 +250,7 @@ export interface FileRouteTypes {
     | '/student/assignments/$assignmentId/'
     | '/student/courses/$courseId/'
     | '/assignments/$assignmentId/questions/$questionId/edit'
+    | '/student/assignments/$assignmentId/questions/$questionId'
     | '/assignments/$assignmentId/questions/$questionId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -259,6 +272,7 @@ export interface FileRouteTypes {
     | '/student/assignments/$assignmentId'
     | '/student/courses/$courseId'
     | '/assignments/$assignmentId/questions/$questionId/edit'
+    | '/student/assignments/$assignmentId/questions/$questionId'
     | '/assignments/$assignmentId/questions/$questionId'
   id:
     | '__root__'
@@ -282,6 +296,7 @@ export interface FileRouteTypes {
     | '/_authenticated/student/assignments/$assignmentId/'
     | '/_authenticated/student/courses/$courseId/'
     | '/_authenticated/assignments/$assignmentId/questions/$questionId/edit'
+    | '/_authenticated/student/assignments/$assignmentId/questions/$questionId'
     | '/_authenticated/assignments/$assignmentId/questions/$questionId/'
   fileRoutesById: FileRoutesById
 }
@@ -441,6 +456,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdEditRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/student/assignments/$assignmentId/questions/$questionId': {
+      id: '/_authenticated/student/assignments/$assignmentId/questions/$questionId'
+      path: '/student/assignments/$assignmentId/questions/$questionId'
+      fullPath: '/student/assignments/$assignmentId/questions/$questionId'
+      preLoaderRoute: typeof AuthenticatedStudentAssignmentsAssignmentIdQuestionsQuestionIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -473,6 +495,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedStudentAssignmentsAssignmentIdIndexRoute: typeof AuthenticatedStudentAssignmentsAssignmentIdIndexRoute
   AuthenticatedStudentCoursesCourseIdIndexRoute: typeof AuthenticatedStudentCoursesCourseIdIndexRoute
   AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdEditRoute: typeof AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdEditRoute
+  AuthenticatedStudentAssignmentsAssignmentIdQuestionsQuestionIdRoute: typeof AuthenticatedStudentAssignmentsAssignmentIdQuestionsQuestionIdRoute
   AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdIndexRoute: typeof AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdIndexRoute
 }
 
@@ -497,6 +520,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedStudentCoursesCourseIdIndexRoute,
   AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdEditRoute:
     AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdEditRoute,
+  AuthenticatedStudentAssignmentsAssignmentIdQuestionsQuestionIdRoute:
+    AuthenticatedStudentAssignmentsAssignmentIdQuestionsQuestionIdRoute,
   AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdIndexRoute:
     AuthenticatedAssignmentsAssignmentIdQuestionsQuestionIdIndexRoute,
 }
