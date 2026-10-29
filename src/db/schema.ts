@@ -75,13 +75,20 @@ export const questionsTable = sqliteTable("questions", {
     onDelete: "cascade",
   }),
   answer: text().notNull(),
+  position: int().notNull(),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .notNull()
     .$onUpdate(() => new Date()),
-});
+}, (table) => [
+    uniqueIndex("questions_assignment_position_unique").on(
+      table.assignmentId,
+      table.position,
+    ),
+  ],
+);
 
 export const assignmentSubmissionsTable = sqliteTable(
   "assignment_submissions",
