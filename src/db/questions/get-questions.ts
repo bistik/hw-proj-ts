@@ -1,6 +1,6 @@
 import { db } from "@/db/";
 import { assignmentsTable, coursesTable, questionsTable } from "../schema";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, gt, lt } from "drizzle-orm";
 
 export async function dbGetQuestionsByAssignment(assignmentId: number) {
   return db
@@ -43,4 +43,53 @@ export async function dbGetQuestionsForStudent(assignmentId: number) {
     .from(questionsTable)
     .where(eq(questionsTable.assignmentId, assignmentId))
     .orderBy(desc(questionsTable.id));
+}
+
+export async function dbGetQuestionByIdAndAssignment(
+  assignmentId: number,
+  questionId: number,
+) {
+  return db.query.questionsTable.findFirst({
+    columns: {
+      id: true,
+      questionText: true,
+      assignmentId: true,
+      position: true,
+    },
+    where: (questionsTable, { and, eq }) =>
+      and(
+        eq(questionsTable.assignmentId, assignmentId),
+        eq(questionsTable.id, questionId),
+      ),
+  });
+}
+
+export async function dbGetNextQuestionByPosition(
+  assignmentId: number,
+  position: number,
+) {
+  return db.query.questionsTable.findFirst({
+    columns: { id: true, questionText: true, assignmentId: true },
+    where: (questionsTable, { and, eq }) =>
+      and(
+        eq(questionsTable.assignmentId, assignmentId),
+        gt(questionsTable.position, position),
+      ),
+    orderBy: (questionsTable, { asc }) => [asc(questionsTable.position)],
+  });
+}
+
+export async function dbGetPreviousQuestionByPosition(
+  assignmentId: number,
+  position: number,
+) {
+  return db.query.questionsTable.findFirst({
+    columns: { id: true, questionText: true, assignmentId: true },
+    where: (questionsTable, { and, eq }) =>
+      and(
+        eq(questionsTable.assignmentId, assignmentId),
+        lt(questionsTable.position, position),
+      ),
+    orderBy: (questionsTable, { desc }) => [desc(questionsTable.position)],
+  });
 }

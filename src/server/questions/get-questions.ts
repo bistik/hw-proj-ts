@@ -1,4 +1,7 @@
 import {
+  dbGetNextQuestionByPosition,
+  dbGetPreviousQuestionByPosition,
+  dbGetQuestionByIdAndAssignment,
   dbGetQuestionByIdAndAuthor,
   dbGetQuestionsByAssignment,
   dbGetQuestionsForStudent,
@@ -60,5 +63,99 @@ export const getStudentQuestions = createServerFn({ method: "GET" })
         err,
       );
       throw new Error("Could not get questions.");
+    }
+  });
+
+export const getStudentQuestion = createServerFn({ method: "GET" })
+  .validator(
+    z.object({
+      assignmentId: z.number().int().positive("Invalid assignment id"),
+      questionId: z.number().int().positive("Invalid question id"),
+    }),
+  )
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    const assignment = await dbGetAssignment(data.assignmentId);
+    if (!assignment || !assignment.courseId)
+      throw new Error("Could not find assignment");
+    try {
+      await requireUserEnrolledInCourse(assignment.courseId, context.user.id);
+      const result = dbGetQuestionByIdAndAssignment(
+        assignment.id,
+        data.questionId,
+      );
+      return result;
+    } catch (err) {
+      console.error(
+        `Error fetching student assignment question ${data.questionId}`,
+        err,
+      );
+      throw new Error("Could not get question.");
+    }
+  });
+
+export const getStudentNextQuestion = createServerFn({ method: "GET" })
+  .validator(
+    z.object({
+      assignmentId: z.number().int().positive("Invalid assignment id"),
+      questionId: z.number().int().positive("Invalid question id"),
+    }),
+  )
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    const assignment = await dbGetAssignment(data.assignmentId);
+    if (!assignment || !assignment.courseId)
+      throw new Error("Could not find assignment");
+    try {
+      await requireUserEnrolledInCourse(assignment.courseId, context.user.id);
+      const question = await dbGetQuestionByIdAndAssignment(
+        assignment.id,
+        data.questionId,
+      );
+      if (!question) return null;
+      const nextQuestion = await dbGetNextQuestionByPosition(
+        assignment.id,
+        question.position,
+      );
+      return nextQuestion;
+    } catch (err) {
+      console.error(
+        `Error fetching student assignment question ${data.questionId}`,
+        err,
+      );
+      throw new Error("Could not get question.");
+    }
+  });
+
+export const getStudentPreviousQuestion = createServerFn({ method: "GET" })
+  .validator(
+    z.object({
+      assignmentId: z.number().int().positive("Invalid assignment id"),
+      questionId: z.number().int().positive("Invalid question id"),
+    }),
+  )
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    const assignment = await dbGetAssignment(data.assignmentId);
+    if (!assignment || !assignment.courseId)
+      throw new Error("Could not find assignment");
+    try {
+      await requireUserEnrolledInCourse(assignment.courseId, context.user.id);
+      const question = await dbGetQuestionByIdAndAssignment(
+        assignment.id,
+        data.questionId,
+      );
+      if (!question) return null;
+      const prevQuestion = await dbGetPreviousQuestionByPosition(
+        assignment.id,
+        question.position,
+      );
+      return prevQuestion;
+    } catch (err) {
+      console.error(
+        `Error fetching student assignment question ${data.questionId}`,
+        err,
+      );
+      throw new Error("Could not get question.");
     }
   });

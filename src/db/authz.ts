@@ -17,7 +17,7 @@ export async function requireUserEnrolledInCourse(
   courseId: number,
   studentId: string,
 ) {
-  const enrollment = db.query.enrollmentsTable.findFirst({
+  const enrollment = await db.query.enrollmentsTable.findFirst({
     where: (enrollmentsTable, { and, eq }) =>
       and(
         eq(enrollmentsTable.courseId, courseId),

@@ -9,4 +9,5 @@ export const db = drizzle({
     authToken: env("TURSO_AUTH_TOKEN"),
   },
   schema,
+  logger: process.env.NODE_ENV === "development",
 });
