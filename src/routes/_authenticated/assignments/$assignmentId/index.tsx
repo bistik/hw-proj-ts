@@ -17,12 +17,10 @@ export const Route = createFileRoute(
 )({
   loader: async ({ params }) => {
     const assignmentId = Number(params.assignmentId);
-    if (!assignmentId) throw notFound();
-    const assignment = await getAssignmentById({
-      data: assignmentId,
-    });
-    if (!assignment) throw notFound();
-    const questions = await getQuestions({ data: Number(params.assignmentId) });
+    if (!Number.isInteger(assignmentId) || assignmentId <= 0) throw notFound();
+    const assignment = await getAssignmentById({ data: { assignmentId } });
+    const questions = await getQuestions({ data: assignmentId });
+
     return { assignment, questions };
   },
   component: RouteComponent,
@@ -78,7 +76,16 @@ function RouteComponent() {
           <li>Assignment: {assignment.title}</li>
         </ul>
       </div>
-      <h2>Assignment title: {assignment.title}</h2>
+      <h2>
+        Assignment title: {assignment.title}
+        <Link
+          to="/assignments/$assignmentId/edit"
+          params={{ assignmentId: String(assignment.id) }}
+          className="link ml-2"
+        >
+          Edit assignment
+        </Link>
+      </h2>
       {questions && (
         <>
           <h2>Questions:</h2>

@@ -1,13 +1,13 @@
 import { db } from "@/db/";
 import { assignmentsTable, coursesTable, questionsTable } from "../schema";
-import { and, desc, eq, gt, lt } from "drizzle-orm";
+import { and, asc, desc, eq, gt, lt } from "drizzle-orm";
 
 export async function dbGetQuestionsByAssignment(assignmentId: number) {
   return db
     .select()
     .from(questionsTable)
     .where(eq(questionsTable.assignmentId, assignmentId))
-    .orderBy(desc(questionsTable.id));
+    .orderBy(asc(questionsTable.position));
 }
 
 export async function dbGetQuestionByIdAndAuthor(

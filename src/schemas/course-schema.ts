@@ -89,3 +89,8 @@ export const submitAnswerFormSchema = z.object({
   questionId: z.number().int().positive("Invalid question id"),
   answer: z.string().trim().min(1, { message: "Answer is required" }),
 });
+
+export const assignmentUpdateFormSchema = z.object({
+  assignmentId: z.number().int().positive("Invalid assignment id"),
+  title: z.string().trim().min(1, { message: "Title is required" }),
+});

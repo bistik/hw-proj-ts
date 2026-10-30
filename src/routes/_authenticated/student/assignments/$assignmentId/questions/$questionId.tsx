@@ -56,17 +56,31 @@ export const Route = createFileRoute(
 
 function QuestionPending() {
   return (
-    <div
-      className="flex w-full items-center justify-center"
-      aria-busy="true"
-      aria-label="Loading question"
-    >
-      <div className="w-full max-w-md space-y-4">
-        <div className="skeleton h-8 w-3/4" />
-        <div className="skeleton h-12 w-full" />
-        <div className="skeleton h-10 w-32" />
+    <>
+      <div className="grid grid-cols-3 items-center w-full px-8 py-8">
+        <div className="justify-self-start">
+          <div className="skeleton h-8 w-full" />
+        </div>
+
+        <div className="justify-self-center"></div>
+
+        <div className="justify-self-end">
+          <div className="skeleton h-8 w-3/4" />
+        </div>
       </div>
-    </div>
+      <div
+        className="flex w-full items-center justify-center"
+        aria-busy="true"
+        aria-label="Loading question"
+      >
+        <div className="w-full max-w-md space-y-4">
+          <div className="skeleton h-8 w-3/4" />
+          <div className="skeleton h-8 w-3/4" />
+          <div className="skeleton h-12 w-full" />
+          <div className="skeleton h-10 w-32" />
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -129,10 +143,8 @@ function RouteComponent() {
           )}
         </div>
 
-        {/* Middle Div */}
         <div className="justify-self-center">Center</div>
 
-        {/* Rightmost Div */}
         <div className="justify-self-end">
           {nextQuestion && (
             <Link

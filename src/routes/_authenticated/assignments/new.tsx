@@ -2,7 +2,7 @@ import {
   assignmentFormSchema,
   defaultValuesAssignment,
 } from "@/schemas/course-schema";
-import { createAssignment } from "@/server/assignments/create-assignment";
+import { createAssignment } from "@/server/assignments/mutate-assignment";
 import { getCoursesByUser } from "@/server/courses/get-course";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, Link } from "@tanstack/react-router";
