@@ -1,5 +1,5 @@
 import { courseFormSchema, defaultCourse } from "@/schemas/course-schema";
-import { createCourse } from "@/server/courses/create-course";
+import { createCourse } from "@/server/courses/mutate-course";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute } from "@tanstack/react-router";
 import z from "zod";

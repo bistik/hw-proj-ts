@@ -18,12 +18,14 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAssignmentsIndexRouteImport } from './routes/_authenticated/assignments/index'
 import { Route as AuthenticatedAssignmentsNewRouteImport } from './routes/_authenticated/assignments/new'
 import { Route as AuthenticatedCoursesIndexRouteImport } from './routes/_authenticated/courses/index'
+import { Route as AuthenticatedCoursesCourseIdRouteImport } from './routes/_authenticated/courses/$courseId'
 import { Route as AuthenticatedCoursesNewRouteImport } from './routes/_authenticated/courses/new'
 import { Route as AuthenticatedLessonsNewRouteImport } from './routes/_authenticated/lessons/new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthenticatedAssignmentsAssignmentIdIndexRouteImport } from './routes/_authenticated/assignments/$assignmentId/index'
 import { Route as AuthenticatedAssignmentsAssignmentIdEditRouteImport } from './routes/_authenticated/assignments/$assignmentId/edit'
 import { Route as AuthenticatedCoursesCourseIdIndexRouteImport } from './routes/_authenticated/courses/$courseId/index'
+import { Route as AuthenticatedCoursesCourseIdEditRouteImport } from './routes/_authenticated/courses/$courseId/edit'
 import { Route as AuthenticatedLessonsLessonIdIndexRouteImport } from './routes/_authenticated/lessons/$lessonId/index'
 import { Route as AuthenticatedLessonsLessonIdEditRouteImport } from './routes/_authenticated/lessons/$lessonId/edit'
 import { Route as AuthenticatedStudentCoursesIndexRouteImport } from './routes/_authenticated/student/courses/index'
@@ -79,6 +81,12 @@ const AuthenticatedCoursesIndexRoute =
     path: '/courses/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCoursesCourseIdRoute =
+  AuthenticatedCoursesCourseIdRouteImport.update({
+    id: '/courses/$courseId',
+    path: '/courses/$courseId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCoursesNewRoute = AuthenticatedCoursesNewRouteImport.update({
   id: '/courses/new',
   path: '/courses/new',
@@ -108,9 +116,15 @@ const AuthenticatedAssignmentsAssignmentIdEditRoute =
   } as any)
 const AuthenticatedCoursesCourseIdIndexRoute =
   AuthenticatedCoursesCourseIdIndexRouteImport.update({
-    id: '/courses/$courseId/',
-    path: '/courses/$courseId/',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedCoursesCourseIdRoute,
+  } as any)
+const AuthenticatedCoursesCourseIdEditRoute =
+  AuthenticatedCoursesCourseIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => AuthenticatedCoursesCourseIdRoute,
   } as any)
 const AuthenticatedLessonsLessonIdIndexRoute =
   AuthenticatedLessonsLessonIdIndexRouteImport.update({
@@ -173,12 +187,14 @@ export interface FileRoutesByFullPath {
   '/sign-up': typeof AuthSignUpRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/assignments/new': typeof AuthenticatedAssignmentsNewRoute
+  '/courses/$courseId': typeof AuthenticatedCoursesCourseIdRouteWithChildren
   '/courses/new': typeof AuthenticatedCoursesNewRoute
   '/lessons/new': typeof AuthenticatedLessonsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/assignments/': typeof AuthenticatedAssignmentsIndexRoute
   '/courses/': typeof AuthenticatedCoursesIndexRoute
   '/assignments/$assignmentId/edit': typeof AuthenticatedAssignmentsAssignmentIdEditRoute
+  '/courses/$courseId/edit': typeof AuthenticatedCoursesCourseIdEditRoute
   '/lessons/$lessonId/edit': typeof AuthenticatedLessonsLessonIdEditRoute
   '/assignments/$assignmentId/': typeof AuthenticatedAssignmentsAssignmentIdIndexRoute
   '/courses/$courseId/': typeof AuthenticatedCoursesCourseIdIndexRoute
@@ -202,6 +218,7 @@ export interface FileRoutesByTo {
   '/assignments': typeof AuthenticatedAssignmentsIndexRoute
   '/courses': typeof AuthenticatedCoursesIndexRoute
   '/assignments/$assignmentId/edit': typeof AuthenticatedAssignmentsAssignmentIdEditRoute
+  '/courses/$courseId/edit': typeof AuthenticatedCoursesCourseIdEditRoute
   '/lessons/$lessonId/edit': typeof AuthenticatedLessonsLessonIdEditRoute
   '/assignments/$assignmentId': typeof AuthenticatedAssignmentsAssignmentIdIndexRoute
   '/courses/$courseId': typeof AuthenticatedCoursesCourseIdIndexRoute
@@ -222,12 +239,14 @@ export interface FileRoutesById {
   '/_auth/sign-up': typeof AuthSignUpRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/assignments/new': typeof AuthenticatedAssignmentsNewRoute
+  '/_authenticated/courses/$courseId': typeof AuthenticatedCoursesCourseIdRouteWithChildren
   '/_authenticated/courses/new': typeof AuthenticatedCoursesNewRoute
   '/_authenticated/lessons/new': typeof AuthenticatedLessonsNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_authenticated/assignments/': typeof AuthenticatedAssignmentsIndexRoute
   '/_authenticated/courses/': typeof AuthenticatedCoursesIndexRoute
   '/_authenticated/assignments/$assignmentId/edit': typeof AuthenticatedAssignmentsAssignmentIdEditRoute
+  '/_authenticated/courses/$courseId/edit': typeof AuthenticatedCoursesCourseIdEditRoute
   '/_authenticated/lessons/$lessonId/edit': typeof AuthenticatedLessonsLessonIdEditRoute
   '/_authenticated/assignments/$assignmentId/': typeof AuthenticatedAssignmentsAssignmentIdIndexRoute
   '/_authenticated/courses/$courseId/': typeof AuthenticatedCoursesCourseIdIndexRoute
@@ -247,12 +266,14 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/dashboard'
     | '/assignments/new'
+    | '/courses/$courseId'
     | '/courses/new'
     | '/lessons/new'
     | '/api/auth/$'
     | '/assignments/'
     | '/courses/'
     | '/assignments/$assignmentId/edit'
+    | '/courses/$courseId/edit'
     | '/lessons/$lessonId/edit'
     | '/assignments/$assignmentId/'
     | '/courses/$courseId/'
@@ -276,6 +297,7 @@ export interface FileRouteTypes {
     | '/assignments'
     | '/courses'
     | '/assignments/$assignmentId/edit'
+    | '/courses/$courseId/edit'
     | '/lessons/$lessonId/edit'
     | '/assignments/$assignmentId'
     | '/courses/$courseId'
@@ -295,12 +317,14 @@ export interface FileRouteTypes {
     | '/_auth/sign-up'
     | '/_authenticated/dashboard'
     | '/_authenticated/assignments/new'
+    | '/_authenticated/courses/$courseId'
     | '/_authenticated/courses/new'
     | '/_authenticated/lessons/new'
     | '/api/auth/$'
     | '/_authenticated/assignments/'
     | '/_authenticated/courses/'
     | '/_authenticated/assignments/$assignmentId/edit'
+    | '/_authenticated/courses/$courseId/edit'
     | '/_authenticated/lessons/$lessonId/edit'
     | '/_authenticated/assignments/$assignmentId/'
     | '/_authenticated/courses/$courseId/'
@@ -385,6 +409,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCoursesIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/courses/$courseId': {
+      id: '/_authenticated/courses/$courseId'
+      path: '/courses/$courseId'
+      fullPath: '/courses/$courseId'
+      preLoaderRoute: typeof AuthenticatedCoursesCourseIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/courses/new': {
       id: '/_authenticated/courses/new'
       path: '/courses/new'
@@ -422,10 +453,17 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/courses/$courseId/': {
       id: '/_authenticated/courses/$courseId/'
-      path: '/courses/$courseId'
+      path: '/'
       fullPath: '/courses/$courseId/'
       preLoaderRoute: typeof AuthenticatedCoursesCourseIdIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedCoursesCourseIdRoute
+    }
+    '/_authenticated/courses/$courseId/edit': {
+      id: '/_authenticated/courses/$courseId/edit'
+      path: '/edit'
+      fullPath: '/courses/$courseId/edit'
+      preLoaderRoute: typeof AuthenticatedCoursesCourseIdEditRouteImport
+      parentRoute: typeof AuthenticatedCoursesCourseIdRoute
     }
     '/_authenticated/lessons/$lessonId/': {
       id: '/_authenticated/lessons/$lessonId/'
@@ -500,9 +538,28 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
   AuthRouteRouteChildren,
 )
 
+interface AuthenticatedCoursesCourseIdRouteChildren {
+  AuthenticatedCoursesCourseIdEditRoute: typeof AuthenticatedCoursesCourseIdEditRoute
+  AuthenticatedCoursesCourseIdIndexRoute: typeof AuthenticatedCoursesCourseIdIndexRoute
+}
+
+const AuthenticatedCoursesCourseIdRouteChildren: AuthenticatedCoursesCourseIdRouteChildren =
+  {
+    AuthenticatedCoursesCourseIdEditRoute:
+      AuthenticatedCoursesCourseIdEditRoute,
+    AuthenticatedCoursesCourseIdIndexRoute:
+      AuthenticatedCoursesCourseIdIndexRoute,
+  }
+
+const AuthenticatedCoursesCourseIdRouteWithChildren =
+  AuthenticatedCoursesCourseIdRoute._addFileChildren(
+    AuthenticatedCoursesCourseIdRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedAssignmentsNewRoute: typeof AuthenticatedAssignmentsNewRoute
+  AuthenticatedCoursesCourseIdRoute: typeof AuthenticatedCoursesCourseIdRouteWithChildren
   AuthenticatedCoursesNewRoute: typeof AuthenticatedCoursesNewRoute
   AuthenticatedLessonsNewRoute: typeof AuthenticatedLessonsNewRoute
   AuthenticatedAssignmentsIndexRoute: typeof AuthenticatedAssignmentsIndexRoute
@@ -510,7 +567,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAssignmentsAssignmentIdEditRoute: typeof AuthenticatedAssignmentsAssignmentIdEditRoute
   AuthenticatedLessonsLessonIdEditRoute: typeof AuthenticatedLessonsLessonIdEditRoute
   AuthenticatedAssignmentsAssignmentIdIndexRoute: typeof AuthenticatedAssignmentsAssignmentIdIndexRoute
-  AuthenticatedCoursesCourseIdIndexRoute: typeof AuthenticatedCoursesCourseIdIndexRoute
   AuthenticatedLessonsLessonIdIndexRoute: typeof AuthenticatedLessonsLessonIdIndexRoute
   AuthenticatedStudentCoursesIndexRoute: typeof AuthenticatedStudentCoursesIndexRoute
   AuthenticatedStudentAssignmentsAssignmentIdIndexRoute: typeof AuthenticatedStudentAssignmentsAssignmentIdIndexRoute
@@ -523,6 +579,8 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedAssignmentsNewRoute: AuthenticatedAssignmentsNewRoute,
+  AuthenticatedCoursesCourseIdRoute:
+    AuthenticatedCoursesCourseIdRouteWithChildren,
   AuthenticatedCoursesNewRoute: AuthenticatedCoursesNewRoute,
   AuthenticatedLessonsNewRoute: AuthenticatedLessonsNewRoute,
   AuthenticatedAssignmentsIndexRoute: AuthenticatedAssignmentsIndexRoute,
@@ -532,8 +590,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedLessonsLessonIdEditRoute: AuthenticatedLessonsLessonIdEditRoute,
   AuthenticatedAssignmentsAssignmentIdIndexRoute:
     AuthenticatedAssignmentsAssignmentIdIndexRoute,
-  AuthenticatedCoursesCourseIdIndexRoute:
-    AuthenticatedCoursesCourseIdIndexRoute,
   AuthenticatedLessonsLessonIdIndexRoute:
     AuthenticatedLessonsLessonIdIndexRoute,
   AuthenticatedStudentCoursesIndexRoute: AuthenticatedStudentCoursesIndexRoute,

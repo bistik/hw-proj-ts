@@ -94,3 +94,9 @@ export const assignmentUpdateFormSchema = z.object({
   assignmentId: z.number().int().positive("Invalid assignment id"),
   title: z.string().trim().min(1, { message: "Title is required" }),
 });
+
+export const courseUpdateFormSchema = z.object({
+  courseId: z.number().int().positive("Invalid course id"),
+  title: z.string().trim().min(1, { message: "Title is required" }),
+  description: z.string(),
+});

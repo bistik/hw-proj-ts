@@ -1,25 +1,28 @@
 import { enrollmentFormSchema } from "@/schemas/course-schema";
-import { getCourseByIdAndAuthor } from "@/server/courses/get-course";
 import { createEnrollment } from "@/server/enrollments/create-enrollment";
 import { getUsers } from "@/server/users/get-user";
 import { useForm } from "@tanstack/react-form";
-import { createFileRoute, notFound, useRouter } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  getRouteApi,
+  Link,
+  useRouter,
+} from "@tanstack/react-router";
 import z from "zod";
 
 export const Route = createFileRoute("/_authenticated/courses/$courseId/")({
-  loader: async ({ params }) => {
-    const course = await getCourseByIdAndAuthor({
-      data: { courseId: Number(params.courseId) },
-    });
-    if (!course) throw notFound();
+  loader: async () => {
     const users = await getUsers();
-    return { course, users };
+    return { users };
   },
   component: RouteComponent,
 });
 
+const courseRouteApi = getRouteApi("/_authenticated/courses/$courseId");
+
 function RouteComponent() {
-  const { course, users } = Route.useLoaderData();
+  const { course } = courseRouteApi.useLoaderData();
+  const { users } = Route.useLoaderData();
   const router = useRouter();
 
   const handleSubmit = async ({
@@ -76,6 +79,13 @@ function RouteComponent() {
       <div className="tab-content border-base-300 bg-base-100 p-10">
         <h2>{course.title}</h2>
         <p>{course.description}</p>
+        <Link
+          className="btn btn-link btn-sm my-2 px-0"
+          to="/courses/$courseId/edit"
+          params={{ courseId: String(course.id) }}
+        >
+          Edit course
+        </Link>
       </div>
 
       <input
