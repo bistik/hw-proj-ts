@@ -21,6 +21,9 @@ export default function Navbar() {
         </Link>
       </div>
       <div className="flex flex-1 gap-2">
+        <Link to="/dashboard" className="link inline-flex">
+          Dashboard
+        </Link>
         <Link to="/courses" className="link inline-flex">
           Courses
         </Link>

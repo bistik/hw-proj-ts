@@ -143,7 +143,7 @@ function RouteComponent() {
           )}
         </div>
 
-        <div className="justify-self-center">Center</div>
+        <div className="justify-self-center">Q{question.position + 1}</div>
 
         <div className="justify-self-end">
           {nextQuestion && (
@@ -211,19 +211,28 @@ function RouteComponent() {
           </form.Field>
           <form.Subscribe selector={(state) => state.isSubmitting}>
             {(isSubmitting) => (
-              <button
-                type="submit"
-                className="btn btn-primary my-4"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <span className="loading loading-spinner"></span>Answering
-                  </>
-                ) : (
-                  "Submit answer"
-                )}
-              </button>
+              <>
+                <button
+                  type="submit"
+                  className="btn btn-primary my-4"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <span className="loading loading-spinner"></span>Answering
+                    </>
+                  ) : (
+                    "Submit answer"
+                  )}
+                </button>
+                <Link
+                  to="/student/assignments/$assignmentId"
+                  params={{ assignmentId: String(question.assignmentId) }}
+                  className="link ml-8 text-sm"
+                >
+                  Back to assignment
+                </Link>
+              </>
             )}
           </form.Subscribe>
         </form>

@@ -11,6 +11,18 @@ export const Route = createFileRoute("/_authenticated/courses/")({
 
 function RouteComponent() {
   const { courses } = Route.useLoaderData();
+  if (!courses || courses.length === 0) {
+    return (
+      <div className="flex justify-center items-center h-32">
+        <div>
+          No courses found.{" "}
+          <Link to="/courses/new" className="link ml-2">
+            Create a new course
+          </Link>
+        </div>
+      </div>
+    );
+  }
   return (
     <>
       {courses.map((course) => (

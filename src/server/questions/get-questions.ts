@@ -55,8 +55,7 @@ export const getStudentQuestions = createServerFn({ method: "GET" })
       throw new Error("Could not find assignment");
     try {
       await requireUserEnrolledInCourse(assignment.courseId, context.user.id);
-      const result = dbGetQuestionsForStudent(assignment.id);
-      return result;
+      return await dbGetQuestionsForStudent(assignment.id);
     } catch (err) {
       console.error(
         `Error fetching student assignment questions ${data.assignmentId}`,
