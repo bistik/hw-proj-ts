@@ -6,7 +6,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import globalCss from "@/styles/global.css?url";
-import { isUnauthorized } from "@/lib/errors";
+import { ErrorBoundaryCard } from "@/components/error-boundary-card";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -25,29 +25,7 @@ export const Route = createRootRoute({
     links: [{ rel: "stylesheet", href: globalCss }],
   }),
   component: RootComponent,
-  errorComponent: ({ error }) => {
-    if (isUnauthorized(error)) {
-      return (
-        <div className="p-4 alert alert-warning">
-          <h3>Please login</h3>
-          <a href="/login" className="btn">
-            Sign in again
-          </a>
-        </div>
-      );
-    }
-    const errorMessage =
-      error instanceof Error ? error.message : "An unknown error occurred.";
-    return (
-      <div className="p-4 alert alert-danger">
-        <h3>Oops! Something went wrong</h3>
-        <p>{errorMessage}</p>
-        <button onClick={() => window.location.reload()} className="btn">
-          Try Again
-        </button>
-      </div>
-    );
-  },
+  errorComponent: ErrorBoundaryCard,
 });
 
 function RootComponent() {

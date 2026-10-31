@@ -1,5 +1,8 @@
 import { dbCreateCourse, dbUpdateCourse } from "@/db/courses/mutate-course";
-import { authMiddleware } from "@/middlewares/auth-middleware";
+import {
+  authMiddleware,
+  verifiedMiddleware,
+} from "@/middlewares/auth-middleware";
 import {
   courseFormSchema,
   courseUpdateFormSchema,
@@ -10,7 +13,7 @@ export const createCourse = createServerFn({
   method: "POST",
 })
   .validator(courseFormSchema)
-  .middleware([authMiddleware])
+  .middleware([verifiedMiddleware])
   .handler(async ({ data, context }) => {
     try {
       const result = await dbCreateCourse({
