@@ -24,6 +24,8 @@ export const settingsTable = sqliteTable("settings", {
     .$onUpdate(() => new Date()),
 });
 
+export const courseItemTypes = ["lesson", "assignment"] as const;
+
 export const coursesTable = sqliteTable("courses", {
   id: int().primaryKey({ autoIncrement: true }),
   title: text().notNull(),
@@ -67,6 +69,53 @@ export const assignmentsTable = sqliteTable("assignments", {
     .notNull()
     .$onUpdate(() => new Date()),
 });
+
+// Course outline: keeps the author-defined sequence of a course's items
+// (lesson A → assignment X → lesson B, ...). One row per item, one ordered
+// list per course.
+//
+// Row lifecycle:
+//  - DELETE course  → rows cascade automatically (declared FK below)
+//  - CREATE item attached to a course → row inserted in the create-lesson /
+//    create-assignment transaction (position = max + 1, see course-items fns)
+//  - DELETE lesson/assignment → row must be deleted in the same app-level
+//    transaction (no FK on item_id: a column can only reference one table,
+//    and lessons/assignments ids come from separate value spaces)
+export const courseItemsTable = sqliteTable(
+  "course_items",
+  {
+    id: int().primaryKey({ autoIncrement: true }),
+    courseId: int("course_id")
+      .notNull()
+      .references(() => coursesTable.id, { onDelete: "cascade" }),
+    itemType: text("item_type", { enum: courseItemTypes }).notNull(),
+    itemId: int("item_id").notNull(),
+    position: int().notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    // one row per (course, slot) — enables the max+1 insert pattern
+    uniqueIndex("course_items_course_position_unique").on(
+      table.courseId,
+      table.position,
+    ),
+    // a lesson/assignment can appear in at most one course outline
+    uniqueIndex("course_items_type_item_unique").on(
+      table.itemType,
+      table.itemId,
+    ),
+    // future item types (e.g. optional "exercises") extend this enum + check
+    check(
+      "course_items_type_check",
+      sql`${table.itemType} in ('lesson', 'assignment')`,
+    ),
+  ],
+);
 
 export const questionsTable = sqliteTable("questions", {
   id: int().primaryKey({ autoIncrement: true }),
@@ -192,6 +241,14 @@ export const coursesRelations = relations(coursesTable, ({ many }) => ({
   lessons: many(lessonsTable),
   assignments: many(assignmentsTable),
   enrollments: many(enrollmentsTable),
+  items: many(courseItemsTable),
+}));
+
+export const courseItemsRelations = relations(courseItemsTable, ({ one }) => ({
+  course: one(coursesTable, {
+    fields: [courseItemsTable.courseId],
+    references: [coursesTable.id],
+  }),
 }));
 
 export const lessonsRelations = relations(lessonsTable, ({ one }) => ({

@@ -22,11 +22,16 @@ function RouteComponent() {
   return (
     <div>
       <h2>{course.title}</h2>
-      <ul>
+      <ul className="list">
         {course.lessons.map((lesson) => (
-          <li key={lesson.id}>
-            {lesson.title}
-            <a href="#">Placeholder link to go to lesson</a>
+          <li key={lesson.id} className="list-row">
+            <Link
+              to="/student/lessons/$lessonId"
+              params={{ lessonId: String(lesson.id) }}
+              className="link"
+            >
+              {lesson.title}
+            </Link>
           </li>
         ))}
       </ul>
