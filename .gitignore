@@ -13,4 +13,12 @@ __unconfig*
 todos.json
 count.txt
 .env.production
+
+# E2E tests (Playwright)
+test-results/
+playwright-report/
+blob-report/
+tests/e2e/e2e-test.db*
+.auth/
+
 docs/
