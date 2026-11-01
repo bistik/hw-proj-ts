@@ -1,7 +1,15 @@
+import type { getCurrentUser } from "@/lib/auth";
 import { authClient } from "@/lib/auth-client";
 import { Link, useNavigate } from "@tanstack/react-router";
 
-export default function Navbar() {
+const defaultUserImgUrl =
+  "https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp";
+
+export default function Navbar({
+  user,
+}: {
+  user: Awaited<ReturnType<typeof getCurrentUser>>;
+}) {
   const navigate = useNavigate();
   const handleLogout = async () => {
     await authClient.signOut({
@@ -44,10 +52,7 @@ export default function Navbar() {
             className="btn btn-ghost btn-circle avatar"
           >
             <div className="w-10 rounded-full">
-              <img
-                alt="Navbar"
-                src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp"
-              />
+              <img alt="Navbar" src={user.image ?? defaultUserImgUrl} />
             </div>
           </div>
           <ul

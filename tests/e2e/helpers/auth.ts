@@ -18,9 +18,15 @@ export async function loginViaUi(
     // form submit (visible as a redirect to /login?). networkidle covers
     // both cold and warm loads.
     await page.waitForLoadState("networkidle");
+    await expect(
+      page.getByRole("button", { name: "Login with Google", exact: true }),
+    ).toBeVisible();
     await page.getByPlaceholder("Email").fill(user.email);
     await page.getByPlaceholder("Password").fill(user.password);
-    await page.getByRole("button", { name: "Login" }).click();
+    await page
+      .locator("form")
+      .getByRole("button", { name: "Login", exact: true })
+      .click();
     // The login form redirects to /dashboard via better-auth's callbackURL.
     try {
       await page.waitForURL(/\/dashboard/, { timeout: 10_000 });
@@ -42,4 +48,7 @@ export async function expectRedirectedToLogin(page: Page, from: string) {
   await page.goto(from);
   await expect(page).toHaveURL(/\/login/);
   await expect(page.getByRole("heading", { name: "Login" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Login with Google", exact: true }),
+  ).toBeVisible();
 }

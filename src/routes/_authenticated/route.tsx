@@ -22,7 +22,7 @@ function RouteComponent() {
   const { user } = Route.useRouteContext();
   return (
     <div>
-      {user && <Navbar />}
+      {user && <Navbar user={user} />}
       <div className="w-4/5 mx-auto my-8 border-2 border-amber-100">
         <Outlet />
       </div>
