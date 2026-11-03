@@ -7,7 +7,12 @@
     "dev": "vite dev",
     "build": "vite build",
     "test:e2e": "playwright test",
-    "db:push:e2e": "drizzle-kit push --config=drizzle.e2e.config.ts --force"
+    "db:push:e2e": "drizzle-kit push --config=drizzle.e2e.config.ts --force",
+    "db:migrate": "drizzle-kit migrate",
+    "deploy": "npm run build && wrangler deploy",
+    "deploy:local": "sh -c 'set -a; test -f .env.deploy.local && . ./.env.deploy.local; set +a; test -n \"$TURSO_DATABASE_URL\" || { echo \"ERROR: .env.deploy.local must define TURSO_DATABASE_URL (production)\" >&2; exit 1; }; npm run build && drizzle-kit migrate && wrangler deploy'",
+    "preview": "npm run build && wrangler dev",
+    "cf-typegen": "wrangler types"
   },
   "keywords": [],
   "author": "",
@@ -29,6 +34,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.67.0",
     "@playwright/test": "^1.64.1",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
@@ -37,6 +43,7 @@
     "daisyui": "^5.7.50",
     "drizzle-kit": "^0.31.11",
     "typescript": "^7.0.2",
-    "vite": "^8.3.4"
+    "vite": "^8.3.4",
+    "wrangler": "^4.156.2"
   }
 }

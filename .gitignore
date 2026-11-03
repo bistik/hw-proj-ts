@@ -3,8 +3,11 @@ node_modules
 dist
 dist-ssr
 *.local
+# Environment & secrets files (examples are tracked on purpose)
 .env
-.nitro
+.env.*
+!.env.example
+!.dev.vars.example
 .tanstack
 .wrangler
 .output
@@ -12,7 +15,6 @@ dist-ssr
 __unconfig*
 todos.json
 count.txt
-.env.production
 
 # E2E tests (Playwright)
 test-results/
