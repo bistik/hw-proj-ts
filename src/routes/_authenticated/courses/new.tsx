@@ -1,3 +1,5 @@
+import FormErrorAlert from "@/components/form-error-alert";
+import { TextField } from "@/components/text-field";
 import { courseFormSchema, defaultCourse } from "@/schemas/course-schema";
 import { createCourse } from "@/server/courses/mutate-course";
 import { useForm } from "@tanstack/react-form";
@@ -46,66 +48,16 @@ function NewCourseComponent() {
     >
       <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
         {(error) =>
-          typeof error === "string" ? (
-            <div role="alert" className="alert alert-error">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                className="h-6 w-6 shrink-0 stroke-current"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                ></path>
-              </svg>
-              <span>{error}</span>
-            </div>
-          ) : null
+          typeof error === "string" ? <FormErrorAlert errorMsg={error} /> : null
         }
       </form.Subscribe>
       <form.Field name="title">
-        {(field) => {
-          const { errors, isTouched } = field.state.meta;
-          return (
-            <fieldset className="fieldset">
-              <legend className="fieldset-legend">Title</legend>
-              <input
-                value={field.state.value}
-                onBlur={(e) => field.handleBlur()}
-                onChange={(e) => field.handleChange(e.target.value)}
-                type="text"
-                className="input"
-                placeholder="Title"
-              />
-              {errors.length > 0 && isTouched && (
-                <p className="label text-error">{errors[0]?.message}</p>
-              )}
-            </fieldset>
-          );
-        }}
+        {(field) => <TextField field={field} label="Title" />}
       </form.Field>
       <form.Field name="description">
-        {(field) => {
-          const { errors, isTouched } = field.state.meta;
-          return (
-            <fieldset className="fieldset">
-              <legend className="fieldset-legend">Description</legend>
-              <textarea
-                onBlur={(e) => field.handleBlur()}
-                onChange={(e) => field.handleChange(e.target.value)}
-                className="textarea"
-                value={field.state.value}
-              />
-
-              {errors.length > 0 && isTouched && (
-                <p className="label text-error">{errors[0]?.message}</p>
-              )}
-            </fieldset>
-          );
-        }}
+        {(field) => (
+          <TextField field={field} label="Description" multiline rows={5} />
+        )}
       </form.Field>
       <form.Subscribe selector={(state) => state.isSubmitting}>
         {(isSubmitting) => (
