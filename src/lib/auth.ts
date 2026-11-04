@@ -17,10 +17,10 @@ export const auth = betterAuth({
     enabled: true,
   },
   socialProviders: {
-    github: {
-      clientId: env("GITHUB_CLIENT_ID"),
-      clientSecret: env("GITHUB_CLIENT_SECRET"),
-    },
+    // github: { // disabled for now - no sign-in button in the UI; re-add with
+    //   clientId: env("GITHUB_CLIENT_ID"),          // GITHUB_CLIENT_ID/SECRET secrets
+    //   clientSecret: env("GITHUB_CLIENT_SECRET"),
+    // },
     google: {
       clientId: env("GOOGLE_CLIENT_ID"),
       clientSecret: env("GOOGLE_CLIENT_SECRET"),
