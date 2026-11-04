@@ -1,4 +1,5 @@
 import { authClient } from "@/lib/auth-client";
+import { SubmitButton } from "@/components/submit-button";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
@@ -140,22 +141,10 @@ function LoginComponent() {
         </form.Field>
         <div className="flex justify-between items-center w-full">
           <form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <button
-                type="submit"
-                className="btn btn-primary my-4"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <span className="loading loading-spinner"></span>Logging in
-                  </>
-                ) : (
-                  "Login"
-                )}
-              </button>
-            )}
-          </form.Subscribe>
+        {(isSubmitting) => (
+          <SubmitButton label="Login" submittingLabel="Logging in" isSubmitting={isSubmitting} />
+        )}
+      </form.Subscribe>
           <Link
             to="/sign-up"
             className="link link-hover text-xs font-semibold underline"

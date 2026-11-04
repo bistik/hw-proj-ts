@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/submit-button";
 import { enrollmentFormSchema } from "@/schemas/course-schema";
 import { createEnrollment } from "@/server/enrollments/create-enrollment";
 import { getUsers } from "@/server/users/get-user";
@@ -158,23 +159,10 @@ function RouteComponent() {
                 }}
               </form.Field>
               <form.Subscribe selector={(state) => state.isSubmitting}>
-                {(isSubmitting) => (
-                  <button
-                    type="submit"
-                    className="btn btn-primary my-4"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <span className="loading loading-spinner"></span>
-                        Enrolling
-                      </>
-                    ) : (
-                      "Enroll user"
-                    )}
-                  </button>
-                )}
-              </form.Subscribe>
+        {(isSubmitting) => (
+          <SubmitButton label="Enroll user" submittingLabel="Enrolling" isSubmitting={isSubmitting} />
+        )}
+      </form.Subscribe>
             </form>
           </>
         ) : (

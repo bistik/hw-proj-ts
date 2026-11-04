@@ -1,4 +1,5 @@
 import FormErrorAlert from "@/components/form-error-alert";
+import { SubmitButton } from "@/components/submit-button";
 import { TextField } from "@/components/text-field";
 import { courseUpdateFormSchema } from "@/schemas/course-schema";
 import { updateCourse } from "@/server/courses/mutate-course";
@@ -82,22 +83,10 @@ function RouteComponent() {
           )}
         </form.Field>
         <form.Subscribe selector={(state) => state.isSubmitting}>
-          {(isSubmitting) => (
-            <button
-              type="submit"
-              className="btn btn-primary my-4"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="loading loading-spinner"></span>Updating
-                </>
-              ) : (
-                "Update course"
-              )}
-            </button>
-          )}
-        </form.Subscribe>
+        {(isSubmitting) => (
+          <SubmitButton label="Update course" submittingLabel="Updating" isSubmitting={isSubmitting} />
+        )}
+      </form.Subscribe>
       </form>
     </div>
   );

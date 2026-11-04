@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/submit-button";
 import { TextField } from "@/components/text-field";
 import { assignmentUpdateFormSchema } from "@/schemas/course-schema";
 import { getAssignmentById } from "@/server/assignments/get-assignment";
@@ -83,22 +84,10 @@ function RouteComponent() {
           {(field) => <TextField label="Title" field={field} />}
         </form.Field>
         <form.Subscribe selector={(state) => state.isSubmitting}>
-          {(isSubmitting) => (
-            <button
-              type="submit"
-              className="btn btn-primary my-4"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="loading loading-spinner"></span>Updating
-                </>
-              ) : (
-                "Update assignment"
-              )}
-            </button>
-          )}
-        </form.Subscribe>
+        {(isSubmitting) => (
+          <SubmitButton label="Update assignment" submittingLabel="Updating" isSubmitting={isSubmitting} />
+        )}
+      </form.Subscribe>
       </form>
     </div>
   );
