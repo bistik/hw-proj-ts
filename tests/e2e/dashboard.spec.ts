@@ -27,6 +27,11 @@ test.describe("dashboard", () => {
     await loginViaUi(page);
     await expect(page).toHaveURL(/\/dashboard/);
 
+    // Dropdown logout is client-side (authClient.signOut + navigate): wait
+    // for hydration or the click is swallowed and the URL never changes
+    // (seen flaky under CI's slower machine). Mirrors loginViaUi's wait.
+    await page.waitForLoadState("networkidle");
+
     // Logout lives behind the avatar dropdown menu (src/components/navbar.tsx).
     await page.getByRole("button", { name: "Navbar" }).click();
     await page.getByRole("link", { name: "Logout" }).click();
