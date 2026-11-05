@@ -8,6 +8,20 @@
       "when": 1793693363213,
       "tag": "0000_purple_giant_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1793855068876,
+      "tag": "0001_yellow_amphibian",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793858180667,
+      "tag": "0002_wonderful_speedball",
+      "breakpoints": true
     }
   ]
 }

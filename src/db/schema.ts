@@ -5,10 +5,9 @@ import {
   integer,
   index,
   uniqueIndex,
-  check,
 } from "drizzle-orm/sqlite-core";
 import { users } from "./auth-schema";
-import { relations, sql } from "drizzle-orm";
+import { relations } from "drizzle-orm";
 
 export const settingsTable = sqliteTable("settings", {
   id: int().primaryKey({ autoIncrement: true }),
@@ -59,6 +58,7 @@ export const lessonsTable = sqliteTable("lessons", {
 export const assignmentsTable = sqliteTable("assignments", {
   id: int().primaryKey({ autoIncrement: true }),
   title: text().notNull(),
+  example: text(),
   courseId: int("course_id").references(() => coursesTable.id, {
     onDelete: "cascade",
   }),
@@ -109,29 +109,27 @@ export const courseItemsTable = sqliteTable(
       table.itemType,
       table.itemId,
     ),
-    // future item types (e.g. optional "exercises") extend this enum + check
-    check(
-      "course_items_type_check",
-      sql`${table.itemType} in ('lesson', 'assignment')`,
-    ),
   ],
 );
 
-export const questionsTable = sqliteTable("questions", {
-  id: int().primaryKey({ autoIncrement: true }),
-  questionText: text("question_text").notNull(),
-  assignmentId: int("assignment_id").references(() => assignmentsTable.id, {
-    onDelete: "cascade",
-  }),
-  answer: text().notNull(),
-  position: int().notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-    .notNull()
-    .$onUpdate(() => new Date()),
-}, (table) => [
+export const questionsTable = sqliteTable(
+  "questions",
+  {
+    id: int().primaryKey({ autoIncrement: true }),
+    questionText: text("question_text").notNull(),
+    assignmentId: int("assignment_id").references(() => assignmentsTable.id, {
+      onDelete: "cascade",
+    }),
+    answer: text().notNull(),
+    position: int().notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
     uniqueIndex("questions_assignment_position_unique").on(
       table.assignmentId,
       table.position,
@@ -230,10 +228,6 @@ export const enrollmentsTable = sqliteTable(
     ),
     // "who is enrolled in this course?" — the composite index above can't serve this
     index("enrollments_courseId_idx").on(table.courseId),
-    check(
-      "enrollments_status_check",
-      sql`${table.status} in ('active', 'completed', 'dropped')`,
-    ),
   ],
 );
 
