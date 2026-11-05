@@ -159,10 +159,14 @@ function RouteComponent() {
                 }}
               </form.Field>
               <form.Subscribe selector={(state) => state.isSubmitting}>
-        {(isSubmitting) => (
-          <SubmitButton label="Enroll user" submittingLabel="Enrolling" isSubmitting={isSubmitting} />
-        )}
-      </form.Subscribe>
+                {(isSubmitting) => (
+                  <SubmitButton
+                    label="Enroll user"
+                    submittingLabel="Enrolling"
+                    isSubmitting={isSubmitting}
+                  />
+                )}
+              </form.Subscribe>
             </form>
           </>
         ) : (
