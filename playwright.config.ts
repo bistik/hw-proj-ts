@@ -15,14 +15,15 @@ export default defineConfig({
   webServer: {
     // Port chosen away from the app's default 3000 so a running dev server
     // (pointed at the real Turso DB) can never be reused by the tests.
-    command: "npx vite dev --port 3100",
+    command: "E2E=1 npx vite dev --port 3100",
     url: "http://localhost:3100",
     reuseExistingServer: !process.env.CI,
     env: {
       // Point the app at an isolated local libsql file instead of the .env
-      // Turso database. Other .env vars (BETTER_AUTH_SECRET etc.) are
-      // inherited: db/index.ts loads dotenv, which does not override
-      // already-set variables.
+      // Turso database. These vars reach the app's Node SSR process directly
+      // (E2E=1 in `command` drops the cloudflare vite plugin — see
+      // vite.config.ts — which is what makes this work: its workerd runtime
+      // neither inherits process env nor supports "file:" libsql URLs).
       TURSO_DATABASE_URL: "file:./tests/e2e/e2e-test.db",
       TURSO_AUTH_TOKEN: "local-e2e-file-db",
       BETTER_AUTH_URL: "http://localhost:3100",

@@ -1,3 +1,4 @@
+import FormErrorAlert from "@/components/form-error-alert";
 import { SubmitButton } from "@/components/submit-button";
 import { TextField } from "@/components/text-field";
 import { assignmentUpdateFormSchema } from "@/schemas/course-schema";
@@ -42,6 +43,7 @@ function RouteComponent() {
     defaultValues: {
       assignmentId: assignment.id,
       title: assignment.title,
+      example: assignment.example ?? "",
     },
     validators: {
       onSubmit: assignmentUpdateFormSchema,
@@ -61,33 +63,27 @@ function RouteComponent() {
         <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
           {(error) =>
             typeof error === "string" ? (
-              <div role="alert" className="alert alert-error">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  className="h-6 w-6 shrink-0 stroke-current"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  ></path>
-                </svg>
-                <span>{error}</span>
-              </div>
+              <FormErrorAlert errorMsg={error} />
             ) : null
           }
         </form.Subscribe>
         <form.Field name="title">
           {(field) => <TextField label="Title" field={field} />}
         </form.Field>
+        <form.Field name="example">
+          {(field) => (
+            <TextField label="Example" field={field} multiline rows={8} />
+          )}
+        </form.Field>
         <form.Subscribe selector={(state) => state.isSubmitting}>
-        {(isSubmitting) => (
-          <SubmitButton label="Update assignment" submittingLabel="Updating" isSubmitting={isSubmitting} />
-        )}
-      </form.Subscribe>
+          {(isSubmitting) => (
+            <SubmitButton
+              label="Update assignment"
+              submittingLabel="Updating"
+              isSubmitting={isSubmitting}
+            />
+          )}
+        </form.Subscribe>
       </form>
     </div>
   );

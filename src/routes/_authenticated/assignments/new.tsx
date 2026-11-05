@@ -1,3 +1,4 @@
+import { TextField } from "@/components/text-field";
 import {
   assignmentFormSchema,
   defaultValuesAssignment,
@@ -53,25 +54,12 @@ function RouteComponent() {
         }}
       >
         <form.Field name="title">
-          {(field) => {
-            const { errors, isTouched } = field.state.meta;
-            return (
-              <fieldset className="fieldset">
-                <legend className="fieldset-legend">Title</legend>
-                <input
-                  value={field.state.value}
-                  onBlur={(e) => field.handleBlur()}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  type="text"
-                  className="input"
-                  placeholder="Title"
-                />
-                {errors.length > 0 && isTouched && (
-                  <p className="label text-error">{errors[0]?.message}</p>
-                )}
-              </fieldset>
-            );
-          }}
+          {(field) => <TextField label="Title" field={field} />}
+        </form.Field>
+        <form.Field name="example">
+          {(field) => (
+            <TextField label="Example" field={field} multiline rows={8} />
+          )}
         </form.Field>
         <form.Field
           name="courseId"
