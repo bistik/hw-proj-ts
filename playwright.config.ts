@@ -3,8 +3,15 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   globalSetup: "./tests/e2e/global-setup.ts",
+  // In CI the HTML report is published for download (see .github/workflows/
+  // e2e.yml) and "github" annotations surface failures inline on the PR.
+  reporter: process.env.CI
+    ? [["github"], ["html", { open: "never" }]]
+    : [["list"]],
+  retries: process.env.CI ? 2 : 0,
   use: {
     baseURL: "http://localhost:3100",
+    trace: "on-first-retry",
   },
   projects: [
     {

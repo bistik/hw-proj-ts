@@ -1,5 +1,45 @@
 import { expect, type Page } from "@playwright/test";
+import { ensureEmailVerified } from "./db";
 import { TEST_USER } from "../test-user";
+
+// The E2E webServer runs on a dedicated port (see playwright.config.ts, which
+// lists the same constant).
+const BASE_URL = "http://localhost:3100";
+
+/**
+ * Signs a user up through the better-auth email API, which handles password
+ * hashing; no SQL-side seeding is needed.
+ *
+ * Reruns must be idempotent: "User already exists" is fine, anything else is
+ * a failure worth reporting.
+ */
+export async function ensureSignedUp(user: {
+  name: string;
+  email: string;
+  password: string;
+}) {
+  const res = await fetch(`${BASE_URL}/api/auth/sign-up/email`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      // better-auth rejects null-origin requests (MISSING_OR_NULL_ORIGIN);
+      // present the app's own base URL, its only trusted origin.
+      Origin: BASE_URL,
+    },
+    body: JSON.stringify(user),
+  });
+
+  const body = await res.json();
+  if (!res.ok && !/exist/i.test(JSON.stringify(body))) {
+    throw new Error(
+      `[e2e] failed to seed test user ${user.email}: ${res.status} ${JSON.stringify(body)}`,
+    );
+  }
+
+  // The courses layout requires verified emails and better-auth has no
+  // verification email flow, so flip the flag in the e2e DB directly.
+  await ensureEmailVerified(user.email);
+}
 
 /**
  * Logs in through the real /login form (better-auth email/password).
@@ -51,4 +91,15 @@ export async function expectRedirectedToLogin(page: Page, from: string) {
   await expect(
     page.getByRole("button", { name: "Login with Google", exact: true }),
   ).toBeVisible();
+}
+
+/**
+ * Logs out through the avatar dropdown menu (src/components/navbar.tsx),
+ * whose trigger's accessible name comes from the avatar img's alt text,
+ * and asserts the logout redirect to /login.
+ */
+export async function logoutViaUi(page: Page) {
+  await page.getByRole("button", { name: "Navbar" }).click();
+  await page.getByRole("link", { name: "Logout" }).click();
+  await expect(page).toHaveURL(/\/login/);
 }
