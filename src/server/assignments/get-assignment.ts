@@ -1,6 +1,7 @@
-import { dbGetAssignment } from "@/db/assignments/get-assignment";
+import { dbGetAssignmentsByCourse, dbGetAssignment } from "@/db/assignments/get-assignment";
 import { requireUserOwnsCourse } from "@/db/authz";
 import { authMiddleware } from "@/middlewares/auth-middleware";
+import { courseByIdSchema } from "@/schemas/course-schema";
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 
@@ -24,5 +25,20 @@ export const getAssignmentById = createServerFn({
     } catch (err) {
       console.error(`Error fetching assignment ${data.assignmentId}`, err);
       throw new Error("Error in fetching assignment", { cause: err });
+    }
+  });
+
+export const getAssignmentsByCourse = createServerFn({
+  method: "GET",
+})
+  .validator(courseByIdSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    try {
+      await requireUserOwnsCourse(data.courseId, context.user.id);
+      return await dbGetAssignmentsByCourse(data.courseId);
+    } catch (err) {
+      console.error(`Error fetching assignments of course ${data.courseId}`, err);
+      throw new Error("Error in fetching assignments", { cause: err });
     }
   });
