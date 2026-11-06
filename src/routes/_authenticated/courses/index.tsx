@@ -1,9 +1,9 @@
-import { getCompleteCourseByUser } from "@/server/courses/get-course";
+import { getCoursesWithItemCountsByUser } from "@/server/courses/get-course";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/courses/")({
   loader: async () => {
-    const courses = await getCompleteCourseByUser();
+    const courses = await getCoursesWithItemCountsByUser();
     return { courses };
   },
   component: RouteComponent,
@@ -24,10 +24,12 @@ function RouteComponent() {
     );
   }
   return (
-    <>
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-4">
       {courses.map((course) => (
-        <div className="card card-side" key={course.id}>
-          <figure></figure>
+        <div
+          className="card border rounded-md border-solid border-accent/40 hover:border-accent block transition-all duration-300 ease-out shadow-sm hover:shadow-md hover:shadow-accent/20"
+          key={course.id}
+        >
           <div className="card-body">
             <h2 className="card-title">
               <Link
@@ -39,47 +41,27 @@ function RouteComponent() {
               </Link>
             </h2>
             <p>{course.description}</p>
-            {course.lessons.length > 0 && <p className="font-bold">Lessons</p>}
-            <ul className="list">
-              {course.lessons.map((lesson) => (
-                <li className="list-row" key={lesson.id}>
-                  <Link
-                    to="/lessons/$lessonId"
-                    params={{ lessonId: String(lesson.id) }}
-                    className="link"
-                  >
-                    {lesson.title}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            {course.assignments.length > 0 && (
-              <p className="font-bold">Assignments</p>
-            )}
-            <ul className="list">
-              {course.assignments.map((assignment) => (
-                <li className="list-row" key={assignment.id}>
-                  <Link
-                    to="/assignments/$assignmentId"
-                    params={{ assignmentId: String(assignment.id) }}
-                    className="link"
-                  >
-                    {assignment.title}
-                  </Link>
-                </li>
-              ))}
-            </ul>
             <div className="card-actions justify-end">
-              <Link to="/assignments/new" className="btn btn-info">
-                Add assignment
+              <Link
+                to="/courses/$courseId"
+                params={{ courseId: String(course.id) }}
+                search={{ tab: "assignments" }}
+                className="link"
+              >
+                {course.assignmentCount} assignments
               </Link>
-              <Link to="/lessons/new" className="btn btn-info">
-                Add lesson
+              <Link
+                to="/courses/$courseId"
+                params={{ courseId: String(course.id) }}
+                search={{ tab: "lessons" }}
+                className="link"
+              >
+                {course.lessonCount} lessons
               </Link>
             </div>
           </div>
         </div>
       ))}
-    </>
+    </div>
   );
 }
