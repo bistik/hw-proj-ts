@@ -1,5 +1,5 @@
 import { db } from "@/db/";
-import { coursesTable } from "../schema";
+import { assignmentsTable, coursesTable, lessonsTable } from "../schema";
 import { desc, eq } from "drizzle-orm";
 
 export async function dbGetCoursesByUser(authorId: string) {
@@ -36,16 +36,32 @@ export async function dbGetCourseByIdAndAuthor(
   }
 }
 
-export async function dbGetCompleteCourseByUser(authorId: string) {
-  return db.query.coursesTable.findMany({
-    where: (coursesTable, { eq }) => eq(coursesTable.authorId, authorId),
-    with: {
-      lessons: { columns: { id: true, title: true } },
-      assignments: { columns: { id: true, title: true } },
-    },
-    orderBy: (coursesTable, { desc }) => desc(coursesTable.id),
-    limit: 50,
-  });
+/**
+ * The author's courses with lesson/assignment counts. Each count is a
+ * correlated subquery (not joins — joining both tables would multiply rows
+ * and skew counts) computed directly from the lessons/assignments tables,
+ * so items missing from the course_items outline are still counted.
+ * Zero-count courses keep both "0 assignments"/"0 lessons" links.
+ */
+export async function dbGetCoursesWithItemCountsByUser(authorId: string) {
+  return db
+    .select({
+      id: coursesTable.id,
+      title: coursesTable.title,
+      description: coursesTable.description,
+      lessonCount: db.$count(
+        lessonsTable,
+        eq(lessonsTable.courseId, coursesTable.id),
+      ),
+      assignmentCount: db.$count(
+        assignmentsTable,
+        eq(assignmentsTable.courseId, coursesTable.id),
+      ),
+    })
+    .from(coursesTable)
+    .where(eq(coursesTable.authorId, authorId))
+    .orderBy(desc(coursesTable.id))
+    .limit(50);
 }
 
 export async function dbGetEnrolledCourses(studentId: string) {

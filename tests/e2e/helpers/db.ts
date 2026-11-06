@@ -21,3 +21,50 @@ export async function ensureEmailVerified(email: string) {
     args: [email],
   });
 }
+
+/**
+ * Inserts lessons directly into the e2e database, bypassing the /lessons/new
+ * form (walks around form hydration and the "select a course" dropdown).
+ *
+ * Only columns notNull in src/db/schema.ts are filled; created_at/updated_at
+ * must be given explicitly because drizzle-kit push emits them WITHOUT
+ * DB-level defaults ($defaultFn/$onUpdate are app-level only). Timestamps
+ * are ms (drizzle mode: timestamp / timestamp_ms) re-derived per row.
+ *
+ * The list page's counts come from dbGetCoursesWithItemCountsByUser's
+ * correlated subqueries (src/db/courses/get-course.ts), which read the
+ * lessons/assignments tables directly and need no course_items outline rows.
+ */
+export async function seedLessons(
+  courseId: number,
+  titles: string[],
+): Promise<void> {
+  let i = 0;
+  for (const title of titles) {
+    i += 1;
+    await client.execute({
+      sql: "INSERT INTO lessons (title, content, course_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+      args: [title, `Content for e2e lesson ${title}`, courseId, nowPlus(i), nowPlus(i)],
+    });
+  }
+}
+
+/** Same as seedLessons but for assignments (example column). */
+export async function seedAssignments(
+  courseId: number,
+  titles: string[],
+): Promise<void> {
+  let i = 0;
+  for (const title of titles) {
+    i += 1;
+    await client.execute({
+      sql: "INSERT INTO assignments (title, example, course_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+      args: [title, `Example for e2e assignment ${title}`, courseId, nowPlus(i), nowPlus(i)],
+    });
+  }
+}
+
+/** Now in ms, nudged by i so rows never collide on created_at. */
+function nowPlus(i: number): number {
+  return Date.now() + i;
+}

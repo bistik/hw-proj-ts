@@ -1,7 +1,7 @@
 import {
-  dbGetCompleteCourseByUser,
   dbGetCourseByIdAndAuthor,
   dbGetCoursesByUser,
+  dbGetCoursesWithItemCountsByUser,
   dbGetEnrolledCourses,
   dbGetEnrollmentByCourseAndStudent,
 } from "@/db/courses/get-course";
@@ -26,13 +26,13 @@ export const getCourseByIdAndAuthor = createServerFn({
     return dbGetCourseByIdAndAuthor(data.courseId, context.user.id);
   });
 
-export const getCompleteCourseByUser = createServerFn({
+export const getCoursesWithItemCountsByUser = createServerFn({
   method: "GET",
 })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
     try {
-      const result = await dbGetCompleteCourseByUser(context.user.id);
+      const result = await dbGetCoursesWithItemCountsByUser(context.user.id);
       return result;
     } catch (err) {
       console.error(`Error in fetching course of user ${context.user.id}`, err);
