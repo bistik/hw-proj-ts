@@ -14,3 +14,10 @@ export async function dbGetLesson(lessonId: number, userId: string) {
 
   return result[0]?.lesson;
 }
+
+export async function dbGetLessonsByCourse(courseId: number) {
+  return db.query.lessonsTable.findMany({
+    where: (lessonsTable, { eq }) => eq(lessonsTable.courseId, courseId),
+    orderBy: (lessonsTable, { asc }) => [asc(lessonsTable.id)],
+  });
+}

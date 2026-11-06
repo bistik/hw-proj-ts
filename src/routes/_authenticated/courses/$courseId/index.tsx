@@ -1,6 +1,13 @@
+import FormErrorAlert from "@/components/form-error-alert";
 import { SubmitButton } from "@/components/submit-button";
+import CourseDetailTabsPending, {
+  type CourseDetailTab,
+} from "@/components/course-detail-tabs-pending";
+import TabPanelSkeleton from "@/components/tab-panel-skeleton";
 import { enrollmentFormSchema } from "@/schemas/course-schema";
+import { getAssignmentsByCourse } from "@/server/assignments/get-assignment";
 import { createEnrollment } from "@/server/enrollments/create-enrollment";
+import { getLessonsByCourse } from "@/server/lessons/get-lesson";
 import { getUsers } from "@/server/users/get-user";
 import { useForm } from "@tanstack/react-form";
 import {
@@ -11,20 +18,72 @@ import {
 } from "@tanstack/react-router";
 import z from "zod";
 
+const tabSchema = z.enum(["details", "enrollments", "assignments", "lessons"]);
+const courseDetailSearchSchema = z.object({ tab: tabSchema.optional() });
+
 export const Route = createFileRoute("/_authenticated/courses/$courseId/")({
-  loader: async () => {
-    const users = await getUsers();
-    return { users };
+  validateSearch: (search: Record<string, unknown>) =>
+    courseDetailSearchSchema.catch({}).parse(search),
+  loaderDeps: ({ search: { tab } }) => ({ tab }),
+  loader: {
+    // 'blocking' so revisiting an already-cached tab waits for the loader
+    // (and shows the pending skeleton) instead of revalidating in background
+    staleReloadMode: "blocking",
+    handler: async ({ deps, params }) => {
+      switch (deps.tab ?? "details") {
+        case "enrollments":
+          return { users: await getUsers() };
+        case "assignments":
+          return {
+            assignments: await getAssignmentsByCourse({
+              data: { courseId: Number(params.courseId) },
+            }),
+          };
+        case "lessons":
+          return {
+            lessons: await getLessonsByCourse({
+              data: { courseId: Number(params.courseId) },
+            }),
+          };
+        default:
+          // Course details — course data comes from the parent $courseId loader
+          return {};
+      }
+    },
   },
-  component: RouteComponent,
+  component: CourseDetailComponent,
+  // Wrapped so the pending view can read the tab search param (it lives in a
+  // separate component file, decoupled from this route)
+  pendingComponent: () => {
+    const { tab } = Route.useSearch();
+    return <CourseDetailTabsPending activeTab={tab ?? "details"} />;
+  },
+  pendingMs: 0,
+  // Generate a flash-free feel: fast loads (<300ms) swap straight to content,
+  // slower loads show the skeleton held for at least 300ms
+  pendingMinMs: 300,
 });
 
 const courseRouteApi = getRouteApi("/_authenticated/courses/$courseId");
 
-function RouteComponent() {
+function CourseDetailComponent() {
   const { course } = courseRouteApi.useLoaderData();
-  const { users } = Route.useLoaderData();
+  const loaderData = Route.useLoaderData();
+  const users = "users" in loaderData ? loaderData.users : undefined;
+  const assignments =
+    "assignments" in loaderData ? loaderData.assignments : undefined;
+  const lessons = "lessons" in loaderData ? loaderData.lessons : undefined;
+  const { tab } = Route.useSearch();
   const router = useRouter();
+  const navigate = courseRouteApi.useNavigate();
+
+  const activeTab = tab ?? "details";
+
+  const handleTabChange = (newTab: CourseDetailTab) => {
+    void navigate({
+      search: newTab === "details" ? {} : { tab: newTab },
+    });
+  };
 
   const handleSubmit = async ({
     value,
@@ -75,9 +134,10 @@ function RouteComponent() {
         name="course_tabs"
         className="tab"
         aria-label="Course Details"
-        defaultChecked
+        checked={activeTab === "details"}
+        onChange={() => handleTabChange("details")}
       />
-      <div className="tab-content border-base-300 bg-base-100 p-10">
+      <div className="tab-content border-base-300 bg-base-100 p-10 min-h-96">
         <h2>{course.title}</h2>
         <p>{course.description}</p>
         <Link
@@ -94,9 +154,13 @@ function RouteComponent() {
         name="course_tabs"
         className="tab"
         aria-label="Enrollment"
+        checked={activeTab === "enrollments"}
+        onChange={() => handleTabChange("enrollments")}
       />
-      <div className="tab-content border-base-300 bg-base-100 p-10">
-        {users && users.length > 0 ? (
+      <div className="tab-content border-base-300 bg-base-100 p-10 min-h-96">
+        {!users ? (
+          <TabPanelSkeleton />
+        ) : users.length > 0 ? (
           <>
             <h3>Enroll a student</h3>
             <form
@@ -109,22 +173,7 @@ function RouteComponent() {
               <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
                 {(error) =>
                   typeof error === "string" ? (
-                    <div role="alert" className="alert alert-error">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        className="h-6 w-6 shrink-0 stroke-current"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        ></path>
-                      </svg>
-                      <span>{error}</span>
-                    </div>
+                    <FormErrorAlert errorMsg={error} />
                   ) : null
                 }
               </form.Subscribe>
@@ -171,6 +220,68 @@ function RouteComponent() {
           </>
         ) : (
           <h3>No students to enroll</h3>
+        )}
+      </div>
+
+      <input
+        type="radio"
+        name="course_tabs"
+        className="tab"
+        aria-label="Assignments"
+        checked={activeTab === "assignments"}
+        onChange={() => handleTabChange("assignments")}
+      />
+      <div className="tab-content border-base-300 bg-base-100 p-10 min-h-96">
+        {!assignments ? (
+          <TabPanelSkeleton />
+        ) : assignments.length > 0 ? (
+          <ul className="flex flex-col space-y-2">
+            {assignments.map((assignment) => (
+              <li key={assignment.id} className="flex items-center gap-3">
+                <span>{assignment.title}</span>
+                <Link
+                  className="btn btn-link btn-sm"
+                  to="/assignments/$assignmentId/edit"
+                  params={{ assignmentId: String(assignment.id) }}
+                >
+                  Edit assignment
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <h3>No assignments yet</h3>
+        )}
+      </div>
+
+      <input
+        type="radio"
+        name="course_tabs"
+        className="tab"
+        aria-label="Lessons"
+        checked={activeTab === "lessons"}
+        onChange={() => handleTabChange("lessons")}
+      />
+      <div className="tab-content border-base-300 bg-base-100 p-10 min-h-96">
+        {!lessons ? (
+          <TabPanelSkeleton />
+        ) : lessons.length > 0 ? (
+          <ul className="flex flex-col space-y-2">
+            {lessons.map((lesson) => (
+              <li key={lesson.id} className="flex items-center gap-3">
+                <span>{lesson.title}</span>
+                <Link
+                  className="btn btn-link btn-sm"
+                  to="/lessons/$lessonId/edit"
+                  params={{ lessonId: String(lesson.id) }}
+                >
+                  Edit lesson
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <h3>No lessons yet</h3>
         )}
       </div>
     </div>
