@@ -44,24 +44,116 @@ export async function seedLessons(
     i += 1;
     await client.execute({
       sql: "INSERT INTO lessons (title, content, course_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-      args: [title, `Content for e2e lesson ${title}`, courseId, nowPlus(i), nowPlus(i)],
+      args: [
+        title,
+        `Content for e2e lesson ${title}`,
+        courseId,
+        nowPlus(i),
+        nowPlus(i),
+      ],
     });
   }
+}
+
+/**
+ * Inserts an active enrollment row directly into the e2e database.
+ *
+ * The user is located by email (the seeded users' ids are unstable across
+ * runs, since they are created through the better-auth sign-up API in
+ * global-setup.ts). Only columns notNull in src/db/schema.ts are filled;
+ * enrolled_at/created_at/updated_at must be given explicitly because
+ * drizzle-kit push emits them WITHOUT DB-level defaults ($defaultFn is
+ * app-level only).
+ */
+export async function seedEnrollment(
+  email: string,
+  courseId: number,
+): Promise<void> {
+  const now = Date.now();
+  await client.execute({
+    sql: `INSERT INTO enrollments (user_id, course_id, status, enrolled_at, created_at, updated_at)
+          SELECT users.id, ?, 'active', ?, ?, ? FROM users WHERE users.email = ?`,
+    args: [courseId, now, now, now, email],
+  });
 }
 
 /** Same as seedLessons but for assignments (example column). */
 export async function seedAssignments(
   courseId: number,
   titles: string[],
-): Promise<void> {
+): Promise<number[]> {
   let i = 0;
+  const ids: number[] = [];
   for (const title of titles) {
     i += 1;
+    const inserted = await client.execute({
+      sql: "INSERT INTO assignments (title, example, course_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?) RETURNING id",
+      args: [
+        title,
+        `Example for e2e assignment ${title}`,
+        courseId,
+        nowPlus(i),
+        nowPlus(i),
+      ],
+    });
+    ids.push(Number(inserted.rows[0]!.id));
+  }
+  return ids;
+}
+
+/**
+ * Seeds questions for an assignment directly in the e2e database, with
+ * consecutive positions 0..n-1 (the student page orders questions by
+ * position and derives the displayed Q# from it).
+ *
+ * Only columns notNull in src/db/schema.ts are filled; created_at/updated_at
+ * are given explicitly like for the other seeders (their drizzle-kit push
+ * emits no DB-level defaults).
+ */
+export async function seedQuestions(
+  assignmentId: number,
+  questionTexts: string[],
+): Promise<void> {
+  let i = 0;
+  for (const questionText of questionTexts) {
+    i += 1;
     await client.execute({
-      sql: "INSERT INTO assignments (title, example, course_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-      args: [title, `Example for e2e assignment ${title}`, courseId, nowPlus(i), nowPlus(i)],
+      sql: "INSERT INTO questions (question_text, answer, assignment_id, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+      args: [
+        questionText,
+        `Answer for e2e question ${i}`,
+        assignmentId,
+        i - 1,
+        nowPlus(i),
+        nowPlus(i),
+      ],
     });
   }
+}
+
+/**
+ * Seeds an assignment submission for the user identified by email.
+ *
+ * The user is located by email like the row-level seeders above. Only
+ * columns notNull in src/db/schema.ts are filled; started_at/created_at/
+ * updated_at must be given explicitly (drizzle-kit push emits no DB-level
+ * defaults and $defaultFn is app-level only).
+ *
+ * submittedAt defaults to null — an in-progress submission, which is what
+ * makes the student assignment page render its "Submit assignment" button.
+ * Pass a ms timestamp to seed an already-submitted record instead.
+ */
+export async function seedSubmission(
+  assignmentId: number,
+  email: string,
+  submittedAt: number | null = null,
+): Promise<void> {
+  const now = Date.now();
+  await client.execute({
+    sql: `INSERT INTO assignment_submissions (assignment_id, assignee_id, started_at, submitted_at, created_at, updated_at)
+          SELECT ?, users.id, ?, ?, ?, ? FROM users WHERE users.email = ?`,
+    args: [assignmentId, now, submittedAt, now, now, email],
+  });
 }
 
 /** Now in ms, nudged by i so rows never collide on created_at. */
