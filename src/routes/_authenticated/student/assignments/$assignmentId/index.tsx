@@ -1,6 +1,14 @@
 import { getSubmission } from "@/server/assignments/submissions/get-submission";
+import { setSubmissionToNow } from "@/server/assignments/submissions/mutate-submission";
 import { getStudentQuestions } from "@/server/questions/get-questions";
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import ConfirmModal from "@/components/confirm-modal";
+import {
+  createFileRoute,
+  Link,
+  notFound,
+  useRouter,
+} from "@tanstack/react-router";
+import { useState } from "react";
 
 export const Route = createFileRoute(
   "/_authenticated/student/assignments/$assignmentId/",
@@ -20,6 +28,14 @@ export const Route = createFileRoute(
 function RouteComponent() {
   const { questions, assignmentSubmission } = Route.useLoaderData();
   const { assignmentId } = Route.useParams();
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const router = useRouter();
+
+  // Submittable only when the student already started (a submission record
+  // exists) and has not submitted yet (submitted_at is null).
+  const submissionRecord = assignmentSubmission.submission;
+  const canSubmit =
+    submissionRecord !== null && submissionRecord.submittedAt === null;
 
   if (questions && questions.length > 0) {
     return (
@@ -56,19 +72,49 @@ function RouteComponent() {
               of {questions.length} questions have been answered
             </p>
             <div>
-              <Link
-                to="/student/assignments/$assignmentId/questions/$questionId"
-                params={{
-                  assignmentId: assignmentId,
-                  questionId: String(questions[0].id),
-                }}
-                className="btn btn-primary"
-              >
-                Go to question #1
-              </Link>
+              <div className="flex items-center justify-center gap-x-2">
+                <Link
+                  to="/student/assignments/$assignmentId/questions/$questionId"
+                  params={{
+                    assignmentId: assignmentId,
+                    questionId: String(questions[0].id),
+                  }}
+                  className="btn btn-primary"
+                >
+                  Go to question #1
+                </Link>
+                {/* TODO: wire up the actual assignment submission action. */}
+                {canSubmit && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => setSubmitOpen(true)}
+                  >
+                    Submit assignment
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
+        {canSubmit && (
+          <ConfirmModal
+            open={submitOpen}
+            message="Submit this assignment?"
+            onConfirm={async () => {
+              // Mark the submission as submitted, then reload the route so
+              // the freshly submitted state (submitted_at set) is reflected
+              // and the button disappears. The ConfirmModal keeps the page
+              // under its top layer (with a spinner on Okay) until this
+              // resolves, so the submit action cannot be double-fired.
+              await setSubmissionToNow({
+                data: { assignmentId: Number(assignmentId) },
+              });
+              await router.invalidate();
+            }}
+            onClose={() => setSubmitOpen(false)}
+          />
+        )}
       </div>
     );
   } else {

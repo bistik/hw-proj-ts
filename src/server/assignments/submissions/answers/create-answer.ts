@@ -1,5 +1,5 @@
 import { dbUpsertAnswer } from "@/db/assignments/submissions/answers/create-answer";
-import { dbCreateSubmission } from "@/db/assignments/submissions/create-submission";
+import { dbCreateSubmission } from "@/db/assignments/submissions/mutate-submission";
 import { dbGetAssignment } from "@/db/assignments/get-assignment";
 import { dbGetQuestionByIdAndAssignment } from "@/db/questions/get-questions";
 import { requireUserEnrolledInCourse } from "@/db/authz";
