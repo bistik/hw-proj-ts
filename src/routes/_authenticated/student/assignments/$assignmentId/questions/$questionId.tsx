@@ -1,8 +1,10 @@
+import FormErrorAlert from "@/components/form-error-alert";
 import { SubmitButton } from "@/components/submit-button";
 import { TextField } from "@/components/text-field";
 import { submitAnswerFormSchema } from "@/schemas/course-schema";
 import { upsertAnswer } from "@/server/assignments/submissions/answers/create-answer";
 import { getStudentAnswer } from "@/server/assignments/submissions/answers/get-answer";
+import { getSubmission } from "@/server/assignments/submissions/get-submission";
 import {
   getStudentNextQuestion,
   getStudentPreviousQuestion,
@@ -28,7 +30,7 @@ export const Route = createFileRoute(
     const questionId = Number(params.questionId);
     if (!Number.isInteger(questionId) || questionId <= 0) throw notFound();
 
-    const [question, currentAnswer, nextQuestion, prevQuestion] =
+    const [question, currentAnswer, nextQuestion, prevQuestion, submissionResult] =
       await Promise.all([
         getStudentQuestion({
           data: { assignmentId, questionId },
@@ -42,13 +44,27 @@ export const Route = createFileRoute(
         getStudentPreviousQuestion({
           data: { assignmentId, questionId },
         }),
+        getSubmission({
+          data: { assignmentId },
+        }),
       ]);
 
     if (!question) throw notFound();
 
-    return { question, nextQuestion, prevQuestion, currentAnswer };
+    // Read-only once the submission is marked submitted (submitted_at set).
+    const isSubmitted =
+      submissionResult.submission !== null &&
+      submissionResult.submission.submittedAt !== null;
+
+    return {
+      question,
+      nextQuestion,
+      prevQuestion,
+      currentAnswer,
+      isSubmitted,
+    };
   },
-  component: RouteComponent,
+  component: SubmitAnswerComponent,
   remountDeps: ({ params }) => [params.questionId],
   pendingComponent: QuestionPending,
   pendingMs: 0,
@@ -85,8 +101,8 @@ function QuestionPending() {
   );
 }
 
-function RouteComponent() {
-  const { question, nextQuestion, prevQuestion, currentAnswer } =
+function SubmitAnswerComponent() {
+  const { question, nextQuestion, prevQuestion, currentAnswer, isSubmitted } =
     Route.useLoaderData();
   const { assignmentId } = Route.useParams();
   const navigate = useNavigate();
@@ -159,70 +175,77 @@ function RouteComponent() {
         </div>
       </div>
       <div className="flex w-full items-center justify-center">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-          }}
-        >
-          <div className="mt-4">
+        {isSubmitted ? (
+          <div className="mt-4 w-full max-w-md space-y-4">
             <h3 className="text-2xl">{question.questionText}</h3>
+            <p>
+              {currentAnswer
+                ? `Your answer: ${currentAnswer.answer}`
+                : "No answer submitted"}
+            </p>
+            <Link
+              to="/student/assignments/$assignmentId"
+              params={{ assignmentId: String(question.assignmentId) }}
+              className="link text-sm"
+            >
+              Back to assignment
+            </Link>
           </div>
-          <form.Subscribe selector={(s) => s.errors}>
-            {(errors) => {
-              const messages = errors.flatMap((byField) =>
-                Object.values(byField)
-                  .flat()
-                  .map((issue) => issue.message),
-              );
-              return messages.length > 0 ? (
-                <div className="alert alert-error">
-                  {messages.map((msg, i) => (
-                    <p key={i}>{msg}</p>
-                  ))}
-                </div>
-              ) : null;
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              form.handleSubmit();
             }}
-          </form.Subscribe>
-          <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
-            {(error) =>
-              typeof error === "string" ? (
-                <div role="alert" className="alert alert-error">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    className="h-6 w-6 shrink-0 stroke-current"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    ></path>
-                  </svg>
-                  <span>{error}</span>
-                </div>
-              ) : null
-            }
-          </form.Subscribe>
-          <form.Field name="answer">
-            {(field) => <TextField field={field} label="Answer" />}
-          </form.Field>
-          <form.Subscribe selector={(state) => state.isSubmitting}>
-        {(isSubmitting) => (
-          <SubmitButton label="Submit answer" submittingLabel="Answering" isSubmitting={isSubmitting} />
-        )}
-      </form.Subscribe>
-          <Link
-            to="/student/assignments/$assignmentId"
-            params={{ assignmentId: String(question.assignmentId) }}
-            className="link ml-8 text-sm"
           >
-            Back to assignment
-          </Link>
-        </form>
+            <div className="mt-4">
+              <h3 className="text-2xl">{question.questionText}</h3>
+            </div>
+            <form.Subscribe selector={(s) => s.errors}>
+              {(errors) => {
+                const messages = errors.flatMap((byField) =>
+                  Object.values(byField)
+                    .flat()
+                    .map((issue) => issue.message),
+                );
+                return messages.length > 0 ? (
+                  <div className="alert alert-error">
+                    {messages.map((msg, i) => (
+                      <p key={i}>{msg}</p>
+                    ))}
+                  </div>
+                ) : null;
+              }}
+            </form.Subscribe>
+            <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
+              {(error) =>
+                typeof error === "string" ? (
+                  <FormErrorAlert errorMsg={error} />
+                ) : null
+              }
+            </form.Subscribe>
+            <form.Field name="answer">
+              {(field) => <TextField field={field} label="Answer" />}
+            </form.Field>
+            <form.Subscribe selector={(state) => state.isSubmitting}>
+              {(isSubmitting) => (
+                <SubmitButton
+                  label="Submit answer"
+                  submittingLabel="Answering"
+                  isSubmitting={isSubmitting}
+                />
+              )}
+            </form.Subscribe>
+            <Link
+              to="/student/assignments/$assignmentId"
+              params={{ assignmentId: String(question.assignmentId) }}
+              className="link ml-8 text-sm"
+            >
+              Back to assignment
+            </Link>
+          </form>
+        )}
       </div>
     </div>
   );
