@@ -6,6 +6,7 @@ import {
   logoutViaUi,
 } from "./helpers/auth";
 import { createCourseViaUi } from "./helpers/course";
+import { seedEnrollment } from "./helpers/db";
 import { OTHER_USER, TEST_USER } from "./test-user";
 
 test.describe("course detail page", () => {
@@ -129,5 +130,85 @@ test.describe("course detail page", () => {
     await expect(page.getByRole("radio", { name: "Enrollment" })).toHaveCount(
       0,
     );
+  });
+
+  test.describe("enrollments tab", () => {
+    // Extracts the numeric course id from a "/courses/<id>" path, as
+    // returned by createCourseViaUi, for seeding enrollment rows directly
+    // in the e2e DB (tests/e2e/helpers/db.ts).
+    function courseIdOf(coursePath: string): number {
+      const id = Number(coursePath.split("/")[2]);
+      if (!Number.isInteger(id)) {
+        throw new Error(`no course id in path "${coursePath}"`);
+      }
+      return id;
+    }
+
+    test("lists all enrollees", async ({ page }) => {
+      await ensureSignedUp(OTHER_USER);
+      await loginViaUi(page);
+
+      const title = `Roster course ${Date.now()}`;
+      const coursePath = await createCourseViaUi(page, {
+        title,
+        description: "Course with two seeded enrollees.",
+      });
+      const courseId = courseIdOf(coursePath);
+      // Enroll every seeded user, the author included, to prove that the
+      // roster shows all enrollees and not just one.
+      await seedEnrollment(TEST_USER.email, courseId);
+      await seedEnrollment(OTHER_USER.email, courseId);
+
+      await page.goto(`${coursePath}?tab=enrollments`);
+      await expect(page).toHaveURL(/tab=enrollments/);
+      await expect(
+        page.getByRole("radio", { name: "Enrollment" }),
+      ).toBeChecked();
+
+      // Each enrollee appears as an entry in the tab's roster list,
+      // identified by the unique seeded email. Scoped to role=listitem so
+      // the Enroll-a-student dropdown (role=option) cannot satisfy the
+      // assertion.
+      for (const user of [TEST_USER, OTHER_USER]) {
+        const rosterEntry = page
+          .getByRole("listitem")
+          .filter({ hasText: user.email });
+        await expect(rosterEntry).toBeVisible();
+      }
+    });
+
+    test("Enroll a student dropdown hides already enrolled students", async ({
+      page,
+    }) => {
+      await ensureSignedUp(OTHER_USER);
+      await loginViaUi(page);
+
+      const title = `Picker course ${Date.now()}`;
+      const coursePath = await createCourseViaUi(page, {
+        title,
+        description: "Course with one seeded enrollee.",
+      });
+      const courseId = courseIdOf(coursePath);
+      await seedEnrollment(OTHER_USER.email, courseId);
+
+      await page.goto(`${coursePath}?tab=enrollments`);
+      await expect(page).toHaveURL(/tab=enrollments/);
+      await expect(
+        page.getByRole("radio", { name: "Enrollment" }),
+      ).toBeChecked();
+
+      // The form and its Student select stay available: TEST_USER, the
+      // author, has no enrollment row for this course.
+      await expect(
+        page.getByRole("heading", { name: "Enroll a student" }),
+      ).toBeVisible();
+      const studentSelect = page.locator('fieldset:has-text("Student") select');
+      await expect(studentSelect).toBeVisible();
+
+      // An already enrolled student must not be selectable again.
+      await expect(
+        studentSelect.getByRole("option", { name: OTHER_USER.email }),
+      ).toHaveCount(0);
+    });
   });
 });
