@@ -5,6 +5,10 @@ import { createClient } from "@libsql/client";
 // for flags the app expects but no signup API path sets.
 const client = createClient({
   url: "file:./tests/e2e/e2e-test.db",
+  // Wait for a held file lock instead of failing fast with SQLITE_BUSY:
+  // the dev-server process and this process both write to the same e2e DB
+  // file, so a write here can legitimately collide with the app's writes.
+  timeout: 10_000,
 });
 
 /**
@@ -106,6 +110,11 @@ export async function seedAssignments(
  * consecutive positions 0..n-1 (the student page orders questions by
  * position and derives the displayed Q# from it).
  *
+ * Returns the inserted question ids in insertion (position) order. The
+ * question page lives at /student/assignments/<assignment_id>/questions/
+ * <question_id>, so tests need the ids, not just the texts. Existing
+ * callers ignore the return value, so this stays backward compatible.
+ *
  * Only columns notNull in src/db/schema.ts are filled; created_at/updated_at
  * are given explicitly like for the other seeders (their drizzle-kit push
  * emits no DB-level defaults).
@@ -113,12 +122,13 @@ export async function seedAssignments(
 export async function seedQuestions(
   assignmentId: number,
   questionTexts: string[],
-): Promise<void> {
+): Promise<number[]> {
   let i = 0;
+  const ids: number[] = [];
   for (const questionText of questionTexts) {
     i += 1;
-    await client.execute({
-      sql: "INSERT INTO questions (question_text, answer, assignment_id, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+    const inserted = await client.execute({
+      sql: "INSERT INTO questions (question_text, answer, assignment_id, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
       args: [
         questionText,
         `Answer for e2e question ${i}`,
@@ -128,7 +138,9 @@ export async function seedQuestions(
         nowPlus(i),
       ],
     });
+    ids.push(Number(inserted.rows[0]!.id));
   }
+  return ids;
 }
 
 /**
@@ -153,6 +165,37 @@ export async function seedSubmission(
     sql: `INSERT INTO assignment_submissions (assignment_id, assignee_id, started_at, submitted_at, created_at, updated_at)
           SELECT ?, users.id, ?, ?, ?, ? FROM users WHERE users.email = ?`,
     args: [assignmentId, now, submittedAt, now, now, email],
+  });
+}
+
+/**
+ * Seeds a saved answer (a submission_answers row) for the user identified by
+ * email, attached to the user's assignment_submissions row for the given
+ * assignment. Mirrors how the app stores answers: one row per (question_id,
+ * submission_id) pair, enforced by the submission_answers_question_submission_unique
+ * index.
+ *
+ * Rounds/regrades read this row to display the student's answer with the
+ * question, and the question page's form uses it as the default value.
+ *
+ * Only columns notNull in src/db/schema.ts are filled; created_at/updated_at
+ * are given explicitly like the other seeders (drizzle-kit push emits no
+ * DB-level defaults).
+ */
+export async function seedSubmissionAnswer(
+  assignmentId: number,
+  email: string,
+  questionId: number,
+  answer: string,
+): Promise<void> {
+  const now = Date.now();
+  await client.execute({
+    sql: `INSERT INTO submission_answers (answer, question_id, submission_id, created_at, updated_at)
+          SELECT ?, ?, assignment_submissions.id, ?, ?
+          FROM assignment_submissions
+          JOIN users ON users.id = assignment_submissions.assignee_id
+          WHERE assignment_submissions.assignment_id = ? AND users.email = ?`,
+    args: [answer, questionId, now, now, assignmentId, email],
   });
 }
 
