@@ -23,5 +23,15 @@ export default async function globalSetup() {
 
   await ensureSignedUp(TEST_USER);
 
+  // Switch the e2e DB to WAL mode (persistent for the file, idempotent):
+  // the dev-server process and the per-worker helpers/db.ts clients both
+  // access the same file, and in the default journal mode every write
+  // blocks all readers, which shows up as SQLITE_BUSY elsewhere.
+  console.log("[e2e] enabling WAL journal mode");
+  execSync(
+    `node -e "import('@libsql/client').then(({createClient}) => createClient({url:'file:./tests/e2e/e2e-test.db', timeout:10_000}).execute('PRAGMA journal_mode = WAL')).then(r => console.log('[e2e] journal:', r.rows[0].journal_mode))"`,
+    { stdio: "inherit", cwd: process.cwd() },
+  );
+
   console.log(`[e2e] test user ready: ${TEST_USER.email}`);
 }

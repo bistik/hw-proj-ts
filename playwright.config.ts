@@ -3,6 +3,11 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   globalSetup: "./tests/e2e/global-setup.ts",
+  // One worker: the suite writes to one shared libsql file DB through
+  // several processes (each test worker's helpers/db.ts client, and the
+  // dev-server process). Parallel workers contend for it and fail with
+  // SQLITE_BUSY, so the specs must run sequentially.
+  workers: 1,
   // In CI the HTML report is published for download (see .github/workflows/
   // e2e.yml) and "github" annotations surface failures inline on the PR.
   reporter: process.env.CI
