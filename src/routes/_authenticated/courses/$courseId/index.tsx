@@ -7,8 +7,9 @@ import TabPanelSkeleton from "@/components/tab-panel-skeleton";
 import { enrollmentFormSchema } from "@/schemas/course-schema";
 import { getAssignmentsByCourse } from "@/server/assignments/get-assignment";
 import { createEnrollment } from "@/server/enrollments/create-enrollment";
+import { getEnrolleesByCourse } from "@/server/enrollments/get-enrollment";
 import { getLessonsByCourse } from "@/server/lessons/get-lesson";
-import { getUsers } from "@/server/users/get-user";
+import { getUnenrolledUsers } from "@/server/users/get-user";
 import { useForm } from "@tanstack/react-form";
 import {
   createFileRoute,
@@ -32,7 +33,14 @@ export const Route = createFileRoute("/_authenticated/courses/$courseId/")({
     handler: async ({ deps, params }) => {
       switch (deps.tab ?? "details") {
         case "enrollments":
-          return { users: await getUsers() };
+          return {
+            unenrolledUsers: await getUnenrolledUsers({
+              data: { courseId: Number(params.courseId) },
+            }),
+            enrollees: await getEnrolleesByCourse({
+              data: { courseId: Number(params.courseId) },
+            }),
+          };
         case "assignments":
           return {
             assignments: await getAssignmentsByCourse({
@@ -69,7 +77,9 @@ const courseRouteApi = getRouteApi("/_authenticated/courses/$courseId");
 function CourseDetailComponent() {
   const { course } = courseRouteApi.useLoaderData();
   const loaderData = Route.useLoaderData();
-  const users = "users" in loaderData ? loaderData.users : undefined;
+  const unenrolledUsers =
+    "unenrolledUsers" in loaderData ? loaderData.unenrolledUsers : undefined;
+  const enrollees = "enrollees" in loaderData ? loaderData.enrollees : undefined;
   const assignments =
     "assignments" in loaderData ? loaderData.assignments : undefined;
   const lessons = "lessons" in loaderData ? loaderData.lessons : undefined;
@@ -158,68 +168,85 @@ function CourseDetailComponent() {
         onChange={() => handleTabChange("enrollments")}
       />
       <div className="tab-content border-base-300 bg-base-100 p-10 min-h-96">
-        {!users ? (
+        {!unenrolledUsers || !enrollees ? (
           <TabPanelSkeleton />
-        ) : users.length > 0 ? (
-          <>
-            <h3>Enroll a student</h3>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                form.handleSubmit();
-              }}
-            >
-              <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
-                {(error) =>
-                  typeof error === "string" ? (
-                    <FormErrorAlert errorMsg={error} />
-                  ) : null
-                }
-              </form.Subscribe>
-              <form.Field name="userId">
-                {(field) => {
-                  const { errors, isTouched } = field.state.meta;
-                  return (
-                    <fieldset className="fieldset">
-                      <legend className="fieldset-legend">Student</legend>
-                      <select
-                        // If state is 0, this evaluates to '' which selects the placeholder option
-                        value={field.state.value || ""}
-                        onBlur={() => field.handleBlur()}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        className="select"
-                      >
-                        <option value="" disabled>
-                          -- Select a User --
-                        </option>
-                        {users.map((user) => (
-                          <option key={user.id} value={user.id}>
-                            {user.name} - {user.email}
-                          </option>
-                        ))}
-                      </select>
-
-                      {errors.length > 0 && isTouched && (
-                        <p className="label text-error">{errors[0]?.message}</p>
-                      )}
-                    </fieldset>
-                  );
-                }}
-              </form.Field>
-              <form.Subscribe selector={(state) => state.isSubmitting}>
-                {(isSubmitting) => (
-                  <SubmitButton
-                    label="Enroll user"
-                    submittingLabel="Enrolling"
-                    isSubmitting={isSubmitting}
-                  />
-                )}
-              </form.Subscribe>
-            </form>
-          </>
         ) : (
-          <h3>No students to enroll</h3>
+          <>
+            <h3>Enrolled students</h3>
+            {enrollees.length > 0 ? (
+              <ul className="flex flex-col space-y-2">
+                {enrollees.map((enrollee) => (
+                  <li key={enrollee.id}>
+                    {enrollee.user.name} - {enrollee.user.email}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No students enrolled yet</p>
+            )}
+
+            <h3 className="mt-8">Enroll a student</h3>
+            {unenrolledUsers.length > 0 ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  form.handleSubmit();
+                }}
+              >
+                <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
+                  {(error) =>
+                    typeof error === "string" ? (
+                      <FormErrorAlert errorMsg={error} />
+                    ) : null
+                  }
+                </form.Subscribe>
+                <form.Field name="userId">
+                  {(field) => {
+                    const { errors, isTouched } = field.state.meta;
+                    return (
+                      <fieldset className="fieldset">
+                        <legend className="fieldset-legend">Student</legend>
+                        <select
+                          // If state is 0, this evaluates to '' which selects the placeholder option
+                          value={field.state.value || ""}
+                          onBlur={() => field.handleBlur()}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          className="select"
+                        >
+                          <option value="" disabled>
+                            -- Select a User --
+                          </option>
+                          {unenrolledUsers.map((user) => (
+                            <option key={user.id} value={user.id}>
+                              {user.name} - {user.email}
+                            </option>
+                          ))}
+                        </select>
+
+                        {errors.length > 0 && isTouched && (
+                          <p className="label text-error">
+                            {errors[0]?.message}
+                          </p>
+                        )}
+                      </fieldset>
+                    );
+                  }}
+                </form.Field>
+                <form.Subscribe selector={(state) => state.isSubmitting}>
+                  {(isSubmitting) => (
+                    <SubmitButton
+                      label="Enroll user"
+                      submittingLabel="Enrolling"
+                      isSubmitting={isSubmitting}
+                    />
+                  )}
+                </form.Subscribe>
+              </form>
+            ) : (
+              <p>No students to enroll</p>
+            )}
+          </>
         )}
       </div>
 
