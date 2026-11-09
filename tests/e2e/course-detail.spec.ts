@@ -57,7 +57,7 @@ test.describe("course detail page", () => {
     await expect(page).toHaveURL(/tab=enrollments/);
     await expect(enrollmentTab).toBeChecked();
     await expect(
-      page.getByRole("heading", { name: "Enroll a student" }),
+      page.getByRole("heading", { name: "Invite a student" }),
     ).toBeVisible();
 
     // Switching back shows the course details again.
@@ -200,7 +200,7 @@ test.describe("course detail page", () => {
       // The form and its Student select stay available: TEST_USER, the
       // author, has no enrollment row for this course.
       await expect(
-        page.getByRole("heading", { name: "Enroll a student" }),
+        page.getByRole("heading", { name: "Invite a student" }),
       ).toBeVisible();
       const studentSelect = page.locator('fieldset:has-text("Student") select');
       await expect(studentSelect).toBeVisible();
@@ -209,6 +209,82 @@ test.describe("course detail page", () => {
       await expect(
         studentSelect.getByRole("option", { name: OTHER_USER.email }),
       ).toHaveCount(0);
+    });
+
+    test("shows an enrollment-status badge for each enrollee", async ({
+      page,
+    }) => {
+      await ensureSignedUp(OTHER_USER);
+      await loginViaUi(page);
+
+      const title = `Badges course ${Date.now()}`;
+      const coursePath = await createCourseViaUi(page, {
+        title,
+        description: "Course with enrollees in different statuses.",
+      });
+      const courseId = courseIdOf(coursePath);
+      await seedEnrollment(TEST_USER.email, courseId, "active");
+      await seedEnrollment(OTHER_USER.email, courseId, "dropped");
+
+      await page.goto(`${coursePath}?tab=enrollments`);
+      await expect(page).toHaveURL(/tab=enrollments/);
+      await expect(
+        page.getByRole("radio", { name: "Enrollment" }),
+      ).toBeChecked();
+
+      // Each enrollee's roster row shows a daisyUI badge (span.badge) with
+      // the enrollment status. Scoping the badge to the listitem that holds
+      // the email proves the badge sits on the same row as name and email.
+      const testUserEntry = page
+        .getByRole("listitem")
+        .filter({ hasText: TEST_USER.email });
+      await expect(testUserEntry).toBeVisible();
+      await expect(testUserEntry.locator(".badge")).toHaveText("active");
+
+      const otherUserEntry = page
+        .getByRole("listitem")
+        .filter({ hasText: OTHER_USER.email });
+      await expect(otherUserEntry).toBeVisible();
+      await expect(otherUserEntry.locator(".badge")).toHaveText("dropped");
+    });
+
+    test("enrolling a student through the form marks them as invited", async ({
+      page,
+    }) => {
+      await ensureSignedUp(OTHER_USER);
+      await loginViaUi(page);
+
+      const title = `Invite course ${Date.now()}`;
+      const coursePath = await createCourseViaUi(page, {
+        title,
+        description: "Course to invite the second user into.",
+      });
+
+      await page.goto(`${coursePath}?tab=enrollments`);
+      await expect(page).toHaveURL(/tab=enrollments/);
+      await expect(
+        page.getByRole("radio", { name: "Enrollment" }),
+      ).toBeChecked();
+      // Let the route's loaders (and React hydration) settle: the Student
+      // select is React-controlled, so selecting an option before its
+      // onChange handler is attached would be reverted by hydration and the
+      // form would submit with an empty user id.
+      await page.waitForLoadState("networkidle");
+
+      // Pick the second user (option text is "<name> - <email>") and submit.
+      const studentSelect = page.locator('fieldset:has-text("Student") select');
+      await studentSelect.selectOption({
+        label: `${OTHER_USER.name} - ${OTHER_USER.email}`,
+      });
+      await page.getByRole("button", { name: "Send invite" }).click();
+
+      // The newly enrolled student now appears in the roster with an
+      // "invited" status badge.
+      const rosterEntry = page
+        .getByRole("listitem")
+        .filter({ hasText: OTHER_USER.email });
+      await expect(rosterEntry).toBeVisible();
+      await expect(rosterEntry.locator(".badge")).toHaveText("invited");
     });
   });
 });

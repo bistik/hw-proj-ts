@@ -206,9 +206,11 @@ export const enrollmentsTable = sqliteTable(
     courseId: int("course_id")
       .notNull()
       .references(() => coursesTable.id, { onDelete: "cascade" }),
-    status: text("status", { enum: ["active", "completed", "dropped"] })
+    status: text("status", {
+      enum: ["invited", "active", "completed", "dropped", "declined"],
+    })
       .notNull()
-      .default("active"),
+      .default("invited"),
     enrolledAt: integer("enrolled_at", { mode: "timestamp_ms" })
       .notNull()
       .$defaultFn(() => new Date()),
