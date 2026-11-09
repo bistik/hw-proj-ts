@@ -27,6 +27,35 @@ export async function ensureEmailVerified(email: string) {
 }
 
 /**
+ * Inserts a course directly into the e2e database, bypassing the
+ * /courses/new form, and returns its id. The author is located by email (the
+ * seeded users' ids are unstable across runs — see seedEnrollment).
+ *
+ * Only columns notNull in src/db/schema.ts are filled; created_at/updated_at
+ * must be given explicitly because drizzle-kit push emits them WITHOUT
+ * DB-level defaults ($defaultFn/$onUpdate are app-level only).
+ */
+export async function seedCourse(
+  authorEmail: string,
+  course: { title: string; description: string },
+): Promise<number> {
+  const author = await client.execute({
+    sql: "SELECT id FROM users WHERE email = ?",
+    args: [authorEmail],
+  });
+  const authorId = author.rows[0]?.id;
+  if (!authorId) {
+    throw new Error(`[e2e] no user found for email ${authorEmail}`);
+  }
+  const now = Date.now();
+  const inserted = await client.execute({
+    sql: "INSERT INTO courses (title, description, author_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?) RETURNING id",
+    args: [course.title, course.description, authorId, now, now],
+  });
+  return Number(inserted.rows[0]!.id);
+}
+
+/**
  * Inserts lessons directly into the e2e database, bypassing the /lessons/new
  * form (walks around form hydration and the "select a course" dropdown).
  *
@@ -60,7 +89,11 @@ export async function seedLessons(
 }
 
 /**
- * Inserts an active enrollment row directly into the e2e database.
+ * Inserts an enrollment row directly into the e2e database.
+ *
+ * `status` defaults to "active" to match the existing callers, but tests can
+ * pass any status (e.g. "dropped", "invited") to seed a roster whose badges
+ * show mixed enrollment states.
  *
  * The user is located by email (the seeded users' ids are unstable across
  * runs, since they are created through the better-auth sign-up API in
@@ -72,12 +105,13 @@ export async function seedLessons(
 export async function seedEnrollment(
   email: string,
   courseId: number,
+  status: string = "active",
 ): Promise<void> {
   const now = Date.now();
   await client.execute({
     sql: `INSERT INTO enrollments (user_id, course_id, status, enrolled_at, created_at, updated_at)
-          SELECT users.id, ?, 'active', ?, ?, ? FROM users WHERE users.email = ?`,
-    args: [courseId, now, now, now, email],
+          SELECT users.id, ?, ?, ?, ?, ? FROM users WHERE users.email = ?`,
+    args: [courseId, status, now, now, now, email],
   });
 }
 

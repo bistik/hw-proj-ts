@@ -7,7 +7,7 @@ export async function dbCreateEnrollment(data: {
 }) {
   const inserted = await db
     .insert(enrollmentsTable)
-    .values(data)
+    .values({ ...data, status: "invited" })
     .onConflictDoNothing({
       target: [enrollmentsTable.userId, enrollmentsTable.courseId],
     })

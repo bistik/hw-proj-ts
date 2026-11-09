@@ -74,12 +74,29 @@ export const Route = createFileRoute("/_authenticated/courses/$courseId/")({
 
 const courseRouteApi = getRouteApi("/_authenticated/courses/$courseId");
 
+/** daisyUI color class for an enrollment status badge. */
+function statusBadgeClass(status: string): string {
+  switch (status) {
+    case "active":
+      return "badge-success";
+    case "dropped":
+    case "declined":
+      return "badge-error";
+    case "invited":
+    case "completed":
+      return "badge-info";
+    default:
+      return "";
+  }
+}
+
 function CourseDetailComponent() {
   const { course } = courseRouteApi.useLoaderData();
   const loaderData = Route.useLoaderData();
   const unenrolledUsers =
     "unenrolledUsers" in loaderData ? loaderData.unenrolledUsers : undefined;
-  const enrollees = "enrollees" in loaderData ? loaderData.enrollees : undefined;
+  const enrollees =
+    "enrollees" in loaderData ? loaderData.enrollees : undefined;
   const assignments =
     "assignments" in loaderData ? loaderData.assignments : undefined;
   const lessons = "lessons" in loaderData ? loaderData.lessons : undefined;
@@ -176,8 +193,15 @@ function CourseDetailComponent() {
             {enrollees.length > 0 ? (
               <ul className="flex flex-col space-y-2">
                 {enrollees.map((enrollee) => (
-                  <li key={enrollee.id}>
-                    {enrollee.user.name} - {enrollee.user.email}
+                  <li key={enrollee.id} className="flex items-center gap-2">
+                    <span>
+                      {enrollee.user.name} - {enrollee.user.email}
+                    </span>
+                    <span
+                      className={`badge badge-outline ${statusBadgeClass(enrollee.status)}`}
+                    >
+                      {enrollee.status}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -185,7 +209,7 @@ function CourseDetailComponent() {
               <p>No students enrolled yet</p>
             )}
 
-            <h3 className="mt-8">Enroll a student</h3>
+            <h3 className="mt-8">Invite a student</h3>
             {unenrolledUsers.length > 0 ? (
               <form
                 onSubmit={(e) => {
@@ -236,8 +260,8 @@ function CourseDetailComponent() {
                 <form.Subscribe selector={(state) => state.isSubmitting}>
                   {(isSubmitting) => (
                     <SubmitButton
-                      label="Enroll user"
-                      submittingLabel="Enrolling"
+                      label="Send invite"
+                      submittingLabel="Sending"
                       isSubmitting={isSubmitting}
                     />
                   )}

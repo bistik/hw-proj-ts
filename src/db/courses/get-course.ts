@@ -66,7 +66,11 @@ export async function dbGetCoursesWithItemCountsByUser(authorId: string) {
 
 export async function dbGetEnrolledCourses(studentId: string) {
   return db.query.enrollmentsTable.findMany({
-    where: (enrollmentsTable, { eq }) => eq(enrollmentsTable.userId, studentId),
+    where: (enrollmentsTable, { and, eq, inArray }) =>
+      and(
+        eq(enrollmentsTable.userId, studentId),
+        inArray(enrollmentsTable.status, ["active", "completed"]),
+      ),
     with: {
       course: { columns: { id: true, title: true, description: true } },
     },
@@ -80,10 +84,11 @@ export async function dbGetEnrollmentByCourseAndStudent(
   studentId: string,
 ) {
   return db.query.enrollmentsTable.findFirst({
-    where: (enrollmentsTable, { and, eq }) =>
+    where: (enrollmentsTable, { and, eq, inArray }) =>
       and(
         eq(enrollmentsTable.courseId, courseId),
         eq(enrollmentsTable.userId, studentId),
+        inArray(enrollmentsTable.status, ["active", "completed"]),
       ),
     with: {
       course: {

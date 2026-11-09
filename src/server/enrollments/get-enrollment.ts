@@ -1,8 +1,25 @@
 import { requireUserOwnsCourse } from "@/db/authz";
-import { dbGetEnrolleesByCourse } from "@/db/enrollments/get-enrollment";
+import {
+  dbGetEnrolleesByCourse,
+  dbGetInvitationsByStudent,
+} from "@/db/enrollments/get-enrollment";
 import { authMiddleware } from "@/middlewares/auth-middleware";
 import { courseByIdSchema } from "@/schemas/course-schema";
 import { createServerFn } from "@tanstack/react-start";
+
+export const getInvitations = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    try {
+      return await dbGetInvitationsByStudent(context.user.id);
+    } catch (err) {
+      console.error(
+        `Error fetching invitations for user ${context.user.id}`,
+        err,
+      );
+      throw new Error("Could not load invitations", { cause: err });
+    }
+  });
 
 export const getEnrolleesByCourse = createServerFn({ method: "GET" })
   .validator(courseByIdSchema)
