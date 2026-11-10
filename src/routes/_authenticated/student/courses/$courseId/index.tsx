@@ -13,10 +13,10 @@ export const Route = createFileRoute(
 
     return { course };
   },
-  component: RouteComponent,
+  component: StudentCourseDetailComponent,
 });
 
-function RouteComponent() {
+function StudentCourseDetailComponent() {
   const { course } = Route.useLoaderData();
 
   return (
@@ -57,8 +57,14 @@ function RouteComponent() {
                 className="link"
               >
                 {assignment.title}
-              </Link>
-              <span className="badge badge-outline">{status}</span>
+              </Link>{" "}
+              <span
+                className={`badge ${
+                  submitted ? "badge-success" : "badge-neutral"
+                }`}
+              >
+                {status}
+              </span>
             </li>
           );
         })}

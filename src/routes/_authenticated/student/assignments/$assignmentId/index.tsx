@@ -24,10 +24,10 @@ export const Route = createFileRoute(
     });
     return { questions, assignmentSubmission, courseId };
   },
-  component: RouteComponent,
+  component: StudentAssignmentDetailComponent,
 });
 
-function RouteComponent() {
+function StudentAssignmentDetailComponent() {
   const { questions, assignmentSubmission, courseId } = Route.useLoaderData();
   const { assignmentId } = Route.useParams();
   const [submitOpen, setSubmitOpen] = useState(false);
