@@ -13,10 +13,10 @@ export const Route = createFileRoute(
 
     return { course };
   },
-  component: RouteComponent,
+  component: StudentCourseDetailComponent,
 });
 
-function RouteComponent() {
+function StudentCourseDetailComponent() {
   const { course } = Route.useLoaderData();
 
   return (
@@ -36,17 +36,38 @@ function RouteComponent() {
         ))}
       </ul>
       <ul>
-        {course.assignments.map((assignment) => (
-          <li key={assignment.id}>
-            <Link
-              to="/student/assignments/$assignmentId"
-              params={{ assignmentId: String(assignment.id) }}
-              className="link"
-            >
-              {assignment.title}
-            </Link>
-          </li>
-        ))}
+        {course.assignments.map((assignment) => {
+          // Status badge per row, like the enrollment roster badges on the
+          // author course page: "submitted" only once the student's
+          // submission has submitted_at set.
+          const hasSubmission = assignment.submissions.length > 0;
+          const submitted = assignment.submissions.some(
+            (s) => s.submittedAt !== null,
+          );
+          const status = submitted
+            ? "submitted"
+            : hasSubmission
+              ? "in progress"
+              : "not submitted";
+          return (
+            <li key={assignment.id}>
+              <Link
+                to="/student/assignments/$assignmentId"
+                params={{ assignmentId: String(assignment.id) }}
+                className="link"
+              >
+                {assignment.title}
+              </Link>{" "}
+              <span
+                className={`badge ${
+                  submitted ? "badge-success" : "badge-neutral"
+                }`}
+              >
+                {status}
+              </span>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

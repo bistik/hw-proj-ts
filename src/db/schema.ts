@@ -254,12 +254,26 @@ export const lessonsRelations = relations(lessonsTable, ({ one }) => ({
   }),
 }));
 
-export const assignmentsRelations = relations(assignmentsTable, ({ one }) => ({
-  course: one(coursesTable, {
-    fields: [assignmentsTable.courseId],
-    references: [coursesTable.id],
+export const assignmentsRelations = relations(
+  assignmentsTable,
+  ({ one, many }) => ({
+    course: one(coursesTable, {
+      fields: [assignmentsTable.courseId],
+      references: [coursesTable.id],
+    }),
+    submissions: many(assignmentSubmissionsTable),
   }),
-}));
+);
+
+export const assignmentSubmissionsRelations = relations(
+  assignmentSubmissionsTable,
+  ({ one }) => ({
+    assignment: one(assignmentsTable, {
+      fields: [assignmentSubmissionsTable.assignmentId],
+      references: [assignmentsTable.id],
+    }),
+  }),
+);
 
 export const enrollmentsRelations = relations(enrollmentsTable, ({ one }) => ({
   user: one(users, {

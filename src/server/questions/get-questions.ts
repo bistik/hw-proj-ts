@@ -19,8 +19,7 @@ export const getQuestions = createServerFn({
   .middleware([authMiddleware])
   .handler(async ({ data: assignmentId }) => {
     try {
-      const result = await dbGetQuestionsByAssignment(assignmentId);
-      return result;
+      return await dbGetQuestionsByAssignment(assignmentId);
     } catch (err) {
       console.error(
         `Error in fetching questions for assignment ${assignmentId}`,
@@ -55,7 +54,13 @@ export const getStudentQuestions = createServerFn({ method: "GET" })
       throw new Error("Could not find assignment");
     try {
       await requireUserEnrolledInCourse(assignment.courseId, context.user.id);
-      return await dbGetQuestionsForStudent(assignment.id);
+      // The route also needs the assignment's course id to render its
+      // "Back to course" link; the enrollment guard above already proved
+      // the caller is a member, so sharing it here is safe.
+      return {
+        courseId: assignment.courseId,
+        questions: await dbGetQuestionsForStudent(assignment.id),
+      };
     } catch (err) {
       console.error(
         `Error fetching student assignment questions ${data.assignmentId}`,
