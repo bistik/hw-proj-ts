@@ -10,17 +10,17 @@
   "send_email": [
     {
       "name": "EMAIL",
-      "remote": true
-    }
+      "remote": true,
+    },
   ],
   // Non-secret worker vars. EMAIL_FROM must be an address on the email domain
   // onboarded in the Cloudflare dashboard (Email Service > Email Sending).
   // Change it here; it deploys with `wrangler deploy`. Add more non-secret
   // config here, secrets go through `wrangler secret put <NAME>` instead.
   "vars": {
-    "EMAIL_FROM": "no-reply@your-domain.example.com"
+    "EMAIL_FROM": "no-reply@ldh.bianes.dev",
   },
   "observability": {
-    "enabled": true
-  }
+    "enabled": true,
+  },
 }
