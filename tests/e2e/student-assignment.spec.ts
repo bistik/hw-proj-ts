@@ -97,6 +97,60 @@ test.describe("student assignment page", () => {
     ).toHaveCount(0);
   });
 
+  test("the course author cannot access the student assignment page", async ({
+    page,
+  }) => {
+    // The helper's course is authored by OTHER_USER and gets no enrollment
+    // row for them: authorship alone must not open the student view, only
+    // the enrollment row does.
+    const { assignmentId } = await createAssignmentOwnedByOtherUser(page);
+
+    await loginViaUi(page, OTHER_USER);
+    // Authors have no student path to this page inside the course UI, so
+    // the direct URL visit is the path that must be guarded.
+    await page.goto(`/student/assignments/${assignmentId}`);
+
+    // Same guard result as for any other non-enrolled visitor: the loader's
+    // requireUserEnrolledInCourse check throws, so only the error card
+    // renders.
+    await expect(
+      page.getByRole("heading", { name: "Oops! Something went wrong" }),
+    ).toBeVisible();
+    await expect(page.getByText("No questions on this assignment")).toHaveCount(
+      0,
+    );
+    await expect(
+      page.getByRole("link", { name: "Go to question #1" }),
+    ).toHaveCount(0);
+  });
+
+  test("an enrolled student sees a 'Back to course' link to the student course page", async ({
+    page,
+  }) => {
+    const { courseId, assignmentId } =
+      await createAssignmentOwnedByOtherUser(page);
+
+    await seedEnrollment(TEST_USER.email, courseId);
+    await loginViaUi(page, TEST_USER);
+    // Enrollment passes the loader's guard, so the direct URL visit renders
+    // the flow page (its "no questions" branch with this seed).
+    await page.goto(`/student/assignments/${assignmentId}`);
+
+    // The flow page needs exactly one 'Back to course' link that targets
+    // /student/courses/<course_id>.
+    const backLink = page.getByRole("link", { name: "Back to course" });
+    await expect(backLink).toHaveCount(1);
+    await expect(backLink).toBeVisible();
+    await expect(backLink).toHaveAttribute(
+      "href",
+      `/student/courses/${courseId}`,
+    );
+
+    // Following the link must land on this course's student course page.
+    await backLink.click();
+    await expect(page).toHaveURL(new RegExp(`/student/courses/${courseId}$`));
+  });
+
   test("an enrolled student sees a 'Submit assignment' button beside 'Go to question #1'", async ({
     page,
   }) => {

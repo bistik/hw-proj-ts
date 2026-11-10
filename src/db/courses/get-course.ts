@@ -94,7 +94,18 @@ export async function dbGetEnrollmentByCourseAndStudent(
       course: {
         with: {
           lessons: { columns: { id: true, title: true } },
-          assignments: { columns: { id: true, title: true } },
+          assignments: {
+            columns: { id: true, title: true },
+            // Only the viewing student's submission per assignment, so the
+            // page can badge the row when the student already submitted.
+            with: {
+              submissions: {
+                columns: { submittedAt: true },
+                where: (assignmentSubmissionsTable, { eq }) =>
+                  eq(assignmentSubmissionsTable.assigneeId, studentId),
+              },
+            },
+          },
         },
       },
     },
