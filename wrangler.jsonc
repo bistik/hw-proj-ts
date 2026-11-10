@@ -3,7 +3,24 @@
   "name": "hw-proj-ts",
   "main": "@tanstack/react-start/server-entry",
   "compatibility_date": "2026-11-02",
+  // Cloudflare Email Service binding. `remote: true` lets local dev (vite dev /
+  // wrangler dev) call the real service; production email failover is handled
+  // in src/lib/email/send.ts, which prefers Mailpit when MAILPIT_URL is set.
+  // https://developers.cloudflare.com/email-service/get-started/send-emails/
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "remote": true,
+    },
+  ],
+  // Non-secret worker vars. EMAIL_FROM must be an address on the email domain
+  // onboarded in the Cloudflare dashboard (Email Service > Email Sending).
+  // Change it here; it deploys with `wrangler deploy`. Add more non-secret
+  // config here, secrets go through `wrangler secret put <NAME>` instead.
+  "vars": {
+    "EMAIL_FROM": "no-reply@ldh.bianes.dev",
+  },
   "observability": {
-    "enabled": true
-  }
+    "enabled": true,
+  },
 }

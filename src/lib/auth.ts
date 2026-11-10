@@ -6,6 +6,7 @@ import { env } from "@/lib/env";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { UnauthorizedError } from "@/lib/errors";
+import { sendWelcomeEmail } from "@/lib/email/welcome";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -27,6 +28,17 @@ export const auth = betterAuth({
     },
   },
   plugins: [tanstackStartCookies()],
+  // Sends a welcome email through a better-auth hooks callback whenever a new
+  // user row is written, so every sign-up (client form or API) is covered.
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          await sendWelcomeEmail({ to: user.email, name: user.name });
+        },
+      },
+    },
+  },
 });
 
 export async function getCurrentUser() {
