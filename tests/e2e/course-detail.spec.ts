@@ -106,6 +106,37 @@ test.describe("course detail page", () => {
     await expect(page.getByRole("heading", { name: "Lessons" })).toBeVisible();
   });
 
+  test("author sees the Submissions tab", async ({ page }) => {
+    await loginViaUi(page);
+
+    const title = `Submissions course ${Date.now()}`;
+    const coursePath = await createCourseViaUi(page, {
+      title,
+      description: "Course for checking the Submissions tab.",
+    });
+
+    await page.goto(coursePath);
+    // Let the route's loaders (and React hydration) settle: a tab click
+    // issued while the initial loaders are still pending can be dropped by
+    // the router (no history push, UI/URL desync).
+    await page.waitForLoadState("networkidle");
+
+    const submissionsTab = page.getByRole("radio", { name: "Submissions" });
+    await expect(submissionsTab).toBeVisible();
+
+    // The tabs are React-controlled radios backed by the ?tab= search
+    // param: click() plus asserting the resulting UI state, since check()'s
+    // native "did the input stay checked" verification races the SPA
+    // re-render triggered by every tab-switch navigation.
+    await submissionsTab.click();
+    await expect(page).toHaveURL(/tab=submissions/);
+    await expect(submissionsTab).toBeChecked();
+
+    // A course with no submissions shows an empty state. No seeding is
+    // needed: the author has not submitted anything to this course.
+    await expect(page.getByText("No submissions yet")).toBeVisible();
+  });
+
   test("non-author gets a 404 instead of the course page", async ({ page }) => {
     // Login as the second seeded user and author a course that TEST_USER
     // must never be able to see.

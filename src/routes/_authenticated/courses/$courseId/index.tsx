@@ -1,11 +1,14 @@
 import FormErrorAlert from "@/components/form-error-alert";
 import { SubmitButton } from "@/components/submit-button";
 import CourseDetailTabsPending, {
+  courseDetailTabValues,
   type CourseDetailTab,
 } from "@/components/course-detail-tabs-pending";
 import TabPanelSkeleton from "@/components/tab-panel-skeleton";
+import SubmissionCard from "@/components/submissions/submission-card";
 import { enrollmentFormSchema } from "@/schemas/course-schema";
 import { getAssignmentsByCourse } from "@/server/assignments/get-assignment";
+import { getSubmissionsByCourse } from "@/server/assignments/submissions/get-submission";
 import { createEnrollment } from "@/server/enrollments/create-enrollment";
 import { getEnrolleesByCourse } from "@/server/enrollments/get-enrollment";
 import { getLessonsByCourse } from "@/server/lessons/get-lesson";
@@ -19,7 +22,9 @@ import {
 } from "@tanstack/react-router";
 import z from "zod";
 
-const tabSchema = z.enum(["details", "enrollments", "assignments", "lessons"]);
+// Tab values come from courseDetailTabValues (single source of truth in
+// src/components/course-detail-tabs-pending.tsx) so the two lists cannot drift.
+const tabSchema = z.enum(courseDetailTabValues);
 const courseDetailSearchSchema = z.object({ tab: tabSchema.optional() });
 
 export const Route = createFileRoute("/_authenticated/courses/$courseId/")({
@@ -50,6 +55,12 @@ export const Route = createFileRoute("/_authenticated/courses/$courseId/")({
         case "lessons":
           return {
             lessons: await getLessonsByCourse({
+              data: { courseId: Number(params.courseId) },
+            }),
+          };
+        case "submissions":
+          return {
+            submissions: await getSubmissionsByCourse({
               data: { courseId: Number(params.courseId) },
             }),
           };
@@ -100,6 +111,8 @@ function CourseDetailComponent() {
   const assignments =
     "assignments" in loaderData ? loaderData.assignments : undefined;
   const lessons = "lessons" in loaderData ? loaderData.lessons : undefined;
+  const submissions =
+    "submissions" in loaderData ? loaderData.submissions : undefined;
   const { tab } = Route.useSearch();
   const router = useRouter();
   const navigate = courseRouteApi.useNavigate();
@@ -164,7 +177,7 @@ function CourseDetailComponent() {
         checked={activeTab === "details"}
         onChange={() => handleTabChange("details")}
       />
-      <div className="tab-content border-base-300 bg-base-100 p-10 min-h-96">
+      <div className="tab-content border-0 bg-base-100 p-10 min-h-96">
         <h2>{course.title}</h2>
         <p>{course.description}</p>
         <Link
@@ -184,7 +197,7 @@ function CourseDetailComponent() {
         checked={activeTab === "enrollments"}
         onChange={() => handleTabChange("enrollments")}
       />
-      <div className="tab-content border-base-300 bg-base-100 p-10 min-h-96">
+      <div className="tab-content border-0 bg-base-100 p-10 min-h-96">
         {!unenrolledUsers || !enrollees ? (
           <TabPanelSkeleton />
         ) : (
@@ -282,7 +295,7 @@ function CourseDetailComponent() {
         checked={activeTab === "assignments"}
         onChange={() => handleTabChange("assignments")}
       />
-      <div className="tab-content border-base-300 bg-base-100 p-10 min-h-96">
+      <div className="tab-content border-0 bg-base-100 p-10 min-h-96">
         {!assignments ? (
           <TabPanelSkeleton />
         ) : assignments.length > 0 ? (
@@ -313,7 +326,7 @@ function CourseDetailComponent() {
         checked={activeTab === "lessons"}
         onChange={() => handleTabChange("lessons")}
       />
-      <div className="tab-content border-base-300 bg-base-100 p-10 min-h-96">
+      <div className="tab-content border-0 bg-base-100 p-10 min-h-96">
         {!lessons ? (
           <TabPanelSkeleton />
         ) : lessons.length > 0 ? (
@@ -333,6 +346,51 @@ function CourseDetailComponent() {
           </ul>
         ) : (
           <h3>No lessons yet</h3>
+        )}
+      </div>
+
+      <input
+        type="radio"
+        name="course_tabs"
+        className="tab"
+        aria-label="Submissions"
+        checked={activeTab === "submissions"}
+        onChange={() => handleTabChange("submissions")}
+      />
+      <div className="tab-content border-0 bg-base-100 p-10 min-h-96">
+        {!submissions ? (
+          <TabPanelSkeleton />
+        ) : submissions.length > 0 ? (
+          <div className="flex flex-col gap-4">
+            {submissions.map((submission) => (
+              <SubmissionCard
+                key={submission.id}
+                cardTitle={submission.assignmentTitle}
+                cardDescription={
+                  <>
+                    {submission.assigneeName} {submission.assigneeEmail}
+                    <span
+                      className={`badge ml-2 ${
+                        submission.submittedAt
+                          ? "badge-success"
+                          : "badge-neutral"
+                      }`}
+                    >
+                      {submission.submittedAt ? "Submitted" : "In progress"}
+                    </span>
+                  </>
+                }
+                // NOTE: the card's dropdown actions are not wired to the
+                // server yet. The menu is disabled until the author-side
+                // mutations exist, so users cannot click no-op actions.
+                handleCompleted={() => {}}
+                handleReset={submission.submittedAt ? () => {} : undefined}
+                actionsDisabled
+              />
+            ))}
+          </div>
+        ) : (
+          <h3>No submissions yet</h3>
         )}
       </div>
     </div>

@@ -1,6 +1,38 @@
 import { db } from "@/db";
-import { questionsTable, submissionAnswersTable } from "@/db/schema";
-import { and, asc, eq } from "drizzle-orm";
+import {
+  assignmentSubmissionsTable,
+  assignmentsTable,
+  questionsTable,
+  submissionAnswersTable,
+  users,
+} from "@/db/schema";
+import { and, asc, desc, eq } from "drizzle-orm";
+
+export async function dbGetSubmissionsByCourse(courseId: number) {
+  return (
+    db
+      .select({
+        id: assignmentSubmissionsTable.id,
+        assignmentTitle: assignmentsTable.title,
+        assigneeName: users.name,
+        assigneeEmail: users.email,
+        startedAt: assignmentSubmissionsTable.startedAt,
+        submittedAt: assignmentSubmissionsTable.submittedAt,
+      })
+      .from(assignmentSubmissionsTable)
+      .innerJoin(
+        assignmentsTable,
+        eq(assignmentSubmissionsTable.assignmentId, assignmentsTable.id),
+      )
+      .innerJoin(users, eq(assignmentSubmissionsTable.assigneeId, users.id))
+      .where(eq(assignmentsTable.courseId, courseId))
+      // Newest submissions first; id breaks ties between identical timestamps.
+      .orderBy(
+        desc(assignmentSubmissionsTable.startedAt),
+        desc(assignmentSubmissionsTable.id),
+      )
+  );
+}
 
 export async function dbGetSubmissionByAssignmentAndStudent(
   assignmentId: number,

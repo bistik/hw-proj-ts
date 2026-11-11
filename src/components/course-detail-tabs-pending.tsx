@@ -1,14 +1,25 @@
 import { Fragment } from "react";
 import TabPanelSkeleton from "@/components/tab-panel-skeleton";
 
-export type CourseDetailTab =
-  "details" | "enrollments" | "assignments" | "lessons";
+// Single source of truth for the course detail tab values. The course
+// detail route derives its ?tab= search-param schema from this list, so
+// the two lists cannot drift.
+export const courseDetailTabValues = [
+  "details",
+  "enrollments",
+  "assignments",
+  "lessons",
+  "submissions",
+] as const;
+
+export type CourseDetailTab = (typeof courseDetailTabValues)[number];
 
 const courseDetailTabs: { value: CourseDetailTab; label: string }[] = [
   { value: "details", label: "Course Details" },
   { value: "enrollments", label: "Enrollment" },
   { value: "assignments", label: "Assignments" },
   { value: "lessons", label: "Lessons" },
+  { value: "submissions", label: "Submissions" },
 ];
 
 // Loading placeholder for the course detail page: keeps the tab bar visible
