@@ -144,6 +144,12 @@ export async function seedAssignments(
  * consecutive positions 0..n-1 (the student page orders questions by
  * position and derives the displayed Q# from it).
  *
+ * `answers` optionally overrides the correct answer per question
+ * (same length and order as `questionTexts`). The author's submission
+ * review page shows this answer as the "correct answer", so tests pass
+ * distinct texts there to keep their assertions unambiguous. Defaults to
+ * the generated "Answer for e2e question <n>" texts.
+ *
  * Returns the inserted question ids in insertion (position) order. The
  * question page lives at /student/assignments/<assignment_id>/questions/
  * <question_id>, so tests need the ids, not just the texts. Existing
@@ -156,6 +162,7 @@ export async function seedAssignments(
 export async function seedQuestions(
   assignmentId: number,
   questionTexts: string[],
+  answers?: string[],
 ): Promise<number[]> {
   let i = 0;
   const ids: number[] = [];
@@ -165,7 +172,7 @@ export async function seedQuestions(
       sql: "INSERT INTO questions (question_text, answer, assignment_id, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
       args: [
         questionText,
-        `Answer for e2e question ${i}`,
+        answers?.[i - 1] ?? `Answer for e2e question ${i}`,
         assignmentId,
         i - 1,
         nowPlus(i),
@@ -188,18 +195,25 @@ export async function seedQuestions(
  * submittedAt defaults to null — an in-progress submission, which is what
  * makes the student assignment page render its "Submit assignment" button.
  * Pass a ms timestamp to seed an already-submitted record instead.
+ *
+ * Returns the seeded submission's id (needed by tests whose target page is
+ * addressed by submission id, e.g. the author's submission review page).
+ * Existing callers ignore the return value, so this stays backward
+ * compatible.
  */
 export async function seedSubmission(
   assignmentId: number,
   email: string,
   submittedAt: number | null = null,
-): Promise<void> {
+): Promise<number> {
   const now = Date.now();
-  await client.execute({
+  const inserted = await client.execute({
     sql: `INSERT INTO assignment_submissions (assignment_id, assignee_id, started_at, submitted_at, created_at, updated_at)
-          SELECT ?, users.id, ?, ?, ?, ? FROM users WHERE users.email = ?`,
+          SELECT ?, users.id, ?, ?, ?, ? FROM users WHERE users.email = ?
+          RETURNING id`,
     args: [assignmentId, now, submittedAt, now, now, email],
   });
+  return Number(inserted.rows[0]!.id);
 }
 
 /**

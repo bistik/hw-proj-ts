@@ -17,7 +17,10 @@ jobs:
       - run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        # No --with-deps: GitHub-hosted Ubuntu runners already ship the
+        # required browser libraries, and --with-deps runs apt-get, which
+        # can fail when the runner has DNS problems with Ubuntu mirrors.
+        run: npx playwright install chromium
 
       - name: Run e2e tests
         run: npx playwright test
