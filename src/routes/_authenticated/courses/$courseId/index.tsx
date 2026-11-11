@@ -14,10 +14,12 @@ import { getEnrolleesByCourse } from "@/server/enrollments/get-enrollment";
 import { getLessonsByCourse } from "@/server/lessons/get-lesson";
 import { getUnenrolledUsers } from "@/server/users/get-user";
 import { useForm } from "@tanstack/react-form";
+import { getCourseByIdAndAuthor } from "@/server/courses/get-course";
 import {
   createFileRoute,
   getRouteApi,
   Link,
+  notFound,
   useRouter,
 } from "@tanstack/react-router";
 import z from "zod";
@@ -36,37 +38,48 @@ export const Route = createFileRoute("/_authenticated/courses/$courseId/")({
     // (and shows the pending skeleton) instead of revalidating in background
     staleReloadMode: "blocking",
     handler: async ({ deps, params }) => {
+      // Duplicated author guard: only the course author may load any tab of
+      // the course detail page. A non-author is thrown to the router's
+      // defaultNotFoundComponent.
+      const courseId = Number(params.courseId);
+      if (!Number.isInteger(courseId) || courseId <= 0) throw notFound();
+      const course = await getCourseByIdAndAuthor({ data: { courseId } });
+      if (!course) throw notFound();
       switch (deps.tab ?? "details") {
         case "enrollments":
           return {
+            course,
             unenrolledUsers: await getUnenrolledUsers({
-              data: { courseId: Number(params.courseId) },
+              data: { courseId },
             }),
             enrollees: await getEnrolleesByCourse({
-              data: { courseId: Number(params.courseId) },
+              data: { courseId },
             }),
           };
         case "assignments":
           return {
+            course,
             assignments: await getAssignmentsByCourse({
-              data: { courseId: Number(params.courseId) },
+              data: { courseId },
             }),
           };
         case "lessons":
           return {
+            course,
             lessons: await getLessonsByCourse({
-              data: { courseId: Number(params.courseId) },
+              data: { courseId },
             }),
           };
         case "submissions":
           return {
+            course,
             submissions: await getSubmissionsByCourse({
-              data: { courseId: Number(params.courseId) },
+              data: { courseId },
             }),
           };
         default:
-          // Course details — course data comes from the parent $courseId loader
-          return {};
+          // Course details
+          return { course };
       }
     },
   },
@@ -102,8 +115,8 @@ function statusBadgeClass(status: string): string {
 }
 
 function CourseDetailComponent() {
-  const { course } = courseRouteApi.useLoaderData();
   const loaderData = Route.useLoaderData();
+  const { course } = loaderData;
   const unenrolledUsers =
     "unenrolledUsers" in loaderData ? loaderData.unenrolledUsers : undefined;
   const enrollees =
@@ -113,6 +126,7 @@ function CourseDetailComponent() {
   const lessons = "lessons" in loaderData ? loaderData.lessons : undefined;
   const submissions =
     "submissions" in loaderData ? loaderData.submissions : undefined;
+  const { courseId } = Route.useParams();
   const { tab } = Route.useSearch();
   const router = useRouter();
   const navigate = courseRouteApi.useNavigate();
@@ -366,6 +380,12 @@ function CourseDetailComponent() {
               <SubmissionCard
                 key={submission.id}
                 cardTitle={submission.assignmentTitle}
+                // The card title links to this submission's review page.
+                cardTitleParams={{
+                  courseId,
+                  assignmentId: String(submission.assignmentId),
+                  submissionId: String(submission.id),
+                }}
                 cardDescription={
                   <>
                     {submission.assigneeName} {submission.assigneeEmail}

@@ -1,7 +1,14 @@
 import type { ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
 
 type SubmissionCardProps = {
   cardTitle: string;
+  /** Route params of the submission review page the card title links to. */
+  cardTitleParams: {
+    courseId: string;
+    assignmentId: string;
+    submissionId: string;
+  };
   cardDescription?: ReactNode;
   handleCompleted: () => void;
   handleReset?: () => void;
@@ -13,6 +20,7 @@ export default function SubmissionCard({
   handleCompleted,
   handleReset,
   cardTitle,
+  cardTitleParams,
   cardDescription,
   actionsDisabled = false,
 }: SubmissionCardProps) {
@@ -79,7 +87,15 @@ export default function SubmissionCard({
 
       {/* Main Window Content Area */}
       <div className="card-body">
-        <h2 className="card-title">{cardTitle}</h2>
+        <h2 className="card-title">
+          <Link
+            to="/courses/$courseId/assignments/$assignmentId/submissions/$submissionId"
+            params={cardTitleParams}
+            className="link hover:font-bold hover:text-primary"
+          >
+            {cardTitle}
+          </Link>
+        </h2>
         {cardDescription && <p>{cardDescription}</p>}
       </div>
     </div>

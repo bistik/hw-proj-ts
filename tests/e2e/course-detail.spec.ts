@@ -6,7 +6,11 @@ import {
   logoutViaUi,
 } from "./helpers/auth";
 import { createCourseViaUi } from "./helpers/course";
-import { seedEnrollment } from "./helpers/db";
+import {
+  seedAssignments,
+  seedEnrollment,
+  seedSubmission,
+} from "./helpers/db";
 import { OTHER_USER, TEST_USER } from "./test-user";
 
 test.describe("course detail page", () => {
@@ -135,6 +139,63 @@ test.describe("course detail page", () => {
     // A course with no submissions shows an empty state. No seeding is
     // needed: the author has not submitted anything to this course.
     await expect(page.getByText("No submissions yet")).toBeVisible();
+  });
+
+  test("each submission card title links to the submission review page", async ({
+    page,
+  }) => {
+    await ensureSignedUp(OTHER_USER);
+    await loginViaUi(page);
+
+    const title = `Submissions links course ${Date.now()}`;
+    const coursePath = await createCourseViaUi(page, {
+      title,
+      description: "Course with seeded submissions to link through.",
+    });
+    const courseId = Number(coursePath.split("/")[2]);
+
+    // Two submissions (different assignees, so the (assignment, assignee)
+    // unique index allows both) on one assignment. Each card title must
+    // link to its own submission's review page.
+    const [assignmentId] = await seedAssignments(courseId, [
+      "Reviewable assignment",
+    ]);
+    const submissionId1 = await seedSubmission(
+      assignmentId,
+      TEST_USER.email,
+      Date.now(),
+    );
+    const submissionId2 = await seedSubmission(
+      assignmentId,
+      OTHER_USER.email,
+      Date.now(),
+    );
+
+    await page.goto(`${coursePath}?tab=submissions`);
+    await expect(page).toHaveURL(/tab=submissions/);
+
+    // Each card title (the assignment title) is a link whose target is that
+    // submission's review page:
+    // /courses/<course_id>/assignments/<assignment_id>/submissions/<submission_id>.
+    const reviewHref = (submissionId: number) =>
+      `/courses/${courseId}/assignments/${assignmentId}/submissions/${submissionId}`;
+    for (const submissionId of [submissionId1, submissionId2]) {
+      const cardTitleLink = page.locator(
+        `a[href="${reviewHref(submissionId)}"]`,
+      );
+      await expect(cardTitleLink).toBeVisible();
+      // The card title itself is the link, not a separate "open" button.
+      await expect(cardTitleLink).toContainText("Reviewable assignment");
+    }
+
+    // Following the first card's title link lands on that submission's
+    // review page.
+    await page.locator(`a[href="${reviewHref(submissionId1)}"]`).click();
+    await expect(page).toHaveURL(
+      new RegExp(
+        `/courses/${courseId}/assignments/${assignmentId}/submissions/${submissionId1}$`,
+      ),
+    );
   });
 
   test("non-author gets a 404 instead of the course page", async ({ page }) => {

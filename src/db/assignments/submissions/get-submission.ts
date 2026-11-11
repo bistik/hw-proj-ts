@@ -13,6 +13,7 @@ export async function dbGetSubmissionsByCourse(courseId: number) {
     db
       .select({
         id: assignmentSubmissionsTable.id,
+        assignmentId: assignmentsTable.id,
         assignmentTitle: assignmentsTable.title,
         assigneeName: users.name,
         assigneeEmail: users.email,
@@ -74,4 +75,62 @@ export async function dbGetSubmissionByAssignmentAndStudent(
     submission,
     questions: rows.map((q) => ({ ...q, answered: q.answerId !== null })),
   };
+}
+
+export async function dbGetSubmissionForReview(submissionId: number) {
+  const submission = await db.query.assignmentSubmissionsTable.findFirst({
+    where: (t, { eq }) => eq(t.id, submissionId),
+    columns: {
+      id: true,
+      assignmentId: true,
+      assigneeId: true,
+      startedAt: true,
+      submittedAt: true,
+    },
+    with: {
+      assignment: {
+        columns: { id: true, courseId: true },
+        with: {
+          course: { columns: { title: true } },
+        },
+      },
+    },
+  });
+
+  if (!submission) return null;
+
+  const [assignee] = await db
+    .select({ name: users.name, email: users.email })
+    .from(users)
+    .where(eq(users.id, submission.assigneeId))
+    .limit(1);
+
+  const questions = await db
+    .select({
+      id: questionsTable.id,
+      position: questionsTable.position,
+      questionText: questionsTable.questionText,
+      correctAnswer: questionsTable.answer,
+      studentAnswer: submissionAnswersTable.answer,
+      isCorrect: submissionAnswersTable.isCorrect,
+    })
+    .from(questionsTable)
+    .innerJoin(
+      assignmentSubmissionsTable,
+      eq(
+        questionsTable.assignmentId,
+        assignmentSubmissionsTable.assignmentId,
+      ),
+    )
+    .leftJoin(
+      submissionAnswersTable,
+      and(
+        eq(submissionAnswersTable.questionId, questionsTable.id),
+        eq(submissionAnswersTable.submissionId, submissionId),
+      ),
+    )
+    .where(eq(assignmentSubmissionsTable.id, submissionId))
+    .orderBy(asc(questionsTable.position));
+
+  return { submission, assignee, questions };
 }

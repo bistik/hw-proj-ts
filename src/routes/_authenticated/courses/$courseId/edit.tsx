@@ -3,23 +3,31 @@ import { SubmitButton } from "@/components/submit-button";
 import { TextField } from "@/components/text-field";
 import { courseUpdateFormSchema } from "@/schemas/course-schema";
 import { updateCourse } from "@/server/courses/mutate-course";
+import { getCourseByIdAndAuthor } from "@/server/courses/get-course";
 import { useForm } from "@tanstack/react-form";
 import {
   createFileRoute,
-  getRouteApi,
+  notFound,
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
 import z from "zod";
 
 export const Route = createFileRoute("/_authenticated/courses/$courseId/edit")({
+  loader: async ({ params }) => {
+    // Duplicated author guard: only the course author may open the edit page.
+    // A non-author is thrown to the router's defaultNotFoundComponent.
+    const courseId = Number(params.courseId);
+    if (!Number.isInteger(courseId) || courseId <= 0) throw notFound();
+    const course = await getCourseByIdAndAuthor({ data: { courseId } });
+    if (!course) throw notFound();
+    return { course };
+  },
   component: RouteComponent,
 });
 
-const courseRouteApi = getRouteApi("/_authenticated/courses/$courseId");
-
 function RouteComponent() {
-  const { course } = courseRouteApi.useLoaderData();
+  const { course } = Route.useLoaderData();
   const router = useRouter();
   const navigate = useNavigate();
 
