@@ -15,15 +15,15 @@ export const Route = createFileRoute("/_authenticated")({
     }
     return { user: session.user };
   },
-  component: RouteComponent,
+  component: BaseLayoutComponent,
 });
 
-function RouteComponent() {
+function BaseLayoutComponent() {
   const { user } = Route.useRouteContext();
   return (
     <div>
       {user && <Navbar user={user} />}
-      <div className="w-4/5 mx-auto my-8 border-2 border-amber-100">
+      <div className="w-4/5 mx-auto my-8">
         <Outlet />
       </div>
     </div>
