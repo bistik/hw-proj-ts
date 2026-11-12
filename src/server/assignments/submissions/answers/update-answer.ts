@@ -1,9 +1,6 @@
 import { dbGradeSubmissionAnswer } from "@/db/assignments/submissions/answers/update-answer";
-import { requireUserOwnsCourse } from "@/db/authz";
-import { db } from "@/db";
-import { assignmentSubmissionsTable, assignmentsTable } from "@/db/schema";
+import { requireUserOwnsSubmission } from "@/db/authz";
 import { authMiddleware } from "@/middlewares/auth-middleware";
-import { and, eq } from "drizzle-orm";
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 
@@ -18,26 +15,20 @@ export const gradeSubmissionAnswer = createServerFn({ method: "POST" })
   .validator(gradeSubmissionAnswerSchema)
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
-    await requireUserOwnsCourse(data.courseId, context.user.id);
+    // The submission must exist, belong to this course, and the caller
+    // must own the course — all checked by the one authz guard.
+    const submission = await requireUserOwnsSubmission(
+      data.submissionId,
+      data.courseId,
+      context.user.id,
+    );
 
-    // The submission must exist, belong to this course, and contain the
-    // answer that is being graded.
-    const [row] = await db
-      .select({ id: assignmentSubmissionsTable.id })
-      .from(assignmentSubmissionsTable)
-      .innerJoin(
-        assignmentsTable,
-        eq(assignmentSubmissionsTable.assignmentId, assignmentsTable.id),
-      )
-      .where(
-        and(
-          eq(assignmentSubmissionsTable.id, data.submissionId),
-          eq(assignmentsTable.courseId, data.courseId),
-        ),
-      )
-      .limit(1);
-
-    if (!row) throw new Error("Submission not found");
+    // Completing closes the review: after completed_at is set, marks stay
+    // frozen. This mirrors the submittedAt check in completeSubmission, so
+    // a stale tab or a direct POST cannot change marks either.
+    if (submission.completedAt !== null) {
+      throw new Error("Submission is already completed");
+    }
 
     const updated = await dbGradeSubmissionAnswer({
       submissionId: data.submissionId,

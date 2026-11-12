@@ -29,6 +29,13 @@
       "when": 1794228772522,
       "tag": "0003_aromatic_master_chief",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1794475246240,
+      "tag": "0004_add-completed-at-to-assignment-submissions",
+      "breakpoints": true
     }
   ]
 }

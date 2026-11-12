@@ -2,12 +2,17 @@ type SubmissionSummaryCardProps = {
   assigneeName: string;
   assigneeEmail: string;
   startedAt: Date | string;
+  /** Set when the review is closed; renders the completion date. */
+  completedAt?: Date | string | null;
   correctCount: number;
   total: number;
+  /** Offer the "Mark as completed" action (submitted, not yet completed). */
+  canComplete: boolean;
+  onComplete: () => void;
 };
 
-function formatStartedAt(startedAt: Date | string) {
-  return new Date(startedAt).toLocaleString("en-US", {
+function formatDate(date: Date | string) {
+  return new Date(date).toLocaleString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -21,8 +26,11 @@ export default function SubmissionSummaryCard({
   assigneeName,
   assigneeEmail,
   startedAt,
+  completedAt,
   correctCount,
   total,
+  canComplete,
+  onComplete,
 }: SubmissionSummaryCardProps) {
   return (
     <div className="card w-full bg-base-100 border-2 border-base-300 shadow-md">
@@ -36,10 +44,22 @@ export default function SubmissionSummaryCard({
       <div className="card-body">
         <p>{assigneeEmail}</p>
         <p>{assigneeName}</p>
-        <p>Started: {formatStartedAt(startedAt)}</p>
+        <p>Started: {formatDate(startedAt)}</p>
+        {completedAt && <p>Completed: {formatDate(completedAt)}</p>}
         <p>
           {correctCount} of {total}
         </p>
+        {canComplete && (
+          <div className="card-actions justify-end">
+            <button
+              type="button"
+              className="btn bg-primary text-primary-content hover:opacity-80"
+              onClick={onComplete}
+            >
+              Mark as completed
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

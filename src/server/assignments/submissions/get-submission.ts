@@ -76,6 +76,7 @@ export const getSubmissionForReview = createServerFn({ method: "GET" })
     return {
       startedAt: result.submission.startedAt,
       submittedAt: result.submission.submittedAt,
+      completedAt: result.submission.completedAt,
       assigneeName: assignee?.name ?? "",
       assigneeEmail: assignee?.email ?? "",
       courseTitle: assignment.course?.title ?? "",

@@ -404,3 +404,233 @@ test.describe("author submission review page", () => {
     ).toHaveCount(0);
   });
 });
+
+/**
+ * Issue #12: the author can close a reviewed submission.
+ *
+ * The contract (from the issue, plus the state decisions documented per
+ * test): the summary card of a submitted submission offers a
+ * [Mark as completed] button. Clicking it lands back on the same review
+ * page, where the [Correct] and [Mistake] buttons no longer render. The
+ * completed state survives a reload, so tests assert on the rendered UI
+ * only — how it persists (a column on assignment_submissions or
+ * otherwise) stays an implementation choice.
+ */
+test.describe("mark a submission as completed", () => {
+  test("the summary card offers the course author a Mark as completed button", async ({
+    page,
+  }) => {
+    const { courseId, assignmentId, submissionId } =
+      await setupSubmissionForReview(page, { submitted: true });
+
+    await loginViaUi(page, OTHER_USER);
+    await page.goto(reviewPath(courseId, assignmentId, submissionId));
+
+    const summaryCard = page
+      .locator(".card")
+      .filter({ hasText: TEST_USER.email });
+    await expect(
+      summaryCard.getByRole("button", {
+        name: "Mark as completed",
+        exact: true,
+      }),
+    ).toBeVisible();
+  });
+
+  test("an in-progress submission offers no Mark as completed button", async ({
+    page,
+  }) => {
+    // Completing makes sense only after the student submitted: an
+    // in-progress submission can still change, so the action must not be
+    // offered for it (matching how grading buttons are already withheld).
+    const { courseId, assignmentId, submissionId } =
+      await setupSubmissionForReview(page, { submitted: false });
+
+    await loginViaUi(page, OTHER_USER);
+    await page.goto(reviewPath(courseId, assignmentId, submissionId));
+
+    await expect(
+      page.getByRole("button", { name: "Mark as completed", exact: true }),
+    ).toHaveCount(0);
+  });
+
+  test("clicking Mark as completed lands back on the review page without grading buttons", async ({
+    page,
+  }) => {
+    const { courseId, assignmentId, submissionId } =
+      await setupSubmissionForReview(page, { submitted: true });
+
+    await loginViaUi(page, OTHER_USER);
+    await page.goto(reviewPath(courseId, assignmentId, submissionId));
+
+    // Hydration in dev can lag the SSR-rendered button (a click that falls
+    // through does nothing — the grading test documents the same race), so
+    // retry the click until the grading buttons disappear. The click can
+    // also throw once the button unmounts mid-navigation; both count as
+    // progress, not failure.
+    const completeButton = page.getByRole("button", {
+      name: "Mark as completed",
+      exact: true,
+    });
+    await expect
+      .poll(
+        async () => {
+          try {
+            await completeButton.click({ timeout: 2_000 });
+          } catch {
+            // The button is gone: completion already happened.
+          }
+          return page.getByRole("button", { name: "Correct", exact: true })
+            .count();
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(0);
+
+    // The action returns to the same page, not somewhere else.
+    await expect(page).toHaveURL(
+      new RegExp(`/courses/${courseId}/assignments/${assignmentId}/submissions/${submissionId}$`),
+    );
+    await expect(
+      page.getByRole("button", { name: "Mistake", exact: true }),
+    ).toHaveCount(0);
+
+    // The review itself stays readable: the summary card still renders.
+    await expect(
+      page.locator(".card").filter({ hasText: TEST_USER.email }),
+    ).toBeVisible();
+  });
+
+  test("grading buttons stay hidden after completing and reloading the page", async ({
+    page,
+  }) => {
+    const { courseId, assignmentId, submissionId } =
+      await setupSubmissionForReview(page, { submitted: true });
+
+    await loginViaUi(page, OTHER_USER);
+    await page.goto(reviewPath(courseId, assignmentId, submissionId));
+
+    const completeButton = page.getByRole("button", {
+      name: "Mark as completed",
+      exact: true,
+    });
+    await expect
+      .poll(
+        async () => {
+          try {
+            await completeButton.click({ timeout: 2_000 });
+          } catch {
+            // The button is gone: completion already happened.
+          }
+          return page.getByRole("button", { name: "Correct", exact: true })
+            .count();
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(0);
+
+    // The completed state persists server-side: a fresh load of the same
+    // URL still hides both grading actions, and the page stays healthy.
+    await page.reload();
+    await expect(
+      page.getByRole("button", { name: "Correct", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Mistake", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Question #1", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Oops! Something went wrong" }),
+    ).toHaveCount(0);
+
+    // The closed review also shows its completion date on the summary
+    // card, next to the started date.
+    const summaryCard = page
+      .locator(".card")
+      .filter({ hasText: TEST_USER.email });
+    await expect(summaryCard.getByText(/^Completed: /)).toBeVisible();
+  });
+
+  test("a completed submission still shows the graded marks and score", async ({
+    page,
+  }) => {
+    // Completing closes the review for editing; it must not erase the
+    // grading results the author already recorded.
+    const { courseId, assignmentId, submissionId } =
+      await setupSubmissionForReview(page, { submitted: true });
+
+    await loginViaUi(page, OTHER_USER);
+    await page.goto(reviewPath(courseId, assignmentId, submissionId));
+
+    const cards = QUESTIONS.map((question) =>
+      page.locator(".card").filter({ hasText: question }),
+    );
+
+    // Grade the first answer Correct first (same hydration retry as the
+    // grading test above).
+    const correctButton = cards[0]!.getByRole("button", {
+      name: "Correct",
+      exact: true,
+    });
+    const card1Mark = cards[0]!.getByText("✓");
+    await expect
+      .poll(
+        async () => {
+          await correctButton.click();
+          return card1Mark.isVisible();
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(true);
+
+    const completeButton = page.getByRole("button", {
+      name: "Mark as completed",
+      exact: true,
+    });
+    await expect
+      .poll(
+        async () => {
+          try {
+            await completeButton.click({ timeout: 2_000 });
+          } catch {
+            // The button is gone: completion already happened.
+          }
+          return page.getByRole("button", { name: "Correct", exact: true })
+            .count();
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(0);
+
+    // The recorded mark and the score survive the completion.
+    await expect(cards[0]!.getByText("✓")).toBeVisible();
+    const summaryCard = page
+      .locator(".card")
+      .filter({ hasText: TEST_USER.email });
+    await expect(summaryCard.getByText("1 of 2")).toBeVisible();
+    await expect(summaryCard.getByText("0 of 2")).toHaveCount(0);
+  });
+
+  test("only the course author reaches the page, so the action stays author-only", async ({
+    page,
+  }) => {
+    // The course is authored by OTHER_USER; TEST_USER is only its student.
+    // The loader already blocks non-authors from the whole review page
+    // (see the non-author test above), so the student must neither see
+    // the review nor the Mark as completed action.
+    const { courseId, assignmentId, submissionId } =
+      await setupSubmissionForReview(page, { submitted: true });
+
+    await loginViaUi(page, TEST_USER);
+    await page.goto(reviewPath(courseId, assignmentId, submissionId));
+
+    await expect(
+      page.getByRole("heading", { name: "Oops! Something went wrong" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Mark as completed", exact: true }),
+    ).toHaveCount(0);
+  });
+});
