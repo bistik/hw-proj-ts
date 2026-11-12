@@ -86,6 +86,7 @@ export async function dbGetSubmissionForReview(submissionId: number) {
       assigneeId: true,
       startedAt: true,
       submittedAt: true,
+      completedAt: true,
     },
     with: {
       assignment: {

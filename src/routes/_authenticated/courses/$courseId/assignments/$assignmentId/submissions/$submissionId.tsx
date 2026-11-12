@@ -1,7 +1,9 @@
 import { getSubmissionForReview } from "@/server/assignments/submissions/get-submission";
 import { gradeSubmissionAnswer } from "@/server/assignments/submissions/answers/update-answer";
+import { completeSubmission } from "@/server/assignments/submissions/complete-submission";
 import AnswerCard from "@/components/submissions/answer-card";
 import SubmissionSummaryCard from "@/components/submissions/summary-card";
+import Breadcrumbs from "@/components/common/breadcrumbs";
 import { Link, createFileRoute, notFound, useRouter } from "@tanstack/react-router";
 
 export const Route = createFileRoute(
@@ -49,32 +51,44 @@ function SubmissionReviewComponent() {
     await router.invalidate();
   };
 
+  // Grading (and completing) is offered only while the submission is
+  // submitted and not yet completed: completing closes the review.
+  const open = review.submittedAt !== null && review.completedAt === null;
+
+  const complete = async () => {
+    await completeSubmission({
+      data: {
+        courseId,
+        submissionId,
+      },
+    });
+    await router.invalidate();
+  };
+
   return (
     <div className="flex w-full justify-center min-h-64">
       <div className="my-4 w-full">
         {/* Breadcrumb: course title > All course submissions, matching the
             card-title link on the course detail Submissions tab. */}
-        <div className="text-sm breadcrumbs mb-8">
-          <ul>
-            <li>
-              <Link
-                to="/courses/$courseId"
-                params={{ courseId: String(courseId) }}
-              >
-                {review.courseTitle}
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/courses/$courseId"
-                params={{ courseId: String(courseId) }}
-                search={{ tab: "submissions" }}
-              >
-                All course submissions
-              </Link>
-            </li>
-          </ul>
-        </div>
+        <Breadcrumbs
+          items={[
+            <Link
+              key="course"
+              to="/courses/$courseId"
+              params={{ courseId: String(courseId) }}
+            >
+              {review.courseTitle}
+            </Link>,
+            <Link
+              key="submissions"
+              to="/courses/$courseId"
+              params={{ courseId: String(courseId) }}
+              search={{ tab: "submissions" }}
+            >
+              All course submissions
+            </Link>,
+          ]}
+        />
 
         <SubmissionSummaryCard
           assigneeEmail={review.assigneeEmail}
@@ -82,6 +96,8 @@ function SubmissionReviewComponent() {
           startedAt={review.startedAt}
           correctCount={review.correctCount}
           total={review.total}
+          canComplete={open}
+          onComplete={complete}
         />
 
         <div className="flex flex-col gap-y-8 mt-8">
@@ -93,7 +109,7 @@ function SubmissionReviewComponent() {
               studentAnswer={question.studentAnswer}
               correctAnswer={question.correctAnswer}
               isCorrect={question.isCorrect}
-              gradable={review.submittedAt !== null}
+              gradable={open}
               onGrade={(isCorrect) => grade(question.id, isCorrect)}
             />
           ))}

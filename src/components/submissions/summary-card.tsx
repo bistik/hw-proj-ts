@@ -4,6 +4,9 @@ type SubmissionSummaryCardProps = {
   startedAt: Date | string;
   correctCount: number;
   total: number;
+  /** Offer the "Mark as completed" action (submitted, not yet completed). */
+  canComplete: boolean;
+  onComplete: () => void;
 };
 
 function formatStartedAt(startedAt: Date | string) {
@@ -23,6 +26,8 @@ export default function SubmissionSummaryCard({
   startedAt,
   correctCount,
   total,
+  canComplete,
+  onComplete,
 }: SubmissionSummaryCardProps) {
   return (
     <div className="card w-full bg-base-100 border-2 border-base-300 shadow-md">
@@ -40,6 +45,17 @@ export default function SubmissionSummaryCard({
         <p>
           {correctCount} of {total}
         </p>
+        {canComplete && (
+          <div className="card-actions justify-end">
+            <button
+              type="button"
+              className="btn bg-primary text-primary-content hover:opacity-80"
+              onClick={onComplete}
+            >
+              Mark as completed
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

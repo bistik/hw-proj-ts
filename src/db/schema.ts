@@ -151,6 +151,9 @@ export const assignmentSubmissionsTable = sqliteTable(
       .notNull()
       .$defaultFn(() => new Date()),
     submittedAt: integer("submitted_at", { mode: "timestamp" }),
+    // Set by the course author via the review page's "Mark as completed"
+    // action: closes the review for further grading.
+    completedAt: integer("completed_at", { mode: "timestamp" }),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .$defaultFn(() => new Date()),
