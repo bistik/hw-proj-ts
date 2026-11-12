@@ -544,6 +544,13 @@ test.describe("mark a submission as completed", () => {
     await expect(
       page.getByRole("heading", { name: "Oops! Something went wrong" }),
     ).toHaveCount(0);
+
+    // The closed review also shows its completion date on the summary
+    // card, next to the started date.
+    const summaryCard = page
+      .locator(".card")
+      .filter({ hasText: TEST_USER.email });
+    await expect(summaryCard.getByText(/^Completed: /)).toBeVisible();
   });
 
   test("a completed submission still shows the graded marks and score", async ({

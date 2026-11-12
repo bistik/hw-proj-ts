@@ -25,5 +25,10 @@ export const completeSubmission = createServerFn({ method: "POST" })
       throw new Error("Submission is not submitted yet");
     }
 
-    return await dbCompleteSubmission(data.submissionId);
+    const updated = await dbCompleteSubmission(data.submissionId);
+
+    // The db fn never overwrites an existing completed_at, so an already
+    // completed submission matches no row: return the time the guard read
+    // (it cannot be null here, the submission is submitted at minimum).
+    return updated ?? { id: submission.id, completedAt: submission.completedAt };
   });
