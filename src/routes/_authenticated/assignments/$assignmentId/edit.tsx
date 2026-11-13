@@ -14,9 +14,12 @@ export const Route = createFileRoute(
   loader: async ({ params }) => {
     const assignmentId = Number(params.assignmentId);
     if (!Number.isInteger(assignmentId) || assignmentId <= 0) throw notFound();
+    // Same guard as the detail page: null means unknown id or a caller who
+    // is not the course author, so a non-author gets the not-found page.
     const assignment = await getAssignmentById({
       data: { assignmentId: assignmentId },
     });
+    if (!assignment) throw notFound();
     return { assignment };
   },
   component: RouteComponent,

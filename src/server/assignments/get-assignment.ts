@@ -1,4 +1,4 @@
-import { dbGetAssignmentsByCourse, dbGetAssignment } from "@/db/assignments/get-assignment";
+import { dbGetAssignmentsByCourse, dbGetAssignmentByIdAndAuthor } from "@/db/assignments/get-assignment";
 import { requireUserOwnsCourse } from "@/db/authz";
 import { authMiddleware } from "@/middlewares/auth-middleware";
 import { courseByIdSchema } from "@/schemas/course-schema";
@@ -16,11 +16,14 @@ export const getAssignmentById = createServerFn({
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
     try {
-      const assignment = await dbGetAssignment(data.assignmentId);
-      if (!assignment) throw new Error("Assignment not found");
-      if (!assignment.courseId)
-        throw new Error("Course for assignment not found");
-      await requireUserOwnsCourse(assignment.courseId, context.user.id);
+      // Author-scoped lookup: a caller who is not the course author gets
+      // null, exactly like getCourseByIdAndAuthor. The route loader turns
+      // null into notFound(), so no assignment data can leak to a non-author.
+      const assignment = await dbGetAssignmentByIdAndAuthor(
+        data.assignmentId,
+        context.user.id,
+      );
+      if (!assignment || !assignment.courseId) return null;
       return assignment;
     } catch (err) {
       console.error(`Error fetching assignment ${data.assignmentId}`, err);

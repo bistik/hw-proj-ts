@@ -316,7 +316,13 @@ function CourseDetailComponent() {
           <ul className="flex flex-col space-y-2">
             {assignments.map((assignment) => (
               <li key={assignment.id} className="flex items-center gap-3">
-                <span>{assignment.title}</span>
+                <Link
+                  className="link"
+                  to="/assignments/$assignmentId"
+                  params={{ assignmentId: String(assignment.id) }}
+                >
+                  {assignment.title}
+                </Link>
                 <Link
                   className="btn btn-link btn-sm"
                   to="/assignments/$assignmentId/edit"
