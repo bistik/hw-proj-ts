@@ -336,6 +336,13 @@ function CourseDetailComponent() {
         ) : (
           <h3>No assignments yet</h3>
         )}
+        <Link
+          className="btn btn-link btn-sm mt-4 px-0"
+          to="/courses/$courseId/assignments/new"
+          params={{ courseId }}
+        >
+          Add assignment
+        </Link>
       </div>
 
       <input
