@@ -94,12 +94,15 @@ test.describe("add a new lesson", () => {
     await expect(courseCrumb).toBeVisible();
     await expect(courseCrumb).toHaveAttribute("href", `/courses/${courseId}`);
 
-    const newLessonCrumb = breadcrumbs.getByText("New lesson");
+    // exact: true, because the course title itself may contain "New
+    // lesson" (e.g. "New lesson crumb course ...") and getByText without
+    // exact matches substrings, colliding with the title link above.
+    const newLessonCrumb = breadcrumbs.getByText("New lesson", { exact: true });
     await expect(newLessonCrumb).toBeVisible();
     // "New lesson" is the current page: text only, never a link.
     await expect(newLessonCrumb).not.toHaveRole("link");
     await expect(
-      breadcrumbs.getByRole("link", { name: "New lesson" }),
+      breadcrumbs.getByRole("link", { name: "New lesson", exact: true }),
     ).toHaveCount(0);
   });
 });
