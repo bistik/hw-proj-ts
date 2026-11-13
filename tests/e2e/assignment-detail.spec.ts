@@ -92,5 +92,11 @@ test.describe("assignment detail page", () => {
     await expect(page.getByText("404 - not found")).toBeVisible();
     // The assignment content must not leak to the non-author.
     await expect(page.getByText("Other user's assignment")).toHaveCount(0);
+
+    // The edit route applies the same guard, so a non-author also gets the
+    // not-found page there instead of the edit form.
+    await page.goto(`/assignments/${assignmentId}/edit`);
+    await expect(page.getByText("404 - not found")).toBeVisible();
+    await expect(page.getByText("Other user's assignment")).toHaveCount(0);
   });
 });

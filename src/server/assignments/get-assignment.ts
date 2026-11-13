@@ -23,7 +23,7 @@ export const getAssignmentById = createServerFn({
         data.assignmentId,
         context.user.id,
       );
-      if (!assignment || !assignment.courseId) return null;
+      if (!assignment) return null;
       return assignment;
     } catch (err) {
       console.error(`Error fetching assignment ${data.assignmentId}`, err);

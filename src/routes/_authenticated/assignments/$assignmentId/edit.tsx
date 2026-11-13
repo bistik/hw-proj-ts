@@ -22,10 +22,10 @@ export const Route = createFileRoute(
     if (!assignment) throw notFound();
     return { assignment };
   },
-  component: RouteComponent,
+  component: EditAssignmentComponent,
 });
 
-function RouteComponent() {
+function EditAssignmentComponent() {
   const { assignment } = Route.useLoaderData();
   const navigate = useNavigate();
   const handleSubmit = async ({

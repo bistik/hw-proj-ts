@@ -27,10 +27,10 @@ export const Route = createFileRoute(
 
     return { assignment, questions };
   },
-  component: RouteComponent,
+  component: AssignmentDetailComponent,
 });
 
-function RouteComponent() {
+function AssignmentDetailComponent() {
   const { assignment, questions } = Route.useLoaderData();
   const router = useRouter();
   const handleSubmit = async function ({
