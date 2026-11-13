@@ -18,15 +18,19 @@ export const Route = createFileRoute(
   loader: async ({ params }) => {
     const assignmentId = Number(params.assignmentId);
     if (!Number.isInteger(assignmentId) || assignmentId <= 0) throw notFound();
+    // The server fn returns null for an unknown id or a caller who is not
+    // the course author; both cases render the router's
+    // defaultNotFoundComponent instead of the assignment detail page.
     const assignment = await getAssignmentById({ data: { assignmentId } });
+    if (!assignment) throw notFound();
     const questions = await getQuestions({ data: assignmentId });
 
     return { assignment, questions };
   },
-  component: RouteComponent,
+  component: AssignmentDetailComponent,
 });
 
-function RouteComponent() {
+function AssignmentDetailComponent() {
   const { assignment, questions } = Route.useLoaderData();
   const router = useRouter();
   const handleSubmit = async function ({
