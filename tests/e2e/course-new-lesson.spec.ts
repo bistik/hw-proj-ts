@@ -34,7 +34,7 @@ test.describe("add a new lesson", () => {
 
     // No lesson seeding is needed: the link must be present in the empty
     // state too ("No lessons yet"), not only once lessons exist.
-    const addLessonLink = page.getByRole("link", { name: "add a lesson" });
+    const addLessonLink = page.getByRole("link", { name: "Add lesson" });
     await expect(addLessonLink).toBeVisible();
   });
 
@@ -52,15 +52,18 @@ test.describe("add a new lesson", () => {
 
     await page.goto(`${coursePath}?tab=lessons`);
     await expect(page).toHaveURL(/tab=lessons/);
-    // Let the route's loaders (and React hydration) settle before clicking:
-    // a click issued while the initial loaders are still pending can be
-    // dropped by the router (no history push, UI/URL desync).
-    await page.waitForLoadState("networkidle");
+    // Assert the link is ready before clicking: a click issued while the
+    // initial loaders are still pending can be dropped by the router
+    // (no history push, UI/URL desync). Visible and enabled is enough;
+    // networkidle is slow and flaky, so it is not used here.
+    const addLessonLink = page.getByRole("link", { name: "Add lesson" });
+    await expect(addLessonLink).toBeVisible();
+    await expect(addLessonLink).toBeEnabled();
 
     // The link is course-scoped: it must lead to this course's lesson form,
     // not the global /lessons/new page (which asks for a course via a
     // select instead of knowing the course from the URL).
-    await page.getByRole("link", { name: "add a lesson" }).click();
+    await addLessonLink.click();
     await expect(page).toHaveURL(
       new RegExp(`/courses/${courseId}/lessons/new$`),
     );

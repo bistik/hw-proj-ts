@@ -22,19 +22,42 @@ export const Route = createFileRoute(
     if (!course) throw notFound();
     return { course };
   },
-  component: RouteComponent,
+  component: NewLessonComponent,
 });
 
-function RouteComponent() {
+function NewLessonComponent() {
   const { course } = Route.useLoaderData();
   const navigate = useNavigate();
+  const failMessage = "Could not create the lesson. Please try again.";
 
   const handleSubmit = async ({
     value,
   }: {
     value: z.infer<typeof lessonFormSchema>;
   }) => {
-    await createLesson({ data: value });
+    let created;
+    try {
+      created = await createLesson({ data: value });
+    } catch (err) {
+      console.error(`Failed to create lesson for course ${course.id}`, err);
+      form.setErrorMap({
+        onSubmit: {
+          form: failMessage,
+          fields: {},
+        },
+      });
+      return;
+    }
+
+    if (!created) {
+      form.setErrorMap({
+        onSubmit: {
+          form: failMessage,
+          fields: {},
+        },
+      });
+      return;
+    }
     await navigate({
       to: "/courses/$courseId",
       params: { courseId: String(course.id) },

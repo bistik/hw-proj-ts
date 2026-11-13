@@ -372,7 +372,7 @@ function CourseDetailComponent() {
           to="/courses/$courseId/lessons/new"
           params={{ courseId }}
         >
-          add a lesson
+          Add lesson
         </Link>
       </div>
 
