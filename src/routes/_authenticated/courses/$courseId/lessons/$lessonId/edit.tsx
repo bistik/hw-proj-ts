@@ -3,8 +3,7 @@ import Breadcrumbs from "@/components/common/breadcrumbs";
 import { SubmitButton } from "@/components/submit-button";
 import { TextField } from "@/components/text-field";
 import { lessonUpdateFormSchema } from "@/schemas/course-schema";
-import { getCourseByIdAndAuthor } from "@/server/courses/get-course";
-import { getLesson } from "@/server/lessons/get-lesson";
+import { getLessonWithCourse } from "@/server/lessons/get-lesson";
 import { updateLesson } from "@/server/lessons/update-lesson";
 import { useForm } from "@tanstack/react-form";
 import {
@@ -29,20 +28,20 @@ export const Route = createFileRoute(
     ) {
       throw notFound();
     }
-    // getLesson only returns a lesson of a course authored by the signed-in
-    // user, so an unknown id and a non-author both fail here (the router
-    // throws them to defaultNotFoundComponent).
-    const lesson = await getLesson({ data: lessonId });
-    if (!lesson || lesson.courseId !== courseId) throw notFound();
-    const course = await getCourseByIdAndAuthor({ data: { courseId } });
-    if (!course) throw notFound();
-    return { lesson, course };
+    // getLessonWithCourse only returns a lesson of a course authored by
+    // the signed-in user, so an unknown id and a non-author both fail
+    // here (the router throws them to defaultNotFoundComponent).
+    const lessonWithCourse = await getLessonWithCourse({ data: lessonId });
+    if (!lessonWithCourse || lessonWithCourse.lesson.courseId !== courseId) {
+      throw notFound();
+    }
+    return lessonWithCourse;
   },
   component: EditLessonComponent,
 });
 
 function EditLessonComponent() {
-  const { lesson, course } = Route.useLoaderData();
+  const { lesson, courseTitle } = Route.useLoaderData();
   const navigate = useNavigate();
   const failMessage = "Could not update the lesson. Please try again.";
 
@@ -76,7 +75,7 @@ function EditLessonComponent() {
     }
     await navigate({
       to: "/courses/$courseId",
-      params: { courseId: String(course.id) },
+      params: { courseId: String(lesson.courseId) },
       search: { tab: "lessons" },
     });
   };
@@ -103,9 +102,9 @@ function EditLessonComponent() {
           <Link
             key="course"
             to="/courses/$courseId"
-            params={{ courseId: String(course.id) }}
+            params={{ courseId: String(lesson.courseId) }}
           >
-            {course.title}
+            {courseTitle}
           </Link>,
           <span key="lesson">{lesson.title}</span>,
         ]}

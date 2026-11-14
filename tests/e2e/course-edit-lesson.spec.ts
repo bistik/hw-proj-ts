@@ -79,10 +79,10 @@ test.describe("edit a lesson on the course-scoped page", () => {
 
     await page.goto(editPathOf(courseId, lessonId));
 
-    // "Similar content" to /lessons/<id>/edit (see
-    // src/routes/_authenticated/lessons/$lessonId/edit.tsx): a form with
-    // Title and Content fields, both prefilled with the lesson's values,
-    // and an "Update lesson" submit button.
+    // "Similar content" to the old /lessons/<id>/edit page this change
+    // replaces (it now lives at /courses/<id>/lessons/<id>/edit): a form
+    // with Title and Content fields, both prefilled with the lesson's
+    // values, and an "Update lesson" submit button.
     await expect(
       page.locator('fieldset:has-text("Title") input'),
     ).toHaveValue(lessonTitle);

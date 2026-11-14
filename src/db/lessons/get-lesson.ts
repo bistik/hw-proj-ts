@@ -15,6 +15,21 @@ export async function dbGetLesson(lessonId: number, userId: string) {
   return result[0]?.lesson;
 }
 
+/** One query for pages that need the lesson and its course's title
+ * (breadcrumbs). The author check also guards non-authors. */
+export async function dbGetLessonWithCourse(lessonId: number, userId: string) {
+  const result = await db
+    .select({ lesson: lessonsTable, courseTitle: coursesTable.title })
+    .from(lessonsTable)
+    .innerJoin(coursesTable, eq(lessonsTable.courseId, coursesTable.id))
+    .where(
+      and(eq(lessonsTable.id, lessonId), eq(coursesTable.authorId, userId)),
+    )
+    .limit(1);
+
+  return result[0];
+}
+
 export async function dbGetLessonsByCourse(courseId: number) {
   return db.query.lessonsTable.findMany({
     where: (lessonsTable, { eq }) => eq(lessonsTable.courseId, courseId),
