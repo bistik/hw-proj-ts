@@ -23,8 +23,11 @@ function RouteComponent() {
         <div className="justify-end card-actions">
           <Link
             className="btn btn-primary"
-            to="/lessons/$lessonId/edit"
-            params={{ lessonId: String(lesson.id) }}
+            to="/courses/$courseId/lessons/$lessonId/edit"
+            params={{
+              courseId: String(lesson.courseId),
+              lessonId: String(lesson.id),
+            }}
           >
             Edit this lesson
           </Link>

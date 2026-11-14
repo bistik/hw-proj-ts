@@ -363,8 +363,11 @@ function CourseDetailComponent() {
                 <span>{lesson.title}</span>
                 <Link
                   className="btn btn-link btn-sm"
-                  to="/lessons/$lessonId/edit"
-                  params={{ lessonId: String(lesson.id) }}
+                  to="/courses/$courseId/lessons/$lessonId/edit"
+                  params={{
+                    courseId,
+                    lessonId: String(lesson.id),
+                  }}
                 >
                   Edit lesson
                 </Link>
