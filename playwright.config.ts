@@ -39,6 +39,16 @@ export default defineConfig({
       TURSO_DATABASE_URL: "file:./tests/e2e/e2e-test.db",
       TURSO_AUTH_TOKEN: "local-e2e-file-db",
       BETTER_AUTH_URL: "http://localhost:3100",
+      // Mailpit transport (src/lib/email/send.ts) for the invite-email spec.
+      // Local only: on CI Mailpit does not exist, and a set but unreachable
+      // MAILPIT_URL would make every send fail. Override with MAILPIT_URL on
+      // the command line if Mailpit runs elsewhere.
+      ...(process.env.CI
+        ? {}
+        : {
+            MAILPIT_URL: process.env.MAILPIT_URL ?? "http://localhost:8025",
+            EMAIL_FROM: "no-reply@e2e.test",
+          }),
     },
   },
 });
