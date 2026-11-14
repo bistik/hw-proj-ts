@@ -89,6 +89,27 @@ export async function seedLessons(
 }
 
 /**
+ * Inserts one lesson directly into the e2e database and returns its id.
+ * Like seedLessons but for tests that need the lesson id (e.g. to name
+ * the /lessons/<id> and /courses/<id>/lessons/<id> routes).
+ *
+ * Only columns notNull in src/db/schema.ts are filled; created_at/updated_at
+ * must be given explicitly because drizzle-kit push emits them WITHOUT
+ * DB-level defaults ($defaultFn/$onUpdate are app-level only).
+ */
+export async function seedLesson(
+  courseId: number,
+  lesson: { title: string; content: string },
+): Promise<number> {
+  const now = Date.now();
+  const inserted = await client.execute({
+    sql: "INSERT INTO lessons (title, content, course_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?) RETURNING id",
+    args: [lesson.title, lesson.content, courseId, now, now],
+  });
+  return Number(inserted.rows[0]!.id);
+}
+
+/**
  * Inserts an enrollment row directly into the e2e database.
  *
  * `status` defaults to "active" to match the existing callers, but tests can
