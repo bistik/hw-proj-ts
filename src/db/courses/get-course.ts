@@ -93,11 +93,17 @@ export async function dbGetEnrollmentByCourseAndStudent(
     with: {
       course: {
         with: {
+          // The outline rows in display order: the student page lists items
+          // by course_items.position (issue #32), not by table or id order.
+          items: {
+            columns: { itemType: true, itemId: true, position: true },
+            orderBy: (courseItemsTable, { asc }) => asc(courseItemsTable.position),
+          },
           lessons: { columns: { id: true, title: true } },
           assignments: {
             columns: { id: true, title: true },
             // Only the viewing student's submission per assignment, so the
-            // page can badge the row when the student already submitted.
+            // page can badge the card when the student already submitted.
             with: {
               submissions: {
                 columns: { submittedAt: true },

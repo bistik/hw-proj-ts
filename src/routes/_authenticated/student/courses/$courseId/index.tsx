@@ -22,53 +22,57 @@ function StudentCourseDetailComponent() {
   return (
     <div>
       <h2>{course.title}</h2>
-      <ul className="list">
-        {course.lessons.map((lesson) => (
-          <li key={lesson.id} className="list-row">
-            <Link
-              to="/student/lessons/$lessonId"
-              params={{ lessonId: String(lesson.id) }}
-              className="link"
-            >
-              {lesson.title}
-            </Link>
-          </li>
+      {/* One card per course item, stacked in course_items.position order
+          (issue #32), with the daisyUI card markup of the SubmissionCard /
+          AnswerCard components. */}
+      <div className="flex flex-col gap-6">
+        {course.items.map((item) => (
+          <div
+            key={`${item.itemType}-${item.id}`}
+            className="card w-full bg-base-100 border-2 border-base-300 shadow-md"
+          >
+            {/* Header strip: item title link, with the status badge on the
+                right for assignments (like the grade mark on AnswerCard). */}
+            <div className="flex items-center justify-between bg-base-300 px-4 py-2.5 rounded-t-[14px] border-b-2 border-base-300">
+              <h2 className="card-title">
+                {item.itemType === "lesson" ? (
+                  <Link
+                    to="/student/lessons/$lessonId"
+                    params={{ lessonId: String(item.id) }}
+                    className="link hover:font-bold hover:text-primary"
+                  >
+                    {item.title}
+                  </Link>
+                ) : (
+                  <Link
+                    to="/student/assignments/$assignmentId"
+                    params={{ assignmentId: String(item.id) }}
+                    className="link hover:font-bold hover:text-primary"
+                  >
+                    {item.title}
+                  </Link>
+                )}
+              </h2>
+              {item.itemType === "assignment" && (
+                // Status badge per card, like the enrollment roster badges on
+                // the author course page: "submitted" only once the student's
+                // submission has submitted_at set.
+                <span
+                  className={`badge ${
+                    item.submitted ? "badge-success" : "badge-neutral"
+                  }`}
+                >
+                  {item.submitted
+                    ? "submitted"
+                    : item.hasSubmission
+                      ? "in progress"
+                      : "not submitted"}
+                </span>
+              )}
+            </div>
+          </div>
         ))}
-      </ul>
-      <ul>
-        {course.assignments.map((assignment) => {
-          // Status badge per row, like the enrollment roster badges on the
-          // author course page: "submitted" only once the student's
-          // submission has submitted_at set.
-          const hasSubmission = assignment.submissions.length > 0;
-          const submitted = assignment.submissions.some(
-            (s) => s.submittedAt !== null,
-          );
-          const status = submitted
-            ? "submitted"
-            : hasSubmission
-              ? "in progress"
-              : "not submitted";
-          return (
-            <li key={assignment.id}>
-              <Link
-                to="/student/assignments/$assignmentId"
-                params={{ assignmentId: String(assignment.id) }}
-                className="link"
-              >
-                {assignment.title}
-              </Link>{" "}
-              <span
-                className={`badge ${
-                  submitted ? "badge-success" : "badge-neutral"
-                }`}
-              >
-                {status}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+      </div>
     </div>
   );
 }
