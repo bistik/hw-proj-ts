@@ -303,6 +303,50 @@ export async function seedSubmissionAnswer(
   });
 }
 
+/**
+ * Reads the id of the lesson row with the given title in a course, so tests
+ * can address the lesson created through the create lesson form (its id is
+ * never shown in the UI; the student lesson page lives at /student/lessons/
+ * <id>). Throws when the row is missing, because that is always a test bug
+ * (a wrong title or course id), not the behaviour under test.
+ */
+export async function getLessonIdByTitle(
+  courseId: number,
+  title: string,
+): Promise<number> {
+  const result = await client.execute({
+    sql: "SELECT id FROM lessons WHERE course_id = ? AND title = ?",
+    args: [courseId, title],
+  });
+  const id = result.rows[0]?.id;
+  if (id === undefined) {
+    throw new Error(
+      `[e2e] no lesson found with title "${title}" in course ${courseId}`,
+    );
+  }
+  return Number(id);
+}
+
+/**
+ * Reads the course_items outline row that points at the given item.
+ * Returns null when the row is missing — which is the behaviour under test
+ * in issue #35, so this read helper (unlike the seeders) must not throw.
+ */
+export async function getCourseItemRow(
+  itemType: "lesson" | "assignment",
+  itemId: number,
+): Promise<{ course_id: number; position: number } | null> {
+  const result = await client.execute({
+    sql: "SELECT course_id, position FROM course_items WHERE item_type = ? AND item_id = ?",
+    args: [itemType, itemId],
+  });
+  const row = result.rows[0];
+  if (!row) {
+    return null;
+  }
+  return { course_id: Number(row.course_id), position: Number(row.position) };
+}
+
 /** Now in ms, nudged by i so rows never collide on created_at. */
 function nowPlus(i: number): number {
   return Date.now() + i;
