@@ -3,6 +3,7 @@ import { ensureSignedUp, loginViaUi } from "./helpers/auth";
 import {
   seedAssignments,
   seedCourse,
+  seedCourseItems,
   seedEnrollment,
   seedSubmission,
 } from "./helpers/db";
@@ -42,43 +43,46 @@ test.describe("student course page", () => {
       title,
       description: "Course with assignments in different submission states.",
     });
-    const [submittedAssignmentId, inProgressAssignmentId] =
-      await seedAssignments(courseId, [
-        "Submitted assignment",
-        "In progress assignment",
-        "Open assignment",
-      ]);
+    const assignmentIds = await seedAssignments(courseId, [
+      "Submitted assignment",
+      "In progress assignment",
+      "Open assignment",
+    ]);
     // One submission with submitted_at set (done), one started but not
     // submitted (submitted_at null), and no submission for the third, so
     // each row earns a different badge.
-    await seedSubmission(submittedAssignmentId, TEST_USER.email, Date.now());
-    await seedSubmission(inProgressAssignmentId, TEST_USER.email);
+    await seedSubmission(assignmentIds[0]!, TEST_USER.email, Date.now());
+    await seedSubmission(assignmentIds[1]!, TEST_USER.email);
+    // The student page displays items by course_items.position (issue #32),
+    // so the seeded assignments need outline rows to be listed at all.
+    await seedCourseItems(
+      courseId,
+      assignmentIds.map((itemId, position) => ({
+        itemType: "assignment" as const,
+        itemId,
+        position,
+      })),
+    );
     await seedEnrollment(TEST_USER.email, courseId);
 
     await loginViaUi(page, TEST_USER);
     await page.goto(`/student/courses/${courseId}`);
 
     // Like the enrollment roster badges on /courses/<id>?tab=enrollments:
-    // a daisyUI badge (span.badge) in the assignment's row, carrying the
-    // status text. Scoping the badge to the listitem that holds the
-    // assignment title proves the badge sits on that row.
-    const submittedRow = page
-      .getByRole("listitem")
-      .filter({ hasText: "Submitted assignment" });
+    // a daisyUI badge (span.badge) inside the assignment's card, carrying
+    // the status text. Scoping the badge to the card that holds the
+    // assignment title proves the badge sits on that item's card.
+    const submittedRow = page.locator(".card").filter({ hasText: "Submitted assignment" });
     await expect(submittedRow).toBeVisible();
     await expect(submittedRow.locator(".badge")).toHaveText("submitted");
 
     // A start with submitted_at still null counts as in progress.
-    const inProgressRow = page
-      .getByRole("listitem")
-      .filter({ hasText: "In progress assignment" });
+    const inProgressRow = page.locator(".card").filter({ hasText: "In progress assignment" });
     await expect(inProgressRow).toBeVisible();
     await expect(inProgressRow.locator(".badge")).toHaveText("in progress");
 
     // The untouched assignment must show the not submitted badge.
-    const openRow = page
-      .getByRole("listitem")
-      .filter({ hasText: "Open assignment" });
+    const openRow = page.locator(".card").filter({ hasText: "Open assignment" });
     await expect(openRow).toBeVisible();
     await expect(openRow.locator(".badge")).toHaveText("not submitted");
   });
