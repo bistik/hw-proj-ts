@@ -1,6 +1,6 @@
 import { db } from "@/db/";
 import { courseItemsTable, lessonsTable } from "../schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, max } from "drizzle-orm";
 
 /**
  * Inserts the lesson row and its course_items outline row in one
@@ -24,14 +24,9 @@ export const dbCreateLesson = async function (data: {
     // Next free outline position for this course: max(position) + 1, so the
     // new row does not collide with an existing position on the
     // course_items_course_position_unique index. max is null on an empty
-    // outline, so coalesce makes the first row take position 0.
-    const [{ nextPosition }] = await tx
-      .select({
-        nextPosition:
-          sql<number>`coalesce(max(${courseItemsTable.position}), -1) + 1`.as(
-            "next_position",
-          ),
-      })
+    // outline, so the ?? -1 makes the first row take position 0.
+    const [{ maxPosition }] = await tx
+      .select({ maxPosition: max(courseItemsTable.position) })
       .from(courseItemsTable)
       .where(eq(courseItemsTable.courseId, data.courseId));
 
@@ -39,7 +34,7 @@ export const dbCreateLesson = async function (data: {
       courseId: data.courseId,
       itemType: "lesson",
       itemId: lesson.lessonId,
-      position: nextPosition,
+      position: (maxPosition ?? -1) + 1,
     });
 
     return lesson;
