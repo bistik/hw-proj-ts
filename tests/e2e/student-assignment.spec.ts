@@ -8,6 +8,7 @@ import {
 import { createCourseViaUi } from "./helpers/course";
 import {
   seedAssignments,
+  seedCourseItems,
   seedEnrollment,
   seedQuestions,
   seedSubmission,
@@ -34,6 +35,13 @@ async function createAssignmentOwnedByOtherUser(page: Page) {
   // assignment page lives at /student/assignments/<assignment_id>.
   const [assignmentId] = await seedAssignments(courseId, [
     "Enrollment-gated assignment",
+  ]);
+  // The student course page lists items by course_items.position (issue
+  // #32), so the assignment needs an outline row for its card (and its
+  // link) to show up there. The app's assignment create flow inserts one
+  // (position = max + 1); the seeder mirrors that for the single item.
+  await seedCourseItems(courseId, [
+    { itemType: "assignment", itemId: assignmentId, position: 0 },
   ]);
   await logoutViaUi(page);
   return { courseId, assignmentId };

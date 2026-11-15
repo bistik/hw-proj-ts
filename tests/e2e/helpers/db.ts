@@ -110,6 +110,41 @@ export async function seedLesson(
 }
 
 /**
+ * Seeds course_items outline rows directly into the e2e database.
+ *
+ * Each entry becomes one outline row; `position` comes from the entry, so a
+ * test can insert rows out of order (or with non-consecutive positions) and
+ * prove the page sorts by course_items.position rather than by row order,
+ * id, or created_at. Positions must stay unique per course — the
+ * course_items_course_position_unique index enforces that in the schema.
+ *
+ * itemType/itemId are stored as given; the seeder does not check that the
+ * referenced lesson/assignment row exists (failures surface through the
+ * page under test instead).
+ *
+ * Only columns notNull in src/db/schema.ts are filled; created_at/updated_at
+ * are given explicitly like the other seeders (drizzle-kit push emits no
+ * DB-level defaults).
+ */
+export async function seedCourseItems(
+  courseId: number,
+  items: Array<{
+    itemType: "lesson" | "assignment";
+    itemId: number;
+    position: number;
+  }>,
+): Promise<void> {
+  let i = 0;
+  for (const item of items) {
+    i += 1;
+    await client.execute({
+      sql: "INSERT INTO course_items (course_id, item_type, item_id, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+      args: [courseId, item.itemType, item.itemId, item.position, nowPlus(i), nowPlus(i)],
+    });
+  }
+}
+
+/**
  * Inserts an enrollment row directly into the e2e database.
  *
  * `status` defaults to "active" to match the existing callers, but tests can
