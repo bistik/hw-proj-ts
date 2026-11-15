@@ -1,4 +1,7 @@
 import { db } from "@/db/";
+import { users } from "../auth-schema";
+import { coursesTable } from "../schema";
+import { eq } from "drizzle-orm";
 
 /**
  * Lists a course's enrollees, each joined to the user's public identity
@@ -32,4 +35,27 @@ export async function dbGetInvitationsByStudent(studentId: string) {
     },
     orderBy: (enrollmentsTable, { asc }) => [asc(enrollmentsTable.id)],
   });
+}
+
+/**
+ * Student and course details for the invitation email. Only called right
+ * after a fresh enrollment row was created, so a missing row is unexpected:
+ * it returns null instead of throwing and the send is skipped.
+ */
+export async function dbGetInviteContext(data: {
+  courseId: number;
+  userId: string;
+}) {
+  const [row] = await db
+    .select({
+      studentEmail: users.email,
+      studentName: users.name,
+      courseTitle: coursesTable.title,
+    })
+    .from(users)
+    .innerJoin(coursesTable, eq(coursesTable.id, data.courseId))
+    .where(eq(users.id, data.userId))
+    .limit(1);
+
+  return row ?? null;
 }
