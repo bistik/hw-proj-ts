@@ -1,8 +1,6 @@
 import { requireUserOwnsCourse } from "@/db/authz";
-import {
-  dbCreateEnrollment,
-  dbGetInviteContext,
-} from "@/db/enrollments/create-enrollment";
+import { dbCreateEnrollment } from "@/db/enrollments/create-enrollment";
+import { dbGetInviteContext } from "@/db/enrollments/get-enrollment";
 import { sendInviteEmail } from "@/lib/email/invite";
 import { authMiddleware } from "@/middlewares/auth-middleware";
 import { enrollmentFormSchema } from "@/schemas/course-schema";
@@ -19,8 +17,11 @@ export const createEnrollment = createServerFn({ method: "POST" })
         userId: data.userId,
       });
       // A fresh enrollment (not an ignored re-invite of an already enrolled
-      // student) triggers the invitation email. The send never throws, so a
-      // Mailpit or transport failure cannot fail the invite itself.
+      // student) triggers the invitation email. The send is awaited on
+      // purpose: sendInviteEmail never throws (it catches and logs), so a
+      // Mailpit or transport failure cannot fail the invite itself, and a
+      // fire-and-forget send could be cancelled by the runtime once this
+      // handler returns its response.
       if (result.created) {
         const invite = await dbGetInviteContext({
           courseId: data.courseId,

@@ -17,7 +17,9 @@ export function inviteEmail(input: InviteEmailInput): EmailMessage {
       title: `Hi ${input.name}!`,
       body: [
         `You have been invited to enroll in "${input.courseTitle}".`,
-        "Open your dashboard to accept or decline the invitation.",
+        input.dashboardUrl
+          ? `Open your dashboard to accept or decline the invitation: ${input.dashboardUrl}`
+          : "Open your dashboard to accept or decline the invitation.",
       ],
       action: input.dashboardUrl
         ? { label: "Go to your dashboard", url: input.dashboardUrl }
