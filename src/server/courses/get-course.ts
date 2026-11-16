@@ -5,6 +5,10 @@ import {
   dbGetEnrolledCourses,
   dbGetEnrollmentByCourseAndStudent,
 } from "@/db/courses/get-course";
+import {
+  dbGetCourseItemsByCourse,
+  type CourseItemView,
+} from "@/db/course-items/get-course-items";
 import { authMiddleware } from "@/middlewares/auth-middleware";
 import { courseByIdSchema } from "@/schemas/course-schema";
 import { createServerFn } from "@tanstack/react-start";
@@ -47,6 +51,25 @@ export const getCourseByIdAndAuthor = createServerFn({
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
     return dbGetCourseByIdAndAuthor(data.courseId, context.user.id);
+  });
+
+/**
+ * The course's outline rows in course_items.position order (issue #33), for
+ * the author's Course Details tab. Returns null when the caller does not own
+ * the course — same scoping pattern as getCourseByIdAndAuthor.
+ */
+export const getCourseItemsByAuthor = createServerFn({
+  method: "GET",
+})
+  .validator(courseByIdSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }): Promise<CourseItemView[] | null> => {
+    const course = await dbGetCourseByIdAndAuthor(
+      data.courseId,
+      context.user.id,
+    );
+    if (!course) return null;
+    return dbGetCourseItemsByCourse(data.courseId);
   });
 
 export const getCoursesWithItemCountsByUser = createServerFn({
