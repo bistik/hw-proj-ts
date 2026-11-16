@@ -14,6 +14,34 @@ import { OTHER_USER, TEST_USER } from "./test-user";
 // (/student/courses/<id>), not the author page (/courses/<id>): the visitor
 // here is a student, who has no author access.
 test.describe("student lesson page", () => {
+  test("a student with a dropped enrollment gets the not-found page", async ({
+    page,
+  }) => {
+    // A course authored by OTHER_USER, so TEST_USER can only reach it
+    // through an enrollment row (there is no author path for students).
+    await ensureSignedUp(OTHER_USER);
+    const title = `Guarded lesson ${Date.now()}`;
+    const courseId = await seedCourse(OTHER_USER.email, {
+      title: `Guard course ${Date.now()}`,
+      description: "Course whose lesson the E2E user dropped.",
+    });
+    const lessonId = await seedLesson(courseId, {
+      title,
+      content: `Content of ${title}`,
+    });
+    // "dropped" is not in the loader's ["active", "completed"] filter
+    // (src/db/lessons/get-lesson.ts), so the lesson must not render.
+    await seedEnrollment(TEST_USER.email, courseId, "dropped");
+
+    await loginViaUi(page, TEST_USER);
+    await page.goto(`/student/lessons/${lessonId}`);
+
+    // The loader throws notFound and the router's defaultNotFoundComponent
+    // renders, like on the student course page for a declined student.
+    await expect(page.getByText("404 - not found")).toBeVisible();
+    await expect(page.getByRole("heading", { name: title })).toHaveCount(0);
+  });
+
   test("shows the lesson title and content", async ({ page }) => {
     // A course authored by OTHER_USER, reached only through the enrollment
     // row, like in real student usage.
