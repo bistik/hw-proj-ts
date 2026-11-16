@@ -11,8 +11,8 @@ import { TEST_USER } from "./test-user";
 
 // Issue #33: on /courses/<id>, Course Details tab, the author sees each
 // course item by position (course_items.position), in a card UI like
-// SubmissionCard / AnswerCard, with move up / move down buttons that have
-// no actions yet (empty handlers).
+// SubmissionCard / AnswerCard, with move up / move down buttons that stay
+// disabled until issue #34 wires them to the reorder endpoint.
 test.describe("author course details items", () => {
   test("items are displayed in course_items.position order", async ({
     page,
@@ -198,9 +198,12 @@ test.describe("author course details items", () => {
     await expect(card.getByRole("button", { name: "Move down" })).toHaveCount(
       0,
     );
+    // No button shows, so the card body does not render either: the card
+    // shows no empty padded area.
+    await expect(card.locator(".card-body")).toHaveCount(0);
   });
 
-  test("move up and move down buttons have no actions yet", async ({
+  test("move up and move down buttons stay disabled until issue #34 wires them", async ({
     page,
   }) => {
     const title = `Author no-op course ${Date.now()}`;
@@ -226,15 +229,18 @@ test.describe("author course details items", () => {
     await loginViaUi(page);
     await page.goto(`/courses/${courseId}`);
 
-    // Clicking both move buttons on the middle item must not navigate and
-    // must not change any outline row in the database.
+    // The buttons have no server wiring yet, so users cannot click no-op
+    // actions — both render disabled, like the action menu on
+    // SubmissionCard (actionsDisabled).
     const middleCard = page
       .locator(".card")
       .filter({ hasText: "Author no-op middle" });
-    await middleCard.getByRole("button", { name: "Move up" }).click();
-    await middleCard.getByRole("button", { name: "Move down" }).click();
-
-    await expect(page).toHaveURL(new RegExp(`/courses/${courseId}$`));
+    await expect(
+      middleCard.getByRole("button", { name: "Move up" }),
+    ).toBeDisabled();
+    await expect(
+      middleCard.getByRole("button", { name: "Move down" }),
+    ).toBeDisabled();
 
     // The seeded positions stay untouched in the e2e database.
     expect(
@@ -247,18 +253,5 @@ test.describe("author course details items", () => {
     expect(
       await getCourseItemRow("assignment", assignment2Id),
     ).toEqual({ course_id: courseId, position: 2 });
-
-    // The display order on the page stays the seeded order.
-    const firstBox = await page
-      .locator(".card")
-      .filter({ hasText: "Author no-op first" })
-      .boundingBox();
-    const middleBox = await middleCard.boundingBox();
-    const lastBox = await page
-      .locator(".card")
-      .filter({ hasText: "Author no-op last" })
-      .boundingBox();
-    expect(firstBox!.y).toBeLessThan(middleBox!.y);
-    expect(middleBox!.y).toBeLessThan(lastBox!.y);
   });
 });

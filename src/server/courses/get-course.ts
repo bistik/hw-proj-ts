@@ -55,21 +55,22 @@ export const getCourseByIdAndAuthor = createServerFn({
 
 /**
  * The course's outline rows in course_items.position order (issue #33), for
- * the author's Course Details tab. Returns null when the caller does not own
- * the course — same scoping pattern as getCourseByIdAndAuthor.
+ * the author's Course Details tab. The db function scopes the read to the
+ * author in its one query: a non-author matches no course row and gets an
+ * empty outline. A database error is thrown, not shown as "no items".
  */
 export const getCourseItemsByAuthor = createServerFn({
   method: "GET",
 })
   .validator(courseByIdSchema)
   .middleware([authMiddleware])
-  .handler(async ({ data, context }): Promise<CourseItemView[] | null> => {
-    const course = await dbGetCourseByIdAndAuthor(
+  .handler(async ({ data, context }): Promise<CourseItemView[]> => {
+    const items = await dbGetCourseItemsByCourse(
       data.courseId,
       context.user.id,
     );
-    if (!course) return null;
-    return dbGetCourseItemsByCourse(data.courseId);
+    if (!items) throw new Error("Could not fetch course items");
+    return items;
   });
 
 export const getCoursesWithItemCountsByUser = createServerFn({

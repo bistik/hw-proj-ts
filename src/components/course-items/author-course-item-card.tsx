@@ -27,7 +27,9 @@ function itemTypeBadgeClass(itemType: "lesson" | "assignment") {
  * the .card-title and move up / move down buttons.
  *
  * The buttons have no actions yet (issue #34 will wire them to the reorder
- * endpoint): they render only where the move is possible and do nothing.
+ * endpoint). They render only where the move is possible, and they stay
+ * disabled so users cannot click no-op actions — the same pattern as the
+ * disabled action menu on SubmissionCard.
  */
 export default function AuthorCourseItemCard({
   itemType,
@@ -37,6 +39,8 @@ export default function AuthorCourseItemCard({
   isFirst,
   isLast,
 }: AuthorCourseItemCardProps) {
+  const showMoveUp = !isFirst;
+  const showMoveDown = !isLast;
   return (
     <div className="card w-full bg-base-100 border-2 border-base-300 shadow-md">
       {/* Header strip: item title link, with the type badge on the right
@@ -67,49 +71,61 @@ export default function AuthorCourseItemCard({
       </div>
 
       {/* Main window content area: the move controls. No onClick handlers
-          yet — reordering lands with the reorder course items endpoint. */}
-      <div className="card-body">
-        <div className="card-actions justify-end">
-          {!isFirst && (
-            <button type="button" className="btn btn-secondary btn-sm">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-                className="inline-block h-4 w-4 stroke-current"
+          yet — reordering lands with the reorder course items endpoint, so
+          both buttons stay disabled until then. A single item shows no
+          button, so the body renders only when a move is possible. */}
+      {(showMoveUp || showMoveDown) && (
+        <div className="card-body">
+          <div className="card-actions justify-end">
+            {showMoveUp && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2.25"
-                  d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18"
-                />
-              </svg>
-              Move up
-            </button>
-          )}
-          {!isLast && (
-            <button type="button" className="btn btn-secondary btn-sm">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-                className="inline-block h-4 w-4 stroke-current"
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  className="inline-block h-4 w-4 stroke-current"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2.25"
+                    d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18"
+                  />
+                </svg>
+                Move up
+              </button>
+            )}
+            {showMoveDown && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2.25"
-                  d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3"
-                />
-              </svg>
-              Move down
-            </button>
-          )}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  className="inline-block h-4 w-4 stroke-current"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2.25"
+                    d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3"
+                  />
+                </svg>
+                Move down
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
