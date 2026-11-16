@@ -81,6 +81,11 @@ export const courseByIdSchema = z.object({
   courseId: z.number().int().positive("Invalid course id"),
 });
 
+export const deleteLessonSchema = z.object({
+  courseId: z.number().int().positive("Invalid course id"),
+  lessonId: z.number().int().positive("Invalid lesson id"),
+});
+
 export const enrollmentFormSchema = z.object({
   courseId: z.number().int().positive("Invalid course id"),
   userId: z.string().trim().min(1, { message: "User id is required" }),
