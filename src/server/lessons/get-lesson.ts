@@ -2,6 +2,7 @@ import {
   dbGetLesson,
   dbGetLessonWithCourse,
   dbGetLessonsByCourse,
+  dbGetStudentLessonWithCourse,
 } from "@/db/lessons/get-lesson";
 import { requireUserOwnsCourse } from "@/db/authz";
 import { authMiddleware } from "@/middlewares/auth-middleware";
@@ -45,5 +46,21 @@ export const getLessonsByCourse = createServerFn({
     } catch (err) {
       console.error(`Error fetching lessons of course ${data.courseId}`, err);
       throw new Error("Error in fetching lessons", { cause: err });
+    }
+  });
+
+export const getStudentLesson = createServerFn({ method: "GET" })
+  .validator(z.number().int().positive("Invalid lesson id"))
+  .middleware([authMiddleware])
+  .handler(async ({ data: lessonId, context }) => {
+    try {
+      // dbGetStudentLessonWithCourse only returns the lesson when the
+      // signed-in user has an active/completed enrollment in the lesson's
+      // course, so an unknown id and a non-enrolled student both yield
+      // undefined (the route loader turns that into a notFound).
+      return await dbGetStudentLessonWithCourse(lessonId, context.user.id);
+    } catch (err) {
+      console.error(`Error fetching student lesson ${lessonId}`, err);
+      throw new Error("Could not load lesson", { cause: err });
     }
   });
