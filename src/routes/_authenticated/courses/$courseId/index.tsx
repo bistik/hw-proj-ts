@@ -5,6 +5,7 @@ import CourseDetailTabsPending, {
   type CourseDetailTab,
 } from "@/components/course-detail-tabs-pending";
 import TabPanelSkeleton from "@/components/tab-panel-skeleton";
+import AuthorCourseItemCard from "@/components/course-items/author-course-item-card";
 import SubmissionCard from "@/components/submissions/submission-card";
 import { enrollmentFormSchema } from "@/schemas/course-schema";
 import { getAssignmentsByCourse } from "@/server/assignments/get-assignment";
@@ -14,7 +15,10 @@ import { getEnrolleesByCourse } from "@/server/enrollments/get-enrollment";
 import { getLessonsByCourse } from "@/server/lessons/get-lesson";
 import { getUnenrolledUsers } from "@/server/users/get-user";
 import { useForm } from "@tanstack/react-form";
-import { getCourseByIdAndAuthor } from "@/server/courses/get-course";
+import {
+  getCourseByIdAndAuthor,
+  getCourseItemsByAuthor,
+} from "@/server/courses/get-course";
 import {
   createFileRoute,
   getRouteApi,
@@ -79,7 +83,11 @@ export const Route = createFileRoute("/_authenticated/courses/$courseId/")({
           };
         default:
           // Course details
-          return { course };
+          return {
+            course,
+            // The outline in course_items.position order (issue #33).
+            items: await getCourseItemsByAuthor({ data: { courseId } }),
+          };
       }
     },
   },
@@ -126,6 +134,7 @@ function CourseDetailComponent() {
   const lessons = "lessons" in loaderData ? loaderData.lessons : undefined;
   const submissions =
     "submissions" in loaderData ? loaderData.submissions : undefined;
+  const items = "items" in loaderData ? loaderData.items : undefined;
   const { courseId } = Route.useParams();
   const { tab } = Route.useSearch();
   const router = useRouter();
@@ -201,6 +210,29 @@ function CourseDetailComponent() {
         >
           Edit course
         </Link>
+
+        {/* Course outline (issue #33): one card per course item, stacked in
+            course_items.position order, like the student course page. */}
+        <h3 className="mb-4 mt-8">Course outline</h3>
+        {!items ? (
+          <TabPanelSkeleton />
+        ) : items.length > 0 ? (
+          <div className="flex flex-col gap-4">
+            {items.map((item, index) => (
+              <AuthorCourseItemCard
+                key={`${item.itemType}-${item.id}`}
+                itemType={item.itemType}
+                itemId={item.id}
+                title={item.title}
+                courseId={courseId}
+                isFirst={index === 0}
+                isLast={index === items.length - 1}
+              />
+            ))}
+          </div>
+        ) : (
+          <p>No course items yet</p>
+        )}
       </div>
 
       <input

@@ -5,6 +5,10 @@ import {
   dbGetEnrolledCourses,
   dbGetEnrollmentByCourseAndStudent,
 } from "@/db/courses/get-course";
+import {
+  dbGetCourseItemsByCourse,
+  type CourseItemView,
+} from "@/db/course-items/get-course-items";
 import { authMiddleware } from "@/middlewares/auth-middleware";
 import { courseByIdSchema } from "@/schemas/course-schema";
 import { createServerFn } from "@tanstack/react-start";
@@ -47,6 +51,26 @@ export const getCourseByIdAndAuthor = createServerFn({
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
     return dbGetCourseByIdAndAuthor(data.courseId, context.user.id);
+  });
+
+/**
+ * The course's outline rows in course_items.position order (issue #33), for
+ * the author's Course Details tab. The db function scopes the read to the
+ * author in its one query: a non-author matches no course row and gets an
+ * empty outline. A database error is thrown, not shown as "no items".
+ */
+export const getCourseItemsByAuthor = createServerFn({
+  method: "GET",
+})
+  .validator(courseByIdSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }): Promise<CourseItemView[]> => {
+    const items = await dbGetCourseItemsByCourse(
+      data.courseId,
+      context.user.id,
+    );
+    if (!items) throw new Error("Could not fetch course items");
+    return items;
   });
 
 export const getCoursesWithItemCountsByUser = createServerFn({
