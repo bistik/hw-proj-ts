@@ -372,6 +372,25 @@ export async function getCourseItemRow(
   return { course_id: Number(row.course_id), position: Number(row.position) };
 }
 
+/**
+ * Reads the lesson row with the given id. Returns null when the row is
+ * missing — which is the behaviour under test in issue #40 (delete a
+ * lesson), so this read helper (unlike the seeders) must not throw.
+ */
+export async function getLessonRow(
+  lessonId: number,
+): Promise<{ course_id: number; title: string } | null> {
+  const result = await client.execute({
+    sql: "SELECT course_id, title FROM lessons WHERE id = ?",
+    args: [lessonId],
+  });
+  const row = result.rows[0];
+  if (!row) {
+    return null;
+  }
+  return { course_id: Number(row.course_id), title: String(row.title) };
+}
+
 /** Now in ms, nudged by i so rows never collide on created_at. */
 function nowPlus(i: number): number {
   return Date.now() + i;
