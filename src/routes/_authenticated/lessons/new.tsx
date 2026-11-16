@@ -1,7 +1,7 @@
 import { TextField } from "@/components/text-field";
 import { defaultValuesLesson, lessonFormSchema } from "@/schemas/course-schema";
 import { getCoursesByUser } from "@/server/courses/get-course";
-import { createLesson } from "@/server/lessons/create-lesson";
+import { createLesson } from "@/server/lessons/mutate-lesson";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import z from "zod";

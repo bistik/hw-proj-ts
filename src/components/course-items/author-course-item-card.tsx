@@ -1,7 +1,7 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import ConfirmModal from "@/components/confirm-modal";
-import { deleteLesson } from "@/server/lessons/delete-lesson";
+import { deleteLesson } from "@/server/lessons/mutate-lesson";
 
 type AuthorCourseItemCardProps = {
   itemType: "lesson" | "assignment";
@@ -157,7 +157,7 @@ export default function AuthorCourseItemCard({
             // button spinning until this resolves, so the delete cannot be
             // double-fired while the page reloads.
             await deleteLesson({
-              data: { courseId: Number(courseId), lessonId: itemId },
+              data: { lessonId: itemId },
             });
             await router.invalidate();
           }}

@@ -17,8 +17,6 @@ import { OTHER_USER, TEST_USER } from "./test-user";
 // runs. The delete removes the lesson row and its course_items row in
 // one transaction. The delete does not renumber the other outline rows.
 // Assignment cards get no delete action: issue #41 covers them.
-//
-// TDD: no implementation exists yet, so every test below must fail.
 test.describe("author deletes a lesson (issue #40)", () => {
   // Issue #40 tests 1 and 2: the author deletes the lesson through the
   // outline card. The database loses the lesson row and its

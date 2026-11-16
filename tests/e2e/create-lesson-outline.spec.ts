@@ -11,7 +11,7 @@ import {
 import { createLessonViaUi } from "./helpers/lesson";
 import { TEST_USER } from "./test-user";
 
-// Issue #35: dbCreateLesson (src/db/lessons/create-lesson.ts) inserts only
+// Issue #35: dbCreateLesson (src/db/lessons/mutate-lesson.ts) inserts only
 // the lessons row. Per the schema contract (src/db/schema.ts, course_items
 // comment) it must also insert the course_items outline row with the next
 // free position (max + 1). The student page /student/courses/<id> builds its
