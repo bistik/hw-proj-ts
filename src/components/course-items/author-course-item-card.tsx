@@ -1,4 +1,7 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
+import { useState } from "react";
+import ConfirmModal from "@/components/confirm-modal";
+import { deleteLesson } from "@/server/lessons/mutate-lesson";
 
 type AuthorCourseItemCardProps = {
   itemType: "lesson" | "assignment";
@@ -26,10 +29,15 @@ function itemTypeBadgeClass(itemType: "lesson" | "assignment") {
  * card in the SubmissionCard / AnswerCard style, with the item's title in
  * the .card-title and move up / move down buttons.
  *
- * The buttons have no actions yet (issue #34 will wire them to the reorder
- * endpoint). They render only where the move is possible, and they stay
- * disabled so users cannot click no-op actions — the same pattern as the
- * disabled action menu on SubmissionCard.
+ * The move buttons have no actions yet (issue #34 will wire them to the
+ * reorder endpoint). They render only where the move is possible, and they
+ * stay disabled so users cannot click no-op actions — the same pattern as
+ * the disabled action menu on SubmissionCard.
+ *
+ * Lesson cards carry a "Delete lesson" action (issue #40): it opens the
+ * ConfirmModal and, on Okay, deletes the lesson row and its course_items
+ * outline row through the deleteLesson server fn, then reloads the route
+ * data. Assignment cards get no delete action (issue #41 covers them).
  */
 export default function AuthorCourseItemCard({
   itemType,
@@ -39,6 +47,8 @@ export default function AuthorCourseItemCard({
   isFirst,
   isLast,
 }: AuthorCourseItemCardProps) {
+  const router = useRouter();
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const showMoveUp = !isFirst;
   const showMoveDown = !isLast;
   return (
@@ -70,11 +80,12 @@ export default function AuthorCourseItemCard({
         </span>
       </div>
 
-      {/* Main window content area: the move controls. No onClick handlers
-          yet — reordering lands with the reorder course items endpoint, so
-          both buttons stay disabled until then. A single item shows no
-          button, so the body renders only when a move is possible. */}
-      {(showMoveUp || showMoveDown) && (
+      {/* Main window content area: the move controls and, on lesson cards,
+          the delete action. Move buttons have no onClick handlers yet —
+          reordering lands with the reorder course items endpoint, so both
+          stay disabled until then. A single-item assignment card shows no
+          button, so the body renders only when something can be shown. */}
+      {(showMoveUp || showMoveDown || itemType === "lesson") && (
         <div className="card-body">
           <div className="card-actions justify-end">
             {showMoveUp && (
@@ -123,8 +134,35 @@ export default function AuthorCourseItemCard({
                 Move down
               </button>
             )}
+            {itemType === "lesson" && (
+              <button
+                type="button"
+                className="btn btn-error btn-sm"
+                onClick={() => setDeleteOpen(true)}
+              >
+                Delete lesson
+              </button>
+            )}
           </div>
         </div>
+      )}
+
+      {itemType === "lesson" && (
+        <ConfirmModal
+          open={deleteOpen}
+          message={`Delete lesson "${title}"? This cannot be undone.`}
+          onConfirm={async () => {
+            // Remove the lesson and its outline row, then reload the route
+            // so the outline drops the card. The ConfirmModal keeps the
+            // button spinning until this resolves, so the delete cannot be
+            // double-fired while the page reloads.
+            await deleteLesson({
+              data: { lessonId: itemId },
+            });
+            await router.invalidate();
+          }}
+          onClose={() => setDeleteOpen(false)}
+        />
       )}
     </div>
   );

@@ -4,7 +4,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { TextField } from "@/components/text-field";
 import { lessonFormSchema } from "@/schemas/course-schema";
 import { getCourseByIdAndAuthor } from "@/server/courses/get-course";
-import { createLesson } from "@/server/lessons/create-lesson";
+import { createLesson } from "@/server/lessons/mutate-lesson";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import z from "zod";

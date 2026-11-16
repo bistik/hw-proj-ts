@@ -190,17 +190,19 @@ test.describe("author course details items", () => {
     await loginViaUi(page);
     await page.goto(`/courses/${courseId}`);
 
-    // The only item is at both first and last position, so both buttons
-    // stay hidden.
+    // The only item is at both first and last position, so both move
+    // buttons stay hidden.
     const card = page.locator(".card").filter({ hasText: "Author only lesson" });
     await expect(card).toHaveCount(1);
     await expect(card.getByRole("button", { name: "Move up" })).toHaveCount(0);
     await expect(card.getByRole("button", { name: "Move down" })).toHaveCount(
       0,
     );
-    // No button shows, so the card body does not render either: the card
-    // shows no empty padded area.
-    await expect(card.locator(".card-body")).toHaveCount(0);
+    // Issue #40 adds the delete action to lesson cards, so the card body
+    // now renders to hold the one button the single lesson shows.
+    await expect(
+      card.getByRole("button", { name: "Delete lesson" }),
+    ).toBeVisible();
   });
 
   test("move up and move down buttons stay disabled until issue #34 wires them", async ({

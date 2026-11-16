@@ -81,6 +81,13 @@ export const courseByIdSchema = z.object({
   courseId: z.number().int().positive("Invalid course id"),
 });
 
+// Only the lessonId: the deleteLesson server fn derives the courseId from
+// the lesson row, so a client-sent course id cannot point the delete at a
+// lesson of another course.
+export const deleteLessonSchema = z.object({
+  lessonId: z.number().int().positive("Invalid lesson id"),
+});
+
 export const enrollmentFormSchema = z.object({
   courseId: z.number().int().positive("Invalid course id"),
   userId: z.string().trim().min(1, { message: "User id is required" }),
