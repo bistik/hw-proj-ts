@@ -328,6 +328,31 @@ export async function getLessonIdByTitle(
 }
 
 /**
+ * Reads the id of the assignment row with the given title in a course, so
+ * tests can address the assignment created through the create assignment
+ * form (its id is never shown in the UI; the student assignment page lives
+ * at /student/assignments/<id>). Throws when the row is missing, because
+ * that is always a test bug (a wrong title or course id), not the
+ * behaviour under test.
+ */
+export async function getAssignmentIdByTitle(
+  courseId: number,
+  title: string,
+): Promise<number> {
+  const result = await client.execute({
+    sql: "SELECT id FROM assignments WHERE course_id = ? AND title = ?",
+    args: [courseId, title],
+  });
+  const id = result.rows[0]?.id;
+  if (id === undefined) {
+    throw new Error(
+      `[e2e] no assignment found with title "${title}" in course ${courseId}`,
+    );
+  }
+  return Number(id);
+}
+
+/**
  * Reads the course_items outline row that points at the given item.
  * Returns null when the row is missing — which is the behaviour under test
  * in issue #35, so this read helper (unlike the seeders) must not throw.
