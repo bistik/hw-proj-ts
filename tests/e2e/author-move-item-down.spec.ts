@@ -26,7 +26,9 @@ test.describe("author moves a course item down (issue #43)", () => {
 
   // Delays every server fn call the page makes. The tests that use it
   // trigger exactly one server fn call each (the move), so the delay
-  // cannot slow anything else down.
+  // cannot slow anything else down. This holds because login posts to
+  // /api/auth, not /_serverFn; if login ever becomes a server fn,
+  // install this route after loginViaUi so it does not delay the login.
   async function slowServerFnCalls(page: Page): Promise<void> {
     await page.route("**/_serverFn/**", async (route) => {
       await new Promise((resolve) => setTimeout(resolve, SERVER_FN_DELAY_MS));

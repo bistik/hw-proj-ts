@@ -1,4 +1,4 @@
-import { dbMoveCourseItemDown } from "@/db/course-items/move-course-item";
+import { dbMoveCourseItemDown } from "@/db/course-items/mutate-course-item";
 import { authMiddleware } from "@/middlewares/auth-middleware";
 import { moveCourseItemDownSchema } from "@/schemas/course-schema";
 import { createServerFn } from "@tanstack/react-start";
@@ -17,16 +17,19 @@ export const moveCourseItemDown = createServerFn({ method: "POST" })
   .validator(moveCourseItemDownSchema)
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
+    let result: Awaited<ReturnType<typeof dbMoveCourseItemDown>>;
     try {
-      const result = await dbMoveCourseItemDown({
+      result = await dbMoveCourseItemDown({
         itemType: data.itemType,
         itemId: data.itemId,
         userId: context.user.id,
       });
-      if (!result) throw new Error("Course item not found");
-      return result;
     } catch (err) {
       console.error(`Error moving course item down`, err);
       throw new Error("Could not move the course item down.", { cause: err });
     }
+    // This throw sits outside the try, so the client receives the
+    // "Course item not found" message, not the wrapped db error.
+    if (!result) throw new Error("Course item not found");
+    return result;
   });
