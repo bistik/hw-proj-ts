@@ -53,9 +53,11 @@ test.describe("author moves a course item down (issue #43)", () => {
     await page.goto(`/courses/${courseId}`);
     await page.waitForLoadState("networkidle");
 
-    // Both cards have an item below them, so both show [Move down]. The
+    // The first card has an item below it, so it shows [Move down]. The
     // button must be clickable now that issue #43 wires it, not a
-    // disabled no-op placeholder.
+    // disabled no-op placeholder. The last card has no item below it, so
+    // it renders no [Move down] at all (issue #33 pins that in
+    // author-course-items.spec.ts).
     const firstCard = page
       .locator(".card")
       .filter({ hasText: "Move down first assignment" });
@@ -67,7 +69,7 @@ test.describe("author moves a course item down (issue #43)", () => {
     ).toBeEnabled();
     await expect(
       lastCard.getByRole("button", { name: "Move down" }),
-    ).toBeEnabled();
+    ).toHaveCount(0);
   });
 
   test("the move down feature is available to the course author only", async ({
@@ -165,15 +167,17 @@ test.describe("author moves a course item down (issue #43)", () => {
       lastCard.getByRole("button", { name: "Move up" }),
     ).toBeDisabled();
 
-    // Once the move completes, the buttons come back: the first item now
-    // sits in the middle (both buttons show), and the last item keeps
-    // its [Move up].
+    // Once the move completes, the wired buttons come back: the moved
+    // item ("Pending first assignment") now sits in the middle, so its
+    // card shows both move buttons and its [Move down] is clickable
+    // again. [Move up] stays a disabled no-op placeholder until issue #44
+    // wires it (author-course-items.spec.ts pins that).
     await expect(
-      middleCard.getByRole("button", { name: "Move up" }),
+      firstCard.getByRole("button", { name: "Move down" }),
     ).toBeEnabled();
     await expect(
       lastCard.getByRole("button", { name: "Move up" }),
-    ).toBeEnabled();
+    ).toBeDisabled();
   });
 
   test("the clicked Move down button shows a loading animation while the move is in progress", async ({

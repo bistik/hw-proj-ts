@@ -1,3 +1,4 @@
+import { useState } from "react";
 import FormErrorAlert from "@/components/form-error-alert";
 import { SubmitButton } from "@/components/submit-button";
 import CourseDetailTabsPending, {
@@ -5,7 +6,9 @@ import CourseDetailTabsPending, {
   type CourseDetailTab,
 } from "@/components/course-detail-tabs-pending";
 import TabPanelSkeleton from "@/components/tab-panel-skeleton";
-import AuthorCourseItemCard from "@/components/course-items/author-course-item-card";
+import AuthorCourseItemCard, {
+  type CourseItemRef,
+} from "@/components/course-items/author-course-item-card";
 import SubmissionCard from "@/components/submissions/submission-card";
 import { enrollmentFormSchema } from "@/schemas/course-schema";
 import { getAssignmentsByCourse } from "@/server/assignments/get-assignment";
@@ -13,6 +16,7 @@ import { getSubmissionsByCourse } from "@/server/assignments/submissions/get-sub
 import { createEnrollment } from "@/server/enrollments/create-enrollment";
 import { getEnrolleesByCourse } from "@/server/enrollments/get-enrollment";
 import { getLessonsByCourse } from "@/server/lessons/get-lesson";
+import { moveCourseItemDown } from "@/server/course-items/move-course-item";
 import { getUnenrolledUsers } from "@/server/users/get-user";
 import { useForm } from "@tanstack/react-form";
 import {
@@ -142,6 +146,27 @@ function CourseDetailComponent() {
 
   const activeTab = tab ?? "details";
 
+  // The outline move in flight (issue #43), or null while no move runs.
+  // The state lives here, one level above the cards, so every card's move
+  // buttons disable while any move runs — not just the clicked card's.
+  const [movingItem, setMovingItem] = useState<CourseItemRef | null>(null);
+
+  const handleMoveDown = async (item: CourseItemRef) => {
+    setMovingItem(item);
+    try {
+      await moveCourseItemDown({
+        data: { itemType: item.itemType, itemId: item.itemId },
+      });
+      // Reload the route data so the outline re-renders in the swapped
+      // order.
+      await router.invalidate();
+    } catch (err) {
+      console.error(`Error moving course item down`, err);
+    } finally {
+      setMovingItem(null);
+    }
+  };
+
   const handleTabChange = (newTab: CourseDetailTab) => {
     void navigate({
       search: newTab === "details" ? {} : { tab: newTab },
@@ -227,6 +252,13 @@ function CourseDetailComponent() {
                 courseId={courseId}
                 isFirst={index === 0}
                 isLast={index === items.length - 1}
+                movingItem={movingItem}
+                onMoveDown={() => {
+                  void handleMoveDown({
+                    itemType: item.itemType,
+                    itemId: item.id,
+                  });
+                }}
               />
             ))}
           </div>
