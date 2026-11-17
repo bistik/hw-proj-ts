@@ -96,6 +96,14 @@ export const moveCourseItemDownSchema = z.object({
   itemId: z.number().int().positive("Invalid item id"),
 });
 
+// Same shape as moveCourseItemDownSchema: the moveCourseItemUp server fn
+// derives the courseId from the course_items row, so a client-sent course
+// id cannot point the move at another course's outline.
+export const moveCourseItemUpSchema = z.object({
+  itemType: z.enum(["lesson", "assignment"]),
+  itemId: z.number().int().positive("Invalid item id"),
+});
+
 export const enrollmentFormSchema = z.object({
   courseId: z.number().int().positive("Invalid course id"),
   userId: z.string().trim().min(1, { message: "User id is required" }),

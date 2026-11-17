@@ -172,14 +172,14 @@ test.describe("author moves a course item down (issue #43)", () => {
     // Once the move completes, the wired buttons come back: the moved
     // item ("Pending first assignment") now sits in the middle, so its
     // card shows both move buttons and its [Move down] is clickable
-    // again. [Move up] stays a disabled no-op placeholder until issue #44
-    // wires it (author-course-items.spec.ts pins that).
+    // again. The last item's [Move up] is clickable too (issue #44 wires
+    // it).
     await expect(
       firstCard.getByRole("button", { name: "Move down" }),
     ).toBeEnabled();
     await expect(
       lastCard.getByRole("button", { name: "Move up" }),
-    ).toBeDisabled();
+    ).toBeEnabled();
   });
 
   test("the clicked Move down button shows a loading animation while the move is in progress", async ({

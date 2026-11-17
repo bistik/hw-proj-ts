@@ -1,6 +1,12 @@
-import { dbMoveCourseItemDown } from "@/db/course-items/mutate-course-item";
+import {
+  dbMoveCourseItemDown,
+  dbMoveCourseItemUp,
+} from "@/db/course-items/mutate-course-item";
 import { authMiddleware } from "@/middlewares/auth-middleware";
-import { moveCourseItemDownSchema } from "@/schemas/course-schema";
+import {
+  moveCourseItemDownSchema,
+  moveCourseItemUpSchema,
+} from "@/schemas/course-schema";
 import { createServerFn } from "@tanstack/react-start";
 
 /**
@@ -27,6 +33,37 @@ export const moveCourseItemDown = createServerFn({ method: "POST" })
     } catch (err) {
       console.error(`Error moving course item down`, err);
       throw new Error("Could not move the course item down.", { cause: err });
+    }
+    // This throw sits outside the try, so the client receives the
+    // "Course item not found" message, not the wrapped db error.
+    if (!result) throw new Error("Course item not found");
+    return result;
+  });
+
+/**
+ * Moves one course item one slot up the author's outline (issue #44): the
+ * item's course_items row swaps positions with the row above it.
+ *
+ * The validator carries only the item coordinates: the server derives the
+ * courseId from the course_items row, so a client-sent course id cannot
+ * point the move at another course's outline. The db function scopes its
+ * lookup to the course author, so a non-author gets "Course item not
+ * found" without touching any row.
+ */
+export const moveCourseItemUp = createServerFn({ method: "POST" })
+  .validator(moveCourseItemUpSchema)
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    let result: Awaited<ReturnType<typeof dbMoveCourseItemUp>>;
+    try {
+      result = await dbMoveCourseItemUp({
+        itemType: data.itemType,
+        itemId: data.itemId,
+        userId: context.user.id,
+      });
+    } catch (err) {
+      console.error(`Error moving course item up`, err);
+      throw new Error("Could not move the course item up.", { cause: err });
     }
     // This throw sits outside the try, so the client receives the
     // "Course item not found" message, not the wrapped db error.

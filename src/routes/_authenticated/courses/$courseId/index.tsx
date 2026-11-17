@@ -16,7 +16,10 @@ import { getSubmissionsByCourse } from "@/server/assignments/submissions/get-sub
 import { createEnrollment } from "@/server/enrollments/create-enrollment";
 import { getEnrolleesByCourse } from "@/server/enrollments/get-enrollment";
 import { getLessonsByCourse } from "@/server/lessons/get-lesson";
-import { moveCourseItemDown } from "@/server/course-items/mutate-course-item";
+import {
+  moveCourseItemDown,
+  moveCourseItemUp,
+} from "@/server/course-items/mutate-course-item";
 import { getUnenrolledUsers } from "@/server/users/get-user";
 import { useForm } from "@tanstack/react-form";
 import {
@@ -146,16 +149,22 @@ function CourseDetailComponent() {
 
   const activeTab = tab ?? "details";
 
-  // The outline move in flight (issue #43), or null while no move runs.
-  // The state lives here, one level above the cards, so every card's move
-  // buttons disable while any move runs — not just the clicked card's.
+  // The outline move in flight (issue #43/#44), or null while no move
+  // runs. The state lives here, one level above the cards, so every card's
+  // move buttons disable while any move runs — not just the clicked
+  // card's. movingDirection records which button started the move, so only
+  // the clicked button shows the loading spinner.
   const [movingItem, setMovingItem] = useState<CourseItemRef | null>(null);
+  const [movingDirection, setMovingDirection] = useState<
+    "up" | "down" | null
+  >(null);
   // The error message from the last outline move, or null when it worked.
   // The route shows it through FormErrorAlert, like the enrollment form.
   const [moveError, setMoveError] = useState<string | null>(null);
 
   const handleMoveDown = async (item: CourseItemRef) => {
     setMovingItem(item);
+    setMovingDirection("down");
     // A new move clears the error from the previous one, so the alert
     // always shows the outcome of the latest attempt.
     setMoveError(null);
@@ -171,6 +180,29 @@ function CourseDetailComponent() {
       setMoveError("Could not move the course item down. Please try again.");
     } finally {
       setMovingItem(null);
+      setMovingDirection(null);
+    }
+  };
+
+  const handleMoveUp = async (item: CourseItemRef) => {
+    setMovingItem(item);
+    setMovingDirection("up");
+    // A new move clears the error from the previous one, so the alert
+    // always shows the outcome of the latest attempt.
+    setMoveError(null);
+    try {
+      await moveCourseItemUp({
+        data: { itemType: item.itemType, itemId: item.itemId },
+      });
+      // Reload the route data so the outline re-renders in the swapped
+      // order.
+      await router.invalidate();
+    } catch (err) {
+      console.error(`Error moving course item up`, err);
+      setMoveError("Could not move the course item up. Please try again.");
+    } finally {
+      setMovingItem(null);
+      setMovingDirection(null);
     }
   };
 
@@ -261,6 +293,13 @@ function CourseDetailComponent() {
                 isFirst={index === 0}
                 isLast={index === items.length - 1}
                 movingItem={movingItem}
+                movingDirection={movingDirection}
+                onMoveUp={() => {
+                  void handleMoveUp({
+                    itemType: item.itemType,
+                    itemId: item.id,
+                  });
+                }}
                 onMoveDown={() => {
                   void handleMoveDown({
                     itemType: item.itemType,
