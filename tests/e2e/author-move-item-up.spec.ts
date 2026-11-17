@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { ensureSignedUp, loginViaUi } from "./helpers/auth";
 import {
   getCourseItemRow,
@@ -8,6 +8,7 @@ import {
   seedEnrollment,
   seedLesson,
 } from "./helpers/db";
+import { slowServerFnCalls } from "./helpers/server-fn";
 import { OTHER_USER, TEST_USER } from "./test-user";
 
 // Issue #44: the [Move up] button on /courses/<id>, Course Details tab,
@@ -18,24 +19,6 @@ import { OTHER_USER, TEST_USER } from "./test-user";
 // is in progress, every other move button disables and the clicked button
 // shows a loading animation. The feature stays author-only.
 test.describe("author moves a course item up (issue #44)", () => {
-  // How long each client→server server-fn call stays pending. TanStack
-  // Start posts server fn calls to /_serverFn/<functionId>; the delay
-  // widens the in-flight window so tests can observe the pending state
-  // (disabled buttons, loading animation) deterministically.
-  const SERVER_FN_DELAY_MS = 500;
-
-  // Delays every server fn call the page makes. The tests that use it
-  // trigger exactly one server fn call each (the move), so the delay
-  // cannot slow anything else down. This holds because login posts to
-  // /api/auth, not /_serverFn; if login ever becomes a server fn,
-  // install this route after loginViaUi so it does not delay the login.
-  async function slowServerFnCalls(page: Page): Promise<void> {
-    await page.route("**/_serverFn/**", async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, SERVER_FN_DELAY_MS));
-      await route.continue();
-    });
-  }
-
   test("the author's Move up button is not disabled", async ({ page }) => {
     const title = `Move up course ${Date.now()}`;
     const courseId = await seedCourse(TEST_USER.email, {

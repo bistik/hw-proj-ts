@@ -21,12 +21,10 @@ type AuthorCourseItemCardProps = {
   isLast: boolean;
   /** The outline move in flight, or null while no move runs. Every move
    * button disables while any move runs (issue #43), and the clicked
-   * button on the moving card shows the loading spinner. */
-  movingItem: CourseItemRef | null;
-  /** Which move button started the move in flight, or null while no move
-   * runs. Only the clicked button shows the loading spinner; the other
-   * buttons on the moving card disable without one. */
-  movingDirection: "up" | "down" | null;
+   * button on the moving card shows the loading spinner. One object holds
+   * the item and the direction together, because they always change at
+   * the same time. */
+  moving: { item: CourseItemRef; direction: "up" | "down" } | null;
   /** Click handler for the [Move up] button (issue #44). */
   onMoveUp: () => void;
   /** Click handler for the [Move down] button (issue #43). */
@@ -52,9 +50,9 @@ function itemTypeBadgeClass(itemType: "lesson" | "assignment") {
  * (issue #44): clicking either swaps the item's course_items position with
  * the neighboring item, then reloads the route data so the outline
  * re-renders in the new order. The route owns the in-flight state and
- * hands it down as movingItem and movingDirection, so while any move runs,
- * every move button disables and the clicked button shows a loading
- * spinner — a second reorder cannot start before the first one lands.
+ * hands it down as moving, so while any move runs, every move button
+ * disables and the clicked button shows a loading spinner — a second
+ * reorder cannot start before the first one lands.
  *
  * Lesson cards carry a "Delete lesson" action (issue #40): it opens the
  * ConfirmModal and, on Okay, deletes the lesson row and its course_items
@@ -68,8 +66,7 @@ export default function AuthorCourseItemCard({
   courseId,
   isFirst,
   isLast,
-  movingItem,
-  movingDirection,
+  moving,
   onMoveUp,
   onMoveDown,
 }: AuthorCourseItemCardProps) {
@@ -79,16 +76,16 @@ export default function AuthorCourseItemCard({
   const showMoveDown = !isLast;
   // Every move button disables while any outline move is in flight, so a
   // second reorder cannot start before the first one lands (issue #43).
-  const moveDisabled = movingItem !== null;
+  const moveDisabled = moving !== null;
   // The moving card is the one whose coordinates match the move in flight.
   const isMovingCard =
-    movingItem !== null &&
-    movingItem.itemType === itemType &&
-    movingItem.itemId === itemId;
+    moving !== null &&
+    moving.item.itemType === itemType &&
+    moving.item.itemId === itemId;
   // Only the clicked button shows the spinner; the other move buttons on
   // the same card disable without one.
-  const moveUpPending = isMovingCard && movingDirection === "up";
-  const moveDownPending = isMovingCard && movingDirection === "down";
+  const moveUpPending = isMovingCard && moving.direction === "up";
+  const moveDownPending = isMovingCard && moving.direction === "down";
   return (
     <div className="card w-full bg-base-100 border-2 border-base-300 shadow-md">
       {/* Header strip: item title link, with the type badge on the right

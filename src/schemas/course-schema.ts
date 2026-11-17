@@ -88,21 +88,18 @@ export const deleteLessonSchema = z.object({
   lessonId: z.number().int().positive("Invalid lesson id"),
 });
 
-// Only the item coordinates: the moveCourseItemDown server fn derives the
-// courseId from the course_items row (same shape as deleteLessonSchema), so
-// a client-sent course id cannot point the move at another course's outline.
-export const moveCourseItemDownSchema = z.object({
+// Only the item coordinates: the move server fns derive the courseId from
+// the course_items row (same shape as deleteLessonSchema), so a
+// client-sent course id cannot point the move at another course's outline.
+// The two direction fns share one schema; the aliases keep the per-fn
+// names without duplicating the shape.
+export const moveCourseItemSchema = z.object({
   itemType: z.enum(["lesson", "assignment"]),
   itemId: z.number().int().positive("Invalid item id"),
 });
 
-// Same shape as moveCourseItemDownSchema: the moveCourseItemUp server fn
-// derives the courseId from the course_items row, so a client-sent course
-// id cannot point the move at another course's outline.
-export const moveCourseItemUpSchema = z.object({
-  itemType: z.enum(["lesson", "assignment"]),
-  itemId: z.number().int().positive("Invalid item id"),
-});
+export const moveCourseItemDownSchema = moveCourseItemSchema;
+export const moveCourseItemUpSchema = moveCourseItemSchema;
 
 export const enrollmentFormSchema = z.object({
   courseId: z.number().int().positive("Invalid course id"),
