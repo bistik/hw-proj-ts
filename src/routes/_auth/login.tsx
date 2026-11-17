@@ -14,10 +14,18 @@ export const Route = createFileRoute("/_auth/login")({
 });
 
 // Only relative in-app paths are safe callback targets. A full URL or a
-// protocol-relative path ("//evil.com") would send the user off-site, and
-// anything else falls back to the default /dashboard.
+// protocol-relative path ("//evil.com") would send the user off-site.
+// Backslashes, control characters, and encoded path separators are rejected
+// too, so bad values fall back to /dashboard instead of failing the sign-in
+// on the better-auth server (it validates callbackURL the same way).
 function safeCallbackURL(redirect: string | undefined): string {
-  if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
+  if (
+    redirect &&
+    redirect.startsWith("/") &&
+    !redirect.startsWith("//") &&
+    !/[\\\u0000-\u001f\u007f]/.test(redirect) &&
+    !/%2f|%5c/i.test(redirect)
+  ) {
     return redirect;
   }
   return "/dashboard";

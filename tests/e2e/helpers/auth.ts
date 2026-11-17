@@ -51,8 +51,9 @@ export async function ensureSignedUp(user: {
  * test can pass a protected route so the beforeLoad bounce to
  * /login?redirect=... happens inside this helper. `waitFor` is the URL regex
  * that marks a successful login; it defaults to /dashboard, the login form's
- * hardcoded callbackURL. Retries re-enter through `entry`, so a protected
- * route entry keeps re-establishing the redirect search param.
+ * fallback when no redirect search param is present. Retries re-enter
+ * through `entry`, so a protected route entry keeps re-establishing the
+ * redirect search param.
  */
 export async function loginViaUi(
   page: Page,
@@ -82,8 +83,8 @@ export async function loginViaUi(
       .locator("form")
       .getByRole("button", { name: "Login", exact: true })
       .click();
-    // The login form redirects via better-auth's callbackURL (issue #47 will
-    // make it honor the redirect search param when one is present).
+    // The login form redirects via better-auth's callbackURL, which honors
+    // the redirect search param when one is present.
     try {
       await page.waitForURL(waitFor, { timeout: 10_000 });
       return;
