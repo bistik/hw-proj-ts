@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { loginViaUi } from "./helpers/auth";
 import {
-  getCourseItemRow,
   seedAssignments,
   seedCourse,
   seedCourseItems,
@@ -205,13 +204,11 @@ test.describe("author course details items", () => {
     ).toBeVisible();
   });
 
-  test("move up and move down buttons stay disabled until issue #34 wires them", async ({
-    page,
-  }) => {
+  test("move up stays disabled until issue #44 wires it", async ({ page }) => {
     const title = `Author no-op course ${Date.now()}`;
     const courseId = await seedCourse(TEST_USER.email, {
       title,
-      description: "Course whose move buttons must stay no-ops.",
+      description: "Course whose move up button must stay a no-op.",
     });
     const [assignment1Id, assignment2Id] = await seedAssignments(courseId, [
       "Author no-op first",
@@ -231,9 +228,10 @@ test.describe("author course details items", () => {
     await loginViaUi(page);
     await page.goto(`/courses/${courseId}`);
 
-    // The buttons have no server wiring yet, so users cannot click no-op
-    // actions — both render disabled, like the action menu on
-    // SubmissionCard (actionsDisabled).
+    // Issue #43 wires the [Move down] button (see
+    // author-move-item-down.spec.ts), so it renders enabled. [Move up]
+    // still has no server wiring: it stays disabled until issue #44
+    // wires it.
     const middleCard = page
       .locator(".card")
       .filter({ hasText: "Author no-op middle" });
@@ -242,18 +240,6 @@ test.describe("author course details items", () => {
     ).toBeDisabled();
     await expect(
       middleCard.getByRole("button", { name: "Move down" }),
-    ).toBeDisabled();
-
-    // The seeded positions stay untouched in the e2e database.
-    expect(
-      await getCourseItemRow("assignment", assignment1Id),
-    ).toEqual({ course_id: courseId, position: 0 });
-    expect(await getCourseItemRow("lesson", lessonId)).toEqual({
-      course_id: courseId,
-      position: 1,
-    });
-    expect(
-      await getCourseItemRow("assignment", assignment2Id),
-    ).toEqual({ course_id: courseId, position: 2 });
+    ).toBeEnabled();
   });
 });

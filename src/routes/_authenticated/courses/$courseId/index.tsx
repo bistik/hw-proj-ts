@@ -1,3 +1,4 @@
+import { useState } from "react";
 import FormErrorAlert from "@/components/form-error-alert";
 import { SubmitButton } from "@/components/submit-button";
 import CourseDetailTabsPending, {
@@ -5,7 +6,9 @@ import CourseDetailTabsPending, {
   type CourseDetailTab,
 } from "@/components/course-detail-tabs-pending";
 import TabPanelSkeleton from "@/components/tab-panel-skeleton";
-import AuthorCourseItemCard from "@/components/course-items/author-course-item-card";
+import AuthorCourseItemCard, {
+  type CourseItemRef,
+} from "@/components/course-items/author-course-item-card";
 import SubmissionCard from "@/components/submissions/submission-card";
 import { enrollmentFormSchema } from "@/schemas/course-schema";
 import { getAssignmentsByCourse } from "@/server/assignments/get-assignment";
@@ -13,6 +16,7 @@ import { getSubmissionsByCourse } from "@/server/assignments/submissions/get-sub
 import { createEnrollment } from "@/server/enrollments/create-enrollment";
 import { getEnrolleesByCourse } from "@/server/enrollments/get-enrollment";
 import { getLessonsByCourse } from "@/server/lessons/get-lesson";
+import { moveCourseItemDown } from "@/server/course-items/mutate-course-item";
 import { getUnenrolledUsers } from "@/server/users/get-user";
 import { useForm } from "@tanstack/react-form";
 import {
@@ -142,6 +146,34 @@ function CourseDetailComponent() {
 
   const activeTab = tab ?? "details";
 
+  // The outline move in flight (issue #43), or null while no move runs.
+  // The state lives here, one level above the cards, so every card's move
+  // buttons disable while any move runs — not just the clicked card's.
+  const [movingItem, setMovingItem] = useState<CourseItemRef | null>(null);
+  // The error message from the last outline move, or null when it worked.
+  // The route shows it through FormErrorAlert, like the enrollment form.
+  const [moveError, setMoveError] = useState<string | null>(null);
+
+  const handleMoveDown = async (item: CourseItemRef) => {
+    setMovingItem(item);
+    // A new move clears the error from the previous one, so the alert
+    // always shows the outcome of the latest attempt.
+    setMoveError(null);
+    try {
+      await moveCourseItemDown({
+        data: { itemType: item.itemType, itemId: item.itemId },
+      });
+      // Reload the route data so the outline re-renders in the swapped
+      // order.
+      await router.invalidate();
+    } catch (err) {
+      console.error(`Error moving course item down`, err);
+      setMoveError("Could not move the course item down. Please try again.");
+    } finally {
+      setMovingItem(null);
+    }
+  };
+
   const handleTabChange = (newTab: CourseDetailTab) => {
     void navigate({
       search: newTab === "details" ? {} : { tab: newTab },
@@ -214,6 +246,7 @@ function CourseDetailComponent() {
         {/* Course outline (issue #33): one card per course item, stacked in
             course_items.position order, like the student course page. */}
         <h3 className="mb-4 mt-8">Course outline</h3>
+        {moveError !== null && <FormErrorAlert errorMsg={moveError} />}
         {!items ? (
           <TabPanelSkeleton />
         ) : items.length > 0 ? (
@@ -227,6 +260,13 @@ function CourseDetailComponent() {
                 courseId={courseId}
                 isFirst={index === 0}
                 isLast={index === items.length - 1}
+                movingItem={movingItem}
+                onMoveDown={() => {
+                  void handleMoveDown({
+                    itemType: item.itemType,
+                    itemId: item.id,
+                  });
+                }}
               />
             ))}
           </div>
