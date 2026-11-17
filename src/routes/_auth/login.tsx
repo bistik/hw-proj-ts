@@ -3,10 +3,25 @@ import { SubmitButton } from "@/components/submit-button";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import z from "zod";
+
+const loginSearchSchema = z.object({ redirect: z.string().optional() });
 
 export const Route = createFileRoute("/_auth/login")({
+  validateSearch: (search: Record<string, unknown>) =>
+    loginSearchSchema.catch({}).parse(search),
   component: LoginComponent,
 });
+
+// Only relative in-app paths are safe callback targets. A full URL or a
+// protocol-relative path ("//evil.com") would send the user off-site, and
+// anything else falls back to the default /dashboard.
+function safeCallbackURL(redirect: string | undefined): string {
+  if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
+    return redirect;
+  }
+  return "/dashboard";
+}
 
 interface FormCredentials {
   email: string;
@@ -14,6 +29,8 @@ interface FormCredentials {
 }
 
 function LoginComponent() {
+  const { redirect } = Route.useSearch();
+  const callbackURL = safeCallbackURL(redirect);
   const [pendingSocial, setPendingSocial] = useState(false);
   const loginUser = async ({ value }: { value: FormCredentials }) => {
     form.setErrorMap({ onSubmit: undefined });
@@ -21,7 +38,7 @@ function LoginComponent() {
       const result = await authClient.signIn.email({
         email: value.email,
         password: value.password,
-        callbackURL: "/dashboard",
+        callbackURL,
       });
       if (result.error) {
         form.setErrorMap({
@@ -46,7 +63,7 @@ function LoginComponent() {
     try {
       const result = await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/dashboard",
+        callbackURL,
       });
       if (result.error) {
         form.setErrorMap({
