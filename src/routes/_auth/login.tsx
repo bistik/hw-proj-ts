@@ -3,10 +3,33 @@ import { SubmitButton } from "@/components/submit-button";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import z from "zod";
+
+const loginSearchSchema = z.object({ redirect: z.string().optional() });
 
 export const Route = createFileRoute("/_auth/login")({
+  validateSearch: (search: Record<string, unknown>) =>
+    loginSearchSchema.catch({}).parse(search),
   component: LoginComponent,
 });
+
+// Only relative in-app paths are safe callback targets. A full URL or a
+// protocol-relative path ("//evil.com") would send the user off-site.
+// Backslashes, control characters, and encoded path separators are rejected
+// too, so bad values fall back to /dashboard instead of failing the sign-in
+// on the better-auth server (it validates callbackURL the same way).
+function safeCallbackURL(redirect: string | undefined): string {
+  if (
+    redirect &&
+    redirect.startsWith("/") &&
+    !redirect.startsWith("//") &&
+    !/[\\\u0000-\u001f\u007f]/.test(redirect) &&
+    !/%2f|%5c/i.test(redirect)
+  ) {
+    return redirect;
+  }
+  return "/dashboard";
+}
 
 interface FormCredentials {
   email: string;
@@ -14,6 +37,8 @@ interface FormCredentials {
 }
 
 function LoginComponent() {
+  const { redirect } = Route.useSearch();
+  const callbackURL = safeCallbackURL(redirect);
   const [pendingSocial, setPendingSocial] = useState(false);
   const loginUser = async ({ value }: { value: FormCredentials }) => {
     form.setErrorMap({ onSubmit: undefined });
@@ -21,7 +46,7 @@ function LoginComponent() {
       const result = await authClient.signIn.email({
         email: value.email,
         password: value.password,
-        callbackURL: "/dashboard",
+        callbackURL,
       });
       if (result.error) {
         form.setErrorMap({
@@ -46,7 +71,7 @@ function LoginComponent() {
     try {
       const result = await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/dashboard",
+        callbackURL,
       });
       if (result.error) {
         form.setErrorMap({

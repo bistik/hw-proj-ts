@@ -46,13 +46,29 @@ export async function ensureSignedUp(user: {
  *
  * Selectors come from src/routes/_auth/login.tsx: email/password inputs are
  * located by their placeholders and the submit button by its accessible name.
+ *
+ * `entry` is the URL the browser starts from; it defaults to /login, but a
+ * test can pass a protected route so the beforeLoad bounce to
+ * /login?redirect=... happens inside this helper. `waitFor` is the URL regex
+ * that marks a successful login; it defaults to /dashboard, the login form's
+ * fallback when no redirect search param is present. Retries re-enter
+ * through `entry`, so a protected route entry keeps re-establishing the
+ * redirect search param.
  */
 export async function loginViaUi(
   page: Page,
   user: { email: string; password: string } = TEST_USER,
+  { entry = "/login", waitFor = /\/dashboard/ }: {
+    entry?: string;
+    waitFor?: RegExp;
+  } = {},
 ) {
   for (let attempt = 1; attempt <= 3; attempt++) {
-    await page.goto("/login");
+    // Start every attempt from a clean session: an already-logged-in browser
+    // entering through a protected route (options.entry) would skip /login
+    // entirely, and a previous failed attempt leaves a session behind.
+    await page.context().clearCookies();
+    await page.goto(entry);
     // In dev the module graph needs a moment to load before React attaches
     // the submit handler; clicking too early falls back to a native GET
     // form submit (visible as a redirect to /login?). networkidle covers
@@ -67,16 +83,17 @@ export async function loginViaUi(
       .locator("form")
       .getByRole("button", { name: "Login", exact: true })
       .click();
-    // The login form redirects to /dashboard via better-auth's callbackURL.
+    // The login form redirects via better-auth's callbackURL, which honors
+    // the redirect search param when one is present.
     try {
-      await page.waitForURL(/\/dashboard/, { timeout: 10_000 });
+      await page.waitForURL(waitFor, { timeout: 10_000 });
       return;
     } catch {
       // Retry: either the form was not hydrated yet or navigation is slow.
     }
   }
   throw new Error(
-    `loginViaUi: failed to reach /dashboard for ${user.email} after 3 attempts`,
+    `loginViaUi: failed to reach ${waitFor} for ${user.email} after 3 attempts`,
   );
 }
 
