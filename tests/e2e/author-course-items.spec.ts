@@ -204,11 +204,13 @@ test.describe("author course details items", () => {
     ).toBeVisible();
   });
 
-  test("move up stays disabled until issue #44 wires it", async ({ page }) => {
+  test("move up and move down buttons render enabled once wired", async ({
+    page,
+  }) => {
     const title = `Author no-op course ${Date.now()}`;
     const courseId = await seedCourse(TEST_USER.email, {
       title,
-      description: "Course whose move up button must stay a no-op.",
+      description: "Course whose move buttons must be clickable.",
     });
     const [assignment1Id, assignment2Id] = await seedAssignments(courseId, [
       "Author no-op first",
@@ -228,16 +230,16 @@ test.describe("author course details items", () => {
     await loginViaUi(page);
     await page.goto(`/courses/${courseId}`);
 
-    // Issue #43 wires the [Move down] button (see
-    // author-move-item-down.spec.ts), so it renders enabled. [Move up]
-    // still has no server wiring: it stays disabled until issue #44
-    // wires it.
+    // Both issues land: #43 wires the [Move down] button (see
+    // author-move-item-down.spec.ts) and #44 wires the [Move up] button
+    // (see author-move-item-up.spec.ts), so both render enabled instead
+    // of disabled no-op placeholders.
     const middleCard = page
       .locator(".card")
       .filter({ hasText: "Author no-op middle" });
     await expect(
       middleCard.getByRole("button", { name: "Move up" }),
-    ).toBeDisabled();
+    ).toBeEnabled();
     await expect(
       middleCard.getByRole("button", { name: "Move down" }),
     ).toBeEnabled();

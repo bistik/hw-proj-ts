@@ -1,20 +1,22 @@
 import { db } from "@/db/";
 import { courseItemsTable, coursesTable } from "@/db/schema";
-import { and, asc, eq, gt, max } from "drizzle-orm";
+import { and, asc, desc, eq, gt, lt, max } from "drizzle-orm";
 
 /**
- * Swaps the outline row of the given item with the outline row below it
- * (issue #43): the item takes the next higher position in its course and
- * the item below takes the item's old position. Only the two rows change,
- * so gapped positions elsewhere in the outline keep their slots.
+ * Swaps the outline row of the given item with its neighbor (issues #43
+ * and #44): for direction "down" the item takes the next higher position
+ * in its course and the item below takes the item's old position; for
+ * direction "up" it is mirrored with the item above. Only the two rows
+ * change, so gapped positions elsewhere in the outline keep their slots.
  *
  * The authorId scopes the row lookup in the same query (the course_items
  * row joins its course), so a caller who does not own the course matches
  * no row — the same guard shape as dbGetLesson.
  *
  * Returns the moved row's new state, or null when the row does not exist
- * or no item sits below it (the caller hides [Move down] at the last
- * position, so that state only comes from a stale or forged request).
+ * or no neighbor sits in the move direction (the caller hides [Move up]
+ * at the first position and [Move down] at the last, so that state only
+ * comes from a stale or forged request).
  *
  * The three updates run in one transaction because the
  * course_items_course_position_unique index blocks a direct two-row swap:
@@ -22,10 +24,11 @@ import { and, asc, eq, gt, max } from "drizzle-orm";
  * item would collide. The item is parked one position past the course's
  * current max first, which frees both swapped positions.
  */
-export const dbMoveCourseItemDown = async function (data: {
+export const dbMoveCourseItem = async function (data: {
   itemType: "lesson" | "assignment";
   itemId: number;
   userId: string;
+  direction: "up" | "down";
 }) {
   return db.transaction(async (tx) => {
     const [row] = await tx
@@ -44,18 +47,27 @@ export const dbMoveCourseItemDown = async function (data: {
 
     const item = row.item;
 
-    // The item below: the outline row with the smallest position greater
-    // than the item's, in the same course.
+    // The neighbor: for "down", the outline row with the smallest position
+    // greater than the item's; for "up", the row with the largest position
+    // smaller than the item's. Both in the same course. The lookup filters
+    // by position only, not item type, because the outline mixes lessons
+    // and assignments.
     const [neighbor] = await tx
       .select()
       .from(courseItemsTable)
       .where(
         and(
           eq(courseItemsTable.courseId, item.courseId),
-          gt(courseItemsTable.position, item.position),
+          data.direction === "down"
+            ? gt(courseItemsTable.position, item.position)
+            : lt(courseItemsTable.position, item.position),
         ),
       )
-      .orderBy(asc(courseItemsTable.position))
+      .orderBy(
+        data.direction === "down"
+          ? asc(courseItemsTable.position)
+          : desc(courseItemsTable.position),
+      )
       .limit(1);
     if (!neighbor) return null;
 

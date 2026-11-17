@@ -16,7 +16,10 @@ import { getSubmissionsByCourse } from "@/server/assignments/submissions/get-sub
 import { createEnrollment } from "@/server/enrollments/create-enrollment";
 import { getEnrolleesByCourse } from "@/server/enrollments/get-enrollment";
 import { getLessonsByCourse } from "@/server/lessons/get-lesson";
-import { moveCourseItemDown } from "@/server/course-items/mutate-course-item";
+import {
+  moveCourseItemDown,
+  moveCourseItemUp,
+} from "@/server/course-items/mutate-course-item";
 import { getUnenrolledUsers } from "@/server/users/get-user";
 import { useForm } from "@tanstack/react-form";
 import {
@@ -146,31 +149,46 @@ function CourseDetailComponent() {
 
   const activeTab = tab ?? "details";
 
-  // The outline move in flight (issue #43), or null while no move runs.
-  // The state lives here, one level above the cards, so every card's move
-  // buttons disable while any move runs — not just the clicked card's.
-  const [movingItem, setMovingItem] = useState<CourseItemRef | null>(null);
+  // The outline move in flight (issue #43/#44), or null while no move
+  // runs. The state lives here, one level above the cards, so every card's
+  // move buttons disable while any move runs — not just the clicked
+  // card's. One state object holds the item and the direction together,
+  // because the two always change at the same time: the item says which
+  // card's move buttons disable without a spinner, and the direction says
+  // which clicked button shows the loading spinner.
+  const [moving, setMoving] = useState<{
+    item: CourseItemRef;
+    direction: "up" | "down";
+  } | null>(null);
   // The error message from the last outline move, or null when it worked.
   // The route shows it through FormErrorAlert, like the enrollment form.
   const [moveError, setMoveError] = useState<string | null>(null);
 
-  const handleMoveDown = async (item: CourseItemRef) => {
-    setMovingItem(item);
+  const handleMove = async (item: CourseItemRef, direction: "up" | "down") => {
+    setMoving({ item, direction });
     // A new move clears the error from the previous one, so the alert
     // always shows the outcome of the latest attempt.
     setMoveError(null);
+    const moveName = direction === "up" ? "up" : "down";
     try {
-      await moveCourseItemDown({
+      await (direction === "up" ? moveCourseItemUp : moveCourseItemDown)({
         data: { itemType: item.itemType, itemId: item.itemId },
       });
       // Reload the route data so the outline re-renders in the swapped
       // order.
       await router.invalidate();
     } catch (err) {
-      console.error(`Error moving course item down`, err);
-      setMoveError("Could not move the course item down. Please try again.");
+      console.error(`Error moving course item ${moveName}`, err);
+      setMoveError(
+        `Could not move the course item ${moveName}. Please try again.`,
+      );
+      // The move failed, so the outline may be stale (the item may no
+      // longer exist, or a move from another tab already changed the
+      // order). Reload the route data anyway, so the stale card does not
+      // stay clickable against outdated data.
+      await router.invalidate();
     } finally {
-      setMovingItem(null);
+      setMoving(null);
     }
   };
 
@@ -260,12 +278,18 @@ function CourseDetailComponent() {
                 courseId={courseId}
                 isFirst={index === 0}
                 isLast={index === items.length - 1}
-                movingItem={movingItem}
+                moving={moving}
+                onMoveUp={() => {
+                  void handleMove(
+                    { itemType: item.itemType, itemId: item.id },
+                    "up",
+                  );
+                }}
                 onMoveDown={() => {
-                  void handleMoveDown({
-                    itemType: item.itemType,
-                    itemId: item.id,
-                  });
+                  void handleMove(
+                    { itemType: item.itemType, itemId: item.id },
+                    "down",
+                  );
                 }}
               />
             ))}
