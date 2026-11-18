@@ -88,6 +88,14 @@ export const deleteLessonSchema = z.object({
   lessonId: z.number().int().positive("Invalid lesson id"),
 });
 
+// Only the questionId: the deleteQuestion server fn derives the courseId
+// from the question's assignment row (same shape as deleteLessonSchema),
+// so a client-sent course id cannot point the delete at another course's
+// question.
+export const deleteQuestionSchema = z.object({
+  questionId: z.number().int().positive("Invalid question id"),
+});
+
 // Only the item coordinates: the move server fns derive the courseId from
 // the course_items row (same shape as deleteLessonSchema), so a
 // client-sent course id cannot point the move at another course's outline.
