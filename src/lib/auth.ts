@@ -7,6 +7,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { UnauthorizedError } from "@/lib/errors";
 import { sendWelcomeEmail } from "@/lib/email/welcome";
+import { sendVerificationEmail } from "@/lib/email/verification";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -28,6 +29,16 @@ export const auth = betterAuth({
     },
   },
   plugins: [tanstackStartCookies()],
+  // Issue #26: better-auth owns the verification flow. sendOnSignUp sends a
+  // verification email for every new sign-up, and the signed link in the
+  // email carries the token that flips email_verified when followed. The
+  // POST /api/auth/send-verification-email endpoint re-sends on request.
+  emailVerification: {
+    sendOnSignUp: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendVerificationEmail({ to: user.email, name: user.name, url });
+    },
+  },
   // Sends a welcome email through a better-auth hooks callback whenever a new
   // user row is written, so every sign-up (client form or API) is covered.
   databaseHooks: {

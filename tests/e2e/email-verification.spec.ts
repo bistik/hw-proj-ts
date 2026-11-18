@@ -117,6 +117,17 @@ test.describe("email verification", { tag: "@mailpit" }, () => {
     )?.[1];
     expect(firstToken, "the first link carries a signed token").toBeTruthy();
 
+    // The token is a JWT whose payload carries only the email and iat/exp at
+    // second granularity, so two tokens issued within the same second are
+    // byte-identical. Wait past the first token's issue second so the
+    // re-send is guaranteed to produce a token that differs from the first.
+    function decodeJwtPayload(token: string): { iat: number; exp: number } {
+      return JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8"));
+    }
+    const firstIat = decodeJwtPayload(firstToken!).iat;
+    const waitMs = (firstIat + 1) * 1000 - Date.now() + 50;
+    if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
+
     // Re-send: the app must expose a way to trigger a fresh verification
     // email for the address (better-auth's send-verification-email endpoint,
     // behind a UI affordance once one exists).
