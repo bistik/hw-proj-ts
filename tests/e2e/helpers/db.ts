@@ -413,6 +413,27 @@ export async function getQuestionRow(
   };
 }
 
+/**
+ * Reads the submission_answers row for the given (questionId, submissionId)
+ * pair. Returns null when the row is missing — which is the cascade
+ * behaviour under test in issue #54 (delete a question), so this read
+ * helper (unlike the seeders) must not throw.
+ */
+export async function getAnswerRow(
+  questionId: number,
+  submissionId: number,
+): Promise<{ answer: string } | null> {
+  const result = await client.execute({
+    sql: "SELECT answer FROM submission_answers WHERE question_id = ? AND submission_id = ?",
+    args: [questionId, submissionId],
+  });
+  const row = result.rows[0];
+  if (!row) {
+    return null;
+  }
+  return { answer: String(row.answer) };
+}
+
 /** Now in ms, nudged by i so rows never collide on created_at. */
 function nowPlus(i: number): number {
   return Date.now() + i;

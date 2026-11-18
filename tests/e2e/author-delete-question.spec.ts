@@ -1,11 +1,14 @@
 import { expect, test } from "@playwright/test";
 import { ensureSignedUp, loginViaUi } from "./helpers/auth";
 import {
+  getAnswerRow,
   getQuestionRow,
   seedAssignments,
   seedCourse,
   seedEnrollment,
   seedQuestions,
+  seedSubmission,
+  seedSubmissionAnswer,
 } from "./helpers/db";
 import { slowServerFnCalls } from "./helpers/server-fn";
 import { OTHER_USER, TEST_USER } from "./test-user";
@@ -111,6 +114,49 @@ test.describe("author deletes a question (issue #54)", () => {
 
     // The questions row itself is gone; the other row survives.
     expect(await getQuestionRow(deletableId)).toBeNull();
+  });
+
+  // The delete cascades to the question's submission_answers rows: after
+  // the question is gone, the student's saved answer to it is gone too,
+  // so no orphaned answer row is left behind (mirrors the child-row check
+  // of the delete-lesson PR, issue #40).
+  test("deleting a question removes its submission_answers row", async ({
+    page,
+  }) => {
+    const title = `Cascade delete question course ${Date.now()}`;
+    const courseId = await seedCourse(TEST_USER.email, {
+      title,
+      description: "Course whose question's saved answer must cascade away.",
+    });
+    const [assignmentId] = await seedAssignments(courseId, [
+      "Cascade delete question assignment",
+    ]);
+    const answeredText = `Answered question ${Date.now()}`;
+    const [questionId] = await seedQuestions(assignmentId, [answeredText]);
+    await seedSubmissionAnswer(
+      assignmentId,
+      TEST_USER.email,
+      questionId,
+      "The student's saved answer",
+    );
+    const submissionId = await seedSubmission(assignmentId, TEST_USER.email);
+
+    await loginViaUi(page);
+    await page.goto(`/assignments/${assignmentId}`);
+    await page.waitForLoadState("networkidle");
+
+    const row = page.locator("ul li").filter({ hasText: answeredText });
+    await row.getByRole("button", { name: "Delete question" }).click();
+    const modalBox = page.locator(".modal-box");
+    await expect(modalBox).toBeVisible();
+    await modalBox.getByRole("button", { name: "Okay" }).click();
+
+    // The delete ends, the question row is gone, and the cascade removed
+    // the student's saved answer with it.
+    await expect(modalBox).not.toBeVisible();
+    await expect(row).toHaveCount(0);
+    expect(await getQuestionRow(questionId)).toBeNull();
+    expect(await getAnswerRow(questionId, submissionId)).toBeNull();
   });
 
   // The ConfirmModal must not delete anything when the author cancels.
