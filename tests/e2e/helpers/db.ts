@@ -15,9 +15,9 @@ const client = createClient({
  * Marks a user's email as verified in the e2e database.
  *
  * The /_authenticated/courses layout gate (src/routes/_authenticated/courses/
- * route.tsx) rejects unverified users, and better-auth has no verification
- * email flow configured, so API signup would otherwise leave e2e users
- * permanently unverified and unable to reach any /courses page.
+ * route.tsx) rejects unverified users, so API signup alone would leave e2e
+ * users unable to reach any /courses page. The direct DB flip keeps the e2e
+ * setup fast and independent of Mailpit.
  */
 export async function ensureEmailVerified(email: string) {
   await client.execute({

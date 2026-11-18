@@ -48,8 +48,8 @@ export async function ensureSignedUp(user: {
   password: string;
 }) {
   await signUpViaApi(user);
-  // The courses layout requires verified emails and better-auth has no
-  // verification email flow, so flip the flag in the e2e DB directly.
+  // The courses layout requires verified emails. Flip the flag in the e2e DB
+  // directly: this keeps the setup fast and independent of Mailpit.
   await ensureEmailVerified(user.email);
 }
 

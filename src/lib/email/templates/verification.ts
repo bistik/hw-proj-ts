@@ -17,7 +17,7 @@ export function verificationEmail(input: VerificationEmailInput): EmailMessage {
       body: [
         `Hi ${input.name},`,
         "Confirm this email address to activate your account.",
-        "The link expires after a while. If it no longer works, request a new one.",
+        "The link expires after 1 hour. If it no longer works, request a new one.",
       ],
       action: { label: "Verify email", url: input.url },
       footer: `You received this email because an account was created with ${input.to}.`,
