@@ -391,6 +391,49 @@ export async function getLessonRow(
   return { course_id: Number(row.course_id), title: String(row.title) };
 }
 
+/**
+ * Reads the question row with the given id. Returns null when the row is
+ * missing — which is the behaviour under test in issue #54 (delete a
+ * question), so this read helper (unlike the seeders) must not throw.
+ */
+export async function getQuestionRow(
+  questionId: number,
+): Promise<{ assignment_id: number; question_text: string } | null> {
+  const result = await client.execute({
+    sql: "SELECT assignment_id, question_text FROM questions WHERE id = ?",
+    args: [questionId],
+  });
+  const row = result.rows[0];
+  if (!row) {
+    return null;
+  }
+  return {
+    assignment_id: Number(row.assignment_id),
+    question_text: String(row.question_text),
+  };
+}
+
+/**
+ * Reads the submission_answers row for the given (questionId, submissionId)
+ * pair. Returns null when the row is missing — which is the cascade
+ * behaviour under test in issue #54 (delete a question), so this read
+ * helper (unlike the seeders) must not throw.
+ */
+export async function getAnswerRow(
+  questionId: number,
+  submissionId: number,
+): Promise<{ answer: string } | null> {
+  const result = await client.execute({
+    sql: "SELECT answer FROM submission_answers WHERE question_id = ? AND submission_id = ?",
+    args: [questionId, submissionId],
+  });
+  const row = result.rows[0];
+  if (!row) {
+    return null;
+  }
+  return { answer: String(row.answer) };
+}
+
 /** Now in ms, nudged by i so rows never collide on created_at. */
 function nowPlus(i: number): number {
   return Date.now() + i;

@@ -2,7 +2,10 @@ import { TextField } from "@/components/text-field";
 import { SubmitButton } from "@/components/submit-button";
 import { questionFormSchema } from "@/schemas/course-schema";
 import { getAssignmentById } from "@/server/assignments/get-assignment";
-import { createQuestion } from "@/server/questions/create-question";
+import {
+  createQuestion,
+  deleteQuestion,
+} from "@/server/questions/mutate-question";
 import { getQuestions } from "@/server/questions/get-questions";
 import { useForm } from "@tanstack/react-form";
 import {
@@ -11,6 +14,8 @@ import {
   notFound,
   useRouter,
 } from "@tanstack/react-router";
+import { useState } from "react";
+import ConfirmModal from "@/components/confirm-modal";
 import z from "zod";
 
 export const Route = createFileRoute(
@@ -30,6 +35,68 @@ export const Route = createFileRoute(
   },
   component: AssignmentDetailComponent,
 });
+
+/**
+ * One question row on the author's assignment detail page (issue #54).
+ * The row carries an "Edit question" link and a "Delete question" button.
+ * The delete opens the ConfirmModal (same flow as the delete-lesson
+ * action, issue #40): the message names the question, and on Okay the
+ * deleteQuestion server fn removes the row, then the route data reloads
+ * and the row disappears. While the delete runs, the ConfirmModal keeps
+ * the Okay button disabled and shows its spinner.
+ */
+function AuthorQuestionRow({
+  questionId,
+  assignmentId,
+  questionText,
+}: {
+  questionId: number;
+  assignmentId: number;
+  questionText: string;
+}) {
+  const router = useRouter();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  return (
+    <li key={questionId}>
+      {questionText}
+      <Link
+        to="/assignments/$assignmentId/questions/$questionId/edit"
+        className="link ml-2"
+        params={{
+          questionId: String(questionId),
+          assignmentId: String(assignmentId),
+        }}
+      >
+        Edit question
+      </Link>
+      <button
+        type="button"
+        className="btn btn-error btn-sm ml-2"
+        onClick={() => setDeleteOpen(true)}
+      >
+        Delete question
+      </button>
+      {/* The modal renders only while a delete is pending, so the page
+          holds at most one ConfirmModal dialog: two rows never leave two
+          closed .modal-box elements in the DOM at the same time. */}
+      {deleteOpen && (
+        <ConfirmModal
+          open={deleteOpen}
+          message={`Delete question "${questionText}"? This cannot be undone.`}
+          onConfirm={async () => {
+            // Remove the question row, then reload the route so the list
+            // drops the row. The ConfirmModal keeps the button spinning
+            // until this resolves, so the delete cannot be double-fired
+            // while the page reloads.
+            await deleteQuestion({ data: { questionId } });
+            await router.invalidate();
+          }}
+          onClose={() => setDeleteOpen(false)}
+        />
+      )}
+    </li>
+  );
+}
 
 function AssignmentDetailComponent() {
   const { assignment, questions } = Route.useLoaderData();
@@ -94,22 +161,15 @@ function AssignmentDetailComponent() {
       {questions && (
         <>
           <h2>Questions:</h2>
-          <ul>
+          <ul className="flex flex-col space-y-2">
             {questions?.map((question) => {
               return (
-                <li key={question.id}>
-                  {question.questionText}
-                  <Link
-                    to="/assignments/$assignmentId/questions/$questionId/edit"
-                    className="link ml-2"
-                    params={{
-                      questionId: String(question.id),
-                      assignmentId: String(assignment.id),
-                    }}
-                  >
-                    Edit question
-                  </Link>
-                </li>
+                <AuthorQuestionRow
+                  key={question.id}
+                  questionId={question.id}
+                  assignmentId={assignment.id}
+                  questionText={question.questionText}
+                />
               );
             })}
           </ul>
