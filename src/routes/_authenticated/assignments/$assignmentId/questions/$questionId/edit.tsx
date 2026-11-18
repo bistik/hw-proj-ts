@@ -1,7 +1,7 @@
 import { TextField } from "@/components/text-field";
 import { questionUpdateFormSchema } from "@/schemas/course-schema";
 import { getQuestion } from "@/server/questions/get-questions";
-import { updateQuestion } from "@/server/questions/update-question";
+import { updateQuestion } from "@/server/questions/mutate-question";
 import { useForm } from "@tanstack/react-form";
 import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import z from "zod";

@@ -2,8 +2,10 @@ import { TextField } from "@/components/text-field";
 import { SubmitButton } from "@/components/submit-button";
 import { questionFormSchema } from "@/schemas/course-schema";
 import { getAssignmentById } from "@/server/assignments/get-assignment";
-import { createQuestion } from "@/server/questions/create-question";
-import { deleteQuestion } from "@/server/questions/delete-question";
+import {
+  createQuestion,
+  deleteQuestion,
+} from "@/server/questions/mutate-question";
 import { getQuestions } from "@/server/questions/get-questions";
 import { useForm } from "@tanstack/react-form";
 import {
@@ -159,7 +161,7 @@ function AssignmentDetailComponent() {
       {questions && (
         <>
           <h2>Questions:</h2>
-          <ul>
+          <ul className="flex flex-col space-y-2">
             {questions?.map((question) => {
               return (
                 <AuthorQuestionRow
