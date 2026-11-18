@@ -27,6 +27,21 @@ export async function ensureEmailVerified(email: string) {
 }
 
 /**
+ * Reads a user's email_verified flag from the e2e database.
+ *
+ * The email-verification spec uses this to assert that following the link in
+ * the verification email really flips the flag, instead of trusting the
+ * verify endpoint's HTTP status alone.
+ */
+export async function isEmailVerified(email: string): Promise<boolean> {
+  const result = await client.execute({
+    sql: "SELECT email_verified FROM users WHERE email = ?",
+    args: [email],
+  });
+  return Boolean(result.rows[0]?.email_verified);
+}
+
+/**
  * Inserts a course directly into the e2e database, bypassing the
  * /courses/new form, and returns its id. The author is located by email (the
  * seeded users' ids are unstable across runs — see seedEnrollment).

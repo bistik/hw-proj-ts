@@ -8,12 +8,13 @@ const BASE_URL = "http://localhost:3100";
 
 /**
  * Signs a user up through the better-auth email API, which handles password
- * hashing; no SQL-side seeding is needed.
+ * hashing; no SQL-side seeding is needed. Leaves the user's email_verified
+ * flag alone: callers decide whether to verify.
  *
  * Reruns must be idempotent: "User already exists" is fine, anything else is
  * a failure worth reporting.
  */
-export async function ensureSignedUp(user: {
+export async function signUpViaApi(user: {
   name: string;
   email: string;
   password: string;
@@ -35,7 +36,18 @@ export async function ensureSignedUp(user: {
       `[e2e] failed to seed test user ${user.email}: ${res.status} ${JSON.stringify(body)}`,
     );
   }
+}
 
+/**
+ * Signs a user up through the better-auth email API and marks the email as
+ * verified, so the seeded users can reach the email-gated courses layout.
+ */
+export async function ensureSignedUp(user: {
+  name: string;
+  email: string;
+  password: string;
+}) {
+  await signUpViaApi(user);
   // The courses layout requires verified emails and better-auth has no
   // verification email flow, so flip the flag in the e2e DB directly.
   await ensureEmailVerified(user.email);
