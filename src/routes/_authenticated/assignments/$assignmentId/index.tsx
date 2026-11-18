@@ -1,4 +1,5 @@
 import { TextField } from "@/components/text-field";
+import { SubmitButton } from "@/components/submit-button";
 import { questionFormSchema } from "@/schemas/course-schema";
 import { getAssignmentById } from "@/server/assignments/get-assignment";
 import { createQuestion } from "@/server/questions/create-question";
@@ -127,9 +128,20 @@ function AssignmentDetailComponent() {
         <form.Field name="answer">
           {(field) => <TextField field={field} label="Answer" multiline />}
         </form.Field>
-        <button type="submit" className="btn">
-          Add question
-        </button>
+        {/* Issue #51: the pending button disables and shows the daisyUI
+            loading spinner, so a second submit cannot start while the
+            createQuestion server fn is in flight. The label stays the
+            same during the pending window, so the button's accessible
+            name does not change mid-submit. */}
+        <form.Subscribe selector={(state) => state.isSubmitting}>
+          {(isSubmitting) => (
+            <SubmitButton
+              label="Add question"
+              submittingLabel="Add question"
+              isSubmitting={isSubmitting}
+            />
+          )}
+        </form.Subscribe>
       </form>
     </div>
   );
