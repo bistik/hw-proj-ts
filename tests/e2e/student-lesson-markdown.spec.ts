@@ -70,8 +70,9 @@ test.describe("student lesson markdown rendering", () => {
       page.locator("code").filter({ hasText: "code snippet" }),
     ).toBeVisible();
 
-    // The unordered list renders both list items.
-    const list = page.getByRole("list");
+    // The unordered list renders both list items. The breadcrumb trail
+    // is also a list, so scope to the list with the markdown items.
+    const list = page.getByRole("list").filter({ hasText: "First list item" });
     await expect(list).toBeVisible();
     await expect(
       list.getByRole("listitem").filter({ hasText: "First list item" }),
