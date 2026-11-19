@@ -1,7 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { ensureSignedUp, loginViaUi } from "./helpers/auth";
 import { createCourseViaUi } from "./helpers/course";
-import { getMailpitMessage, isMailpitAvailable, waitForMailpitMessage } from "./helpers/mailpit";
+import {
+  countMailpitMessages,
+  getMailpitMessage,
+  isMailpitAvailable,
+  waitForMailpitMessage,
+} from "./helpers/mailpit";
 import { OTHER_USER } from "./test-user";
 
 // Issue #24: send an email when a user is invited to a course. The local
@@ -117,5 +122,58 @@ test.describe("course invite email", { tag: "@mailpit" }, () => {
     // so the unique course title has to appear in the body.
     const body = `${message!.HTML ?? ""}\n${message!.Text ?? ""}`;
     expect(body).toContain(title);
+  });
+
+  test("does not send a second email when an unregistered user is invited again", async ({
+    page,
+  }) => {
+    test.skip(!(await isMailpitAvailable()), "Mailpit is not reachable, skipping");
+
+    await ensureSignedUp(OTHER_USER);
+    await loginViaUi(page);
+
+    const title = `Re-invite course ${Date.now()}`;
+    const coursePath = await createCourseViaUi(page, {
+      title,
+      description: "Course whose repeated unregistered invite must stay silent.",
+    });
+
+    await page.goto(`${coursePath}?tab=enrollments`);
+    await expect(page).toHaveURL(/tab=enrollments/);
+    await page.waitForLoadState("networkidle");
+
+    const inviteForm = page.locator("form").filter({
+      has: page.getByRole("button", { name: "Send invite" }),
+    });
+    const emailField = inviteForm.getByRole("textbox", { name: /email/i });
+    const unregisteredEmail = `e2e-reinvite-${Date.now()}@example.test`;
+
+    // First invite: the email goes out.
+    await emailField.fill(unregisteredEmail);
+    await page.getByRole("button", { name: "Send invite" }).click();
+    const first = await waitForMailpitMessage(unregisteredEmail, (message) => {
+      const subject = message.Subject ?? "";
+      return /invit/i.test(subject) && subject.includes(title);
+    });
+    expect(first, "first invite email should appear in Mailpit").toBeTruthy();
+
+    // Second invite of the same address: the pending invite already
+    // exists, so no email may be sent again. The handler awaits the send
+    // before it returns, so the form-level "already invited" response
+    // proves the (non-)send already happened when it shows up.
+    await emailField.fill(unregisteredEmail);
+    await page.getByRole("button", { name: "Send invite" }).click();
+    await expect(
+      inviteForm.locator('[role="alert"]'),
+    ).toContainText(/already enrolled or invited/i);
+
+    const matching = await countMailpitMessages(unregisteredEmail, (message) => {
+      const subject = message.Subject ?? "";
+      return /invit/i.test(subject) && subject.includes(title);
+    });
+    expect(
+      matching,
+      `invite emails to ${unregisteredEmail} for ${title}`,
+    ).toBe(1);
   });
 });

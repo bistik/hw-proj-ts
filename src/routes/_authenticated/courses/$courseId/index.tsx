@@ -220,7 +220,9 @@ function CourseDetailComponent() {
     if (!result.created) {
       form.setErrorMap({
         onSubmit: {
-          form: "This student is already enrolled in this course.",
+          // Covers both no-op re-invites: a registered student who is
+          // already enrolled, and an email address with a pending invite.
+          form: "This student is already enrolled or invited in this course.",
           fields: {},
         },
       });
@@ -343,21 +345,26 @@ function CourseDetailComponent() {
             )}
 
             <h3 className="mt-8">Invite a student</h3>
-            {unenrolledUsers.length > 0 ? (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  form.handleSubmit();
-                }}
-              >
-                <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
-                  {(error) =>
-                    typeof error === "string" ? (
-                      <FormErrorAlert errorMsg={error} />
-                    ) : null
-                  }
-                </form.Subscribe>
+            {/* The form always renders: an email invite targets an
+                unregistered person (issue #31), so the email path must
+                stay usable even when every registered user is already
+                enrolled. Only the registered-student select depends on
+                there being unenrolled users. */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                form.handleSubmit();
+              }}
+            >
+              <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
+                {(error) =>
+                  typeof error === "string" ? (
+                    <FormErrorAlert errorMsg={error} />
+                  ) : null
+                }
+              </form.Subscribe>
+              {unenrolledUsers.length > 0 && (
                 <form.Field name="userId">
                   {(field) => {
                     return (
@@ -383,42 +390,40 @@ function CourseDetailComponent() {
                     );
                   }}
                 </form.Field>
-                <form.Field name="inviteEmail">
-                  {(field) => {
-                    return (
-                      <fieldset className="fieldset">
-                        <legend className="fieldset-legend">Email</legend>
-                        {/* An unregistered invitee has no user id, so the
-                            email text field is the second, mutually
-                            exclusive way to address an invite (issue #31).
-                            The legend does not name the input for assistive
-                            technology, so the accessible name is explicit. */}
-                        <input
-                          type="email"
-                          className="input"
-                          aria-label="Email address"
-                          placeholder="student@example.com"
-                          value={field.state.value}
-                          onBlur={() => field.handleBlur()}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                        />
-                      </fieldset>
-                    );
-                  }}
-                </form.Field>
-                <form.Subscribe selector={(state) => state.isSubmitting}>
-                  {(isSubmitting) => (
-                    <SubmitButton
-                      label="Send invite"
-                      submittingLabel="Sending"
-                      isSubmitting={isSubmitting}
-                    />
-                  )}
-                </form.Subscribe>
-              </form>
-            ) : (
-              <p>No students to enroll</p>
-            )}
+              )}
+              <form.Field name="inviteEmail">
+                {(field) => {
+                  return (
+                    <fieldset className="fieldset">
+                      <legend className="fieldset-legend">Email</legend>
+                      {/* An unregistered invitee has no user id, so the
+                          email text field is the second, mutually
+                          exclusive way to address an invite (issue #31).
+                          The legend does not name the input for assistive
+                          technology, so the accessible name is explicit. */}
+                      <input
+                        type="email"
+                        className="input"
+                        aria-label="Email address"
+                        placeholder="student@example.com"
+                        value={field.state.value}
+                        onBlur={() => field.handleBlur()}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                      />
+                    </fieldset>
+                  );
+                }}
+              </form.Field>
+              <form.Subscribe selector={(state) => state.isSubmitting}>
+                {(isSubmitting) => (
+                  <SubmitButton
+                    label="Send invite"
+                    submittingLabel="Sending"
+                    isSubmitting={isSubmitting}
+                  />
+                )}
+              </form.Subscribe>
+            </form>
           </>
         )}
       </div>

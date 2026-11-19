@@ -5,9 +5,9 @@ import {
   logoutViaUi,
   signUpViaApi,
 } from "./helpers/auth";
-import { ensureEmailVerified } from "./helpers/db";
+import { ensureEmailVerified, seedCourse, seedEnrollmentForAllUsers } from "./helpers/db";
 import { createCourseViaUi } from "./helpers/course";
-import { OTHER_USER } from "./test-user";
+import { OTHER_USER, TEST_USER } from "./test-user";
 
 // Issue #31: invite unregistered users to a course by email.
 //
@@ -205,5 +205,41 @@ test.describe("invite unregistered user (issue #31)", () => {
     await expect(
       page.getByRole("button", { name: "decline", exact: true }),
     ).toBeVisible();
+  });
+
+  test("the email invite stays available when every registered user is enrolled", async ({
+    page,
+  }) => {
+    await ensureSignedUp(OTHER_USER);
+    await loginViaUi(page);
+
+    const title = `Full roster invite course ${Date.now()}`;
+    // seedCourse returns the numeric course id the enrollment seeder needs;
+    // the UI-created course only exposes its path.
+    const courseId = await seedCourse(TEST_USER.email, {
+      title,
+      description: "Course whose roster is filled to the last registered user.",
+    });
+
+    // Enroll every registered user directly through the database, so the
+    // student select has no candidates left (issue #31 review: the form
+    // used to disappear entirely in this state).
+    await seedEnrollmentForAllUsers(courseId);
+
+    await page.goto(`/courses/${courseId}?tab=enrollments`);
+    await expect(page).toHaveURL(/tab=enrollments/);
+    await page.waitForLoadState("networkidle");
+
+    // The student select disappears with the empty candidate list...
+    await expect(
+      page.locator('fieldset:has-text("Student") select'),
+    ).toHaveCount(0);
+
+    // ...but the email path must stay usable.
+    const unregisteredEmail = `e2e-full-roster-${Date.now()}@example.test`;
+    await emailFieldOf(page).fill(unregisteredEmail);
+    await page.getByRole("button", { name: "Send invite" }).click();
+    await page.waitForLoadState("networkidle");
+    await expect(errorIndicationOf(page)).toHaveCount(0);
   });
 });
