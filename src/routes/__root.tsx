@@ -42,7 +42,9 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       <head>
         <HeadContent />
       </head>
-      <body>
+      {/* @uiw/react-markdown-preview CSS follows data-color-mode, not the
+          daisyUI data-theme. Set dark so the editor matches the dark page. */}
+      <body data-color-mode="dark">
         {children}
         <Scripts />
       </body>
