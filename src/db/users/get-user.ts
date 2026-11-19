@@ -6,6 +6,9 @@ import { and, desc, eq, notExists } from "drizzle-orm";
 /**
  * The registered user owning an email address, or null. Emails are matched
  * normalized (trim + lowercase), the same rule the invites table applies.
+ * The exact lowercase comparison matches every stored user row: better-auth
+ * lowercases the email on every creation path (password sign-up and first
+ * OAuth sign-in both write email.toLowerCase()).
  * The course-author invite flow uses this to turn an email-only invite into
  * a real enrollment when the address belongs to an existing account.
  */
