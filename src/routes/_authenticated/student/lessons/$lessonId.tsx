@@ -1,4 +1,5 @@
 import Breadcrumbs from "@/components/common/breadcrumbs";
+import { MarkdownView } from "@/components/markdown-view";
 import { getStudentLesson } from "@/server/lessons/get-lesson";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
@@ -44,9 +45,9 @@ function StudentLessonComponent() {
       {/* The title is the page heading, like the h2 on the student course
           page. */}
       <h2 className="mb-6">{lesson.title}</h2>
-      {/* whitespace-pre-wrap like the author lesson page, so multi-line
-          content keeps its line breaks. */}
-      <p className="whitespace-pre-wrap">{lesson.content}</p>
+      {/* The stored content is markdown, so render it as sanitized
+          HTML (see MarkdownView). */}
+      <MarkdownView content={lesson.content} />
     </div>
   );
 }
