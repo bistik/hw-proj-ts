@@ -8,6 +8,8 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { UnauthorizedError } from "@/lib/errors";
 import { sendWelcomeEmail } from "@/lib/email/welcome";
 import { sendVerificationEmail } from "@/lib/email/verification";
+import { dbConvertInviteToEnrollment } from "@/db/invites/mutate-invite";
+import { dbGetPendingInvitesByEmail } from "@/db/invites/get-invite";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -46,6 +48,39 @@ export const auth = betterAuth({
       create: {
         after: async (user) => {
           await sendWelcomeEmail({ to: user.email, name: user.name });
+          // Issue #31: invitations that were stored by email address while
+          // the invitee had no account become enrollments now, so the
+          // dashboard's accept/decline flow (getInvitations) picks them up.
+          // This hook fires for every user-row creation path — password
+          // sign-up (form or API) and a first-time OAuth sign-in, whose
+          // user row better-auth writes on first sign-in — so a Google
+          // invitee is converted too. Each conversion stands alone: one
+          // failing invite must not block the others. The initial read is
+          // protected too: a db failure here must not fail the sign-up
+          // itself (the invites simply stay pending).
+          let invites: Awaited<ReturnType<typeof dbGetPendingInvitesByEmail>> =
+            [];
+          try {
+            invites = await dbGetPendingInvitesByEmail(user.email);
+          } catch (error) {
+            console.error(
+              `Failed to load pending invites for ${user.email}`,
+              error,
+            );
+            return;
+          }
+          for (const invite of invites) {
+            try {
+              // The enrollment insert and the invite delete run in one
+              // transaction, so an invite cannot convert twice.
+              await dbConvertInviteToEnrollment(invite, user.id);
+            } catch (error) {
+              console.error(
+                `Failed to convert invite ${invite.id} for ${user.email}`,
+                error,
+              );
+            }
+          }
         },
       },
     },

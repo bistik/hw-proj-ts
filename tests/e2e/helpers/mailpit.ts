@@ -78,3 +78,21 @@ export async function getMailpitMessage(id: string): Promise<MailpitMessage | nu
   if (!response.ok) return null;
   return (await response.json()) as MailpitMessage;
 }
+
+/**
+ * Counts the messages addressed to `to` that pass `predicate`. Reads the
+ * mailbox exactly once (no polling), so a caller proving that no new email
+ * arrived must first let the send settle — e.g. wait for another visible
+ * effect of the request — before counting.
+ */
+export async function countMailpitMessages(
+  to: string,
+  predicate: (message: MailpitMessageSummary) => boolean,
+): Promise<number> {
+  const response = await fetch(
+    `${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:${to}`)}&limit=100`,
+  );
+  if (!response.ok) return 0;
+  const body = (await response.json()) as { messages?: MailpitMessageSummary[] };
+  return (body.messages ?? []).filter(predicate).length;
+}

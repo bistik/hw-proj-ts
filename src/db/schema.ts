@@ -236,6 +236,28 @@ export const enrollmentsTable = sqliteTable(
   ],
 );
 
+export const invitesTable = sqliteTable(
+  "invites",
+  {
+    id: int().primaryKey({ autoIncrement: true }),
+    courseId: int("course_id")
+      .notNull()
+      .references(() => coursesTable.id, { onDelete: "cascade" }),
+    // Normalized (trim + lowercase) at every write and read, so lookups from
+    // better-auth sign-ups match the stored row.
+    email: text().notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    // One pending invite per course/email pair; re-inviting is a no-op.
+    uniqueIndex("invites_course_email_unique").on(table.courseId, table.email),
+    // "which pending invites exist for this address?" (sign-up hook)
+    index("invites_email_idx").on(table.email),
+  ],
+);
+
 export const coursesRelations = relations(coursesTable, ({ many }) => ({
   lessons: many(lessonsTable),
   assignments: many(assignmentsTable),
@@ -285,6 +307,13 @@ export const enrollmentsRelations = relations(enrollmentsTable, ({ one }) => ({
   }),
   course: one(coursesTable, {
     fields: [enrollmentsTable.courseId],
+    references: [coursesTable.id],
+  }),
+}));
+
+export const invitesRelations = relations(invitesTable, ({ one }) => ({
+  course: one(coursesTable, {
+    fields: [invitesTable.courseId],
     references: [coursesTable.id],
   }),
 }));

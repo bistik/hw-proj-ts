@@ -186,6 +186,28 @@ export async function seedEnrollment(
   });
 }
 
+/**
+ * Enrolls every registered user in a course directly, bypassing the invite
+ * form. Fills a roster to the point where dbGetUnenrolledUsers returns an
+ * empty list — the state in which the invite form must still offer the
+ * email path (issue #31).
+ *
+ * The course must be fresh (no enrollments yet), so the insert cannot hit
+ * the (user, course) unique index. Like seedEnrollment, timestamps are
+ * given explicitly because drizzle-kit push emits no DB-level defaults.
+ */
+export async function seedEnrollmentForAllUsers(
+  courseId: number,
+  status: string = "active",
+): Promise<void> {
+  const now = Date.now();
+  await client.execute({
+    sql: `INSERT INTO enrollments (user_id, course_id, status, enrolled_at, created_at, updated_at)
+          SELECT users.id, ?, ?, ?, ?, ? FROM users`,
+    args: [courseId, status, now, now, now],
+  });
+}
+
 /** Same as seedLessons but for assignments (example column). */
 export async function seedAssignments(
   courseId: number,
