@@ -34,11 +34,13 @@ type MarkdownViewProps = {
  *
  * The wrapper carries the preview stylesheet class, so tables have
  * borders, headings scale, and the look matches the author editor
- * preview.
+ * preview. bg-transparent! drops the canvas background that
+ * .wmde-markdown paints on the container, so the page background
+ * stays visible; child element styles are unchanged.
  */
 export function MarkdownView({ content }: MarkdownViewProps) {
   return (
-    <div className="wmde-markdown">
+    <div className="wmde-markdown bg-transparent!">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
