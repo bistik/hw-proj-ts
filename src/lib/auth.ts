@@ -8,6 +8,9 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { UnauthorizedError } from "@/lib/errors";
 import { sendWelcomeEmail } from "@/lib/email/welcome";
 import { sendVerificationEmail } from "@/lib/email/verification";
+import { dbCreateEnrollment } from "@/db/enrollments/create-enrollment";
+import { dbGetPendingInvitesByEmail } from "@/db/invites/get-invite";
+import { dbDeleteInvite } from "@/db/invites/delete-invite";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -46,6 +49,29 @@ export const auth = betterAuth({
       create: {
         after: async (user) => {
           await sendWelcomeEmail({ to: user.email, name: user.name });
+          // Issue #31: invitations that were stored by email address while
+          // the invitee had no account become enrollments now, so the
+          // dashboard's accept/decline flow (getInvitations) picks them up.
+          // This hook fires for every user-row creation path — password
+          // sign-up (form or API) and a first-time OAuth sign-in, whose
+          // user row better-auth writes on first sign-in — so a Google
+          // invitee is converted too. Each conversion stands alone: one
+          // failing invite must not block the others.
+          const invites = await dbGetPendingInvitesByEmail(user.email);
+          for (const invite of invites) {
+            try {
+              await dbCreateEnrollment({
+                courseId: invite.courseId,
+                userId: user.id,
+              });
+              await dbDeleteInvite(invite.id);
+            } catch (error) {
+              console.error(
+                `Failed to convert invite ${invite.id} for ${user.email}`,
+                error,
+              );
+            }
+          }
         },
       },
     },

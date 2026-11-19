@@ -234,9 +234,19 @@ function CourseDetailComponent() {
     defaultValues: {
       courseId: course.id,
       userId: "",
+      inviteEmail: "",
     },
+    // A schema validator lands its issues in errorMap.onSubmit as an
+    // object, but the render layer (and the field paragraphs, which need
+    // isTouched) only displays plain strings. This wrapper keeps the
+    // schema as the single source of truth and surfaces its first issue
+    // as the form-level error string FormErrorAlert renders.
     validators: {
-      onSubmit: enrollmentFormSchema,
+      onSubmit: ({ value }) => {
+        const result = enrollmentFormSchema.safeParse(value);
+        if (result.success) return;
+        return result.error.issues[0]?.message;
+      },
     },
     onSubmit: handleSubmit,
   });
@@ -350,7 +360,6 @@ function CourseDetailComponent() {
                 </form.Subscribe>
                 <form.Field name="userId">
                   {(field) => {
-                    const { errors, isTouched } = field.state.meta;
                     return (
                       <fieldset className="fieldset">
                         <legend className="fieldset-legend">Student</legend>
@@ -370,12 +379,29 @@ function CourseDetailComponent() {
                             </option>
                           ))}
                         </select>
-
-                        {errors.length > 0 && isTouched && (
-                          <p className="label text-error">
-                            {errors[0]?.message}
-                          </p>
-                        )}
+                      </fieldset>
+                    );
+                  }}
+                </form.Field>
+                <form.Field name="inviteEmail">
+                  {(field) => {
+                    return (
+                      <fieldset className="fieldset">
+                        <legend className="fieldset-legend">Email</legend>
+                        {/* An unregistered invitee has no user id, so the
+                            email text field is the second, mutually
+                            exclusive way to address an invite (issue #31).
+                            The legend does not name the input for assistive
+                            technology, so the accessible name is explicit. */}
+                        <input
+                          type="email"
+                          className="input"
+                          aria-label="Email address"
+                          placeholder="student@example.com"
+                          value={field.state.value}
+                          onBlur={() => field.handleBlur()}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                        />
                       </fieldset>
                     );
                   }}

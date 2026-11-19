@@ -109,10 +109,33 @@ export const moveCourseItemSchema = z.object({
 export const moveCourseItemDownSchema = moveCourseItemSchema;
 export const moveCourseItemUpSchema = moveCourseItemSchema;
 
-export const enrollmentFormSchema = z.object({
-  courseId: z.number().int().positive("Invalid course id"),
-  userId: z.string().trim().min(1, { message: "User id is required" }),
-});
+// Exactly one of the two invite inputs is required: the registered-student
+// select (userId) or the email text field for an unregistered invitee
+// (inviteEmail, issue #31). "Exactly one of two fields" cannot live on a
+// single field, so every violation is reported as a form-level issue and
+// rendered through FormErrorAlert.
+export const enrollmentFormSchema = z
+  .object({
+    courseId: z.number().int().positive("Invalid course id"),
+    userId: z.string().trim(),
+    inviteEmail: z.string().trim(),
+  })
+  .superRefine((data, ctx) => {
+    const hasUser = data.userId.length > 0;
+    const hasEmail = data.inviteEmail.length > 0;
+    const reject = (message: string) =>
+      ctx.addIssue({ code: "custom", message });
+
+    if (hasUser && hasEmail) {
+      reject(
+        "Choose a registered student or enter an email address, not both.",
+      );
+    } else if (!hasUser && !hasEmail) {
+      reject("Select a student or enter an email address to invite.");
+    } else if (hasEmail && !z.email().safeParse(data.inviteEmail).success) {
+      reject("Enter a valid email address.");
+    }
+  });
 
 export const submitAnswerFormSchema = z.object({
   assignmentId: z.number().int().positive("Invalid assignment id"),
