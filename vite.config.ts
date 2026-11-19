@@ -12,6 +12,12 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  // The @uiw markdown editor's ESM build imports its CSS with plain JS
+  // imports. Node's SSR loader cannot parse ".css" as a module, so the
+  // packages must be bundled by Vite for the server instead of externalized.
+  ssr: {
+    noExternal: [/^@uiw\//],
+  },
   plugins: [
     tanstackStart(),
     // react's vite plugin must come after start's vite plugin

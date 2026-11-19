@@ -2,6 +2,7 @@ import FormErrorAlert from "@/components/form-error-alert";
 import Breadcrumbs from "@/components/common/breadcrumbs";
 import { SubmitButton } from "@/components/submit-button";
 import { TextField } from "@/components/text-field";
+import { MarkdownField } from "@/components/markdown-field";
 import { lessonUpdateFormSchema } from "@/schemas/course-schema";
 import { getLessonWithCourse } from "@/server/lessons/get-lesson";
 import { updateLesson } from "@/server/lessons/mutate-lesson";
@@ -87,8 +88,8 @@ function EditLessonComponent() {
       content: lesson.content,
     },
     validators: {
+      // See the new lesson route: field-scoped onBlur, whole-schema onSubmit.
       onSubmit: lessonUpdateFormSchema,
-      onBlur: lessonUpdateFormSchema,
     },
     onSubmit: handleSubmit,
   });
@@ -123,13 +124,17 @@ function EditLessonComponent() {
             ) : null
           }
         </form.Subscribe>
-        <form.Field name="title">
+        <form.Field
+          name="title"
+          validators={{ onBlur: lessonUpdateFormSchema.shape.title }}
+        >
           {(field) => <TextField field={field} label="Title" />}
         </form.Field>
-        <form.Field name="content">
-          {(field) => (
-            <TextField field={field} label="Content" multiline rows={10} />
-          )}
+        <form.Field
+          name="content"
+          validators={{ onBlur: lessonUpdateFormSchema.shape.content }}
+        >
+          {(field) => <MarkdownField field={field} label="Content" />}
         </form.Field>
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(isSubmitting) => (

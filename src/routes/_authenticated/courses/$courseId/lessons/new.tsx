@@ -2,6 +2,7 @@ import FormErrorAlert from "@/components/form-error-alert";
 import Breadcrumbs from "@/components/common/breadcrumbs";
 import { SubmitButton } from "@/components/submit-button";
 import { TextField } from "@/components/text-field";
+import { MarkdownField } from "@/components/markdown-field";
 import { lessonFormSchema } from "@/schemas/course-schema";
 import { getCourseByIdAndAuthor } from "@/server/courses/get-course";
 import { createLesson } from "@/server/lessons/mutate-lesson";
@@ -72,8 +73,12 @@ function NewLessonComponent() {
       courseId: course.id,
     },
     validators: {
+      // Whole-schema validation only on submit: form-level onBlur would
+      // re-run on every field blur and attach errors to fields the user
+      // has not reached yet (a later blur then clears them, shifting the
+      // layout mid-click). Blur errors come from the field-scoped
+      // validators on the form.Field elements below.
       onSubmit: lessonFormSchema,
-      onBlur: lessonFormSchema,
     },
     onSubmit: handleSubmit,
   });
@@ -108,11 +113,21 @@ function NewLessonComponent() {
             ) : null
           }
         </form.Subscribe>
-        <form.Field name="title">
+        {/* Field-scoped onBlur validation: a whole-schema validator here
+            would also attach errors to the still-empty content field when
+            the title blurs, and the stale error would then clear while the
+            user's click is in progress (layout shifts under the pointer). */}
+        <form.Field
+          name="title"
+          validators={{ onBlur: lessonFormSchema.shape.title }}
+        >
           {(field) => <TextField field={field} label="Title" />}
         </form.Field>
-        <form.Field name="content">
-          {(field) => <TextField field={field} label="Content" multiline />}
+        <form.Field
+          name="content"
+          validators={{ onBlur: lessonFormSchema.shape.content }}
+        >
+          {(field) => <MarkdownField field={field} label="Content" />}
         </form.Field>
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(isSubmitting) => (

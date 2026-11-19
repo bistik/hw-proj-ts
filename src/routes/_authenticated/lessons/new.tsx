@@ -1,4 +1,5 @@
 import { TextField } from "@/components/text-field";
+import { MarkdownField } from "@/components/markdown-field";
 import { defaultValuesLesson, lessonFormSchema } from "@/schemas/course-schema";
 import { getCoursesByUser } from "@/server/courses/get-course";
 import { createLesson } from "@/server/lessons/mutate-lesson";
@@ -30,8 +31,9 @@ function RouteComponent() {
   const form = useForm({
     defaultValues: defaultValuesLesson,
     validators: {
+      // See the course-scoped new lesson route: field-scoped onBlur,
+      // whole-schema onSubmit.
       onSubmit: lessonFormSchema,
-      onBlur: lessonFormSchema,
     },
     onSubmit: handleSubmit,
   });
@@ -51,11 +53,17 @@ function RouteComponent() {
           form.handleSubmit();
         }}
       >
-        <form.Field name="title">
+        <form.Field
+          name="title"
+          validators={{ onBlur: lessonFormSchema.shape.title }}
+        >
           {(field) => <TextField field={field} label="Title" />}
         </form.Field>
-        <form.Field name="content">
-          {(field) => <TextField field={field} label="Content" multiline />}
+        <form.Field
+          name="content"
+          validators={{ onBlur: lessonFormSchema.shape.content }}
+        >
+          {(field) => <MarkdownField field={field} label="Content" />}
         </form.Field>
         <form.Field
           name="courseId"
