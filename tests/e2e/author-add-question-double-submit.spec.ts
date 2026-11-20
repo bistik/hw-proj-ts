@@ -61,6 +61,9 @@ test.describe("author adds a question to an assignment (issue #51)", () => {
     await page.goto(`/assignments/${assignmentId}`);
     await page.waitForLoadState("networkidle");
 
+    // Issue #70 moved the form into the Add question tab.
+    await page.getByRole("radio", { name: "Add question" }).click();
+
     const addQuestionButton = page.getByRole("button", { name: "Add question" });
     await addQuestionButton.scrollIntoViewIfNeeded();
     await page
@@ -92,6 +95,9 @@ test.describe("author adds a question to an assignment (issue #51)", () => {
     await loginViaUi(page);
     await page.goto(`/assignments/${assignmentId}`);
     await page.waitForLoadState("networkidle");
+
+    // Issue #70 moved the form into the Add question tab.
+    await page.getByRole("radio", { name: "Add question" }).click();
 
     const addQuestionButton = page.getByRole("button", { name: "Add question" });
     await addQuestionButton.scrollIntoViewIfNeeded();
@@ -127,6 +133,9 @@ test.describe("author adds a question to an assignment (issue #51)", () => {
     await loginViaUi(page);
     await page.goto(`/assignments/${assignmentId}`);
     await page.waitForLoadState("networkidle");
+
+    // Issue #70 moved the form into the Add question tab.
+    await page.getByRole("radio", { name: "Add question" }).click();
 
     const addQuestionButton = page.getByRole("button", { name: "Add question" });
     await addQuestionButton.scrollIntoViewIfNeeded();
@@ -173,6 +182,9 @@ test.describe("author adds a question to an assignment (issue #51)", () => {
     await loginViaUi(page);
     await page.goto(`/assignments/${assignmentId}`);
     await page.waitForLoadState("networkidle");
+
+    // Issue #70 moved the form into the Add question tab.
+    await page.getByRole("radio", { name: "Add question" }).click();
 
     const addQuestionButton = page.getByRole("button", { name: "Add question" });
     await addQuestionButton.scrollIntoViewIfNeeded();
