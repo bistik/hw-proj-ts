@@ -26,10 +26,6 @@ import {
 // answer. The two pure-UI tests carry no tag, so they still run where
 // Mailpit is absent.
 test.describe("forgot password", () => {
-  // The E2E webServer runs on a dedicated port (see playwright.config.ts,
-  // which lists the same constant).
-  const BASE_URL = "http://localhost:3100";
-
   // A fresh user per run, so the mailbox for the address holds only the
   // emails this run produced and the reset token below is unambiguous.
   function uniqueUser() {
@@ -90,15 +86,20 @@ test.describe("forgot password", () => {
   // The reset form mirrors the sign-up form (src/routes/_auth/sign-up.tsx):
   // a "Password" input and a "Confirm Password" input, validated by the same
   // zod rules and messages.
-  function fillResetForm(
+  async function fillResetForm(
     page: Page,
     password: string,
     confirmPassword: string,
   ) {
-    return Promise.all([
-      page.getByPlaceholder("Password", { exact: true }).fill(password),
-      page.getByPlaceholder("Confirm Password", { exact: true }).fill(confirmPassword),
-    ]);
+    // Sequential on purpose. Concurrent Playwright fills interleave their
+    // focus and typing steps, so both values can land in the input focused
+    // last; the race reproduces on a static page, so no app change can make
+    // concurrent fills safe (see Playwright's "actions are not run
+    // concurrently" guidance).
+    await page.getByPlaceholder("Password", { exact: true }).fill(password);
+    await page
+      .getByPlaceholder("Confirm Password", { exact: true })
+      .fill(confirmPassword);
   }
 
   test("shows an email input on the forgot-password page", async ({ page }) => {
