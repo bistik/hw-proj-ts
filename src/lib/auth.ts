@@ -27,6 +27,9 @@ export const auth = betterAuth({
     // endpoint, but the route contract wants the link to land on the app's
     // forgot-password page directly, so the link is rebuilt here from the
     // token and the app origin taken from better-auth's baseURL.
+    // Issue #68: after a reset applies the new password, every session the
+    // user held before the reset is deleted, so a stolen session dies too.
+    revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url, token }) => {
       const origin = new URL(url).origin;
       await sendPasswordResetEmail({
