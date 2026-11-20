@@ -149,9 +149,9 @@ function LoginComponent() {
               <fieldset className="fieldset">
                 <legend className="fieldset-legend flex justify-between items-center w-full">
                   <span>Password</span>
-                  <a href="#" className="link">
+                  <Link to="/forgot-password" className="link">
                     Forgot password
-                  </a>
+                  </Link>
                 </legend>
                 <input
                   value={field.state.value}

@@ -12,10 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteRouteImport } from './routes/_auth/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthSignUpRouteImport } from './routes/_auth/sign-up'
 import { Route as AuthenticatedCoursesRouteRouteImport } from './routes/_authenticated/courses/route'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as ApiForgotPasswordRouteImport } from './routes/api/forgot-password'
 import { Route as AuthenticatedAssignmentsIndexRouteImport } from './routes/_authenticated/assignments/index'
 import { Route as AuthenticatedAssignmentsNewRouteImport } from './routes/_authenticated/assignments/new'
 import { Route as AuthenticatedCoursesIndexRouteImport } from './routes/_authenticated/courses/index'
@@ -53,6 +55,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => AuthRouteRoute,
+} as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -73,6 +80,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiForgotPasswordRoute = ApiForgotPasswordRouteImport.update({
+  id: '/api/forgot-password',
+  path: '/api/forgot-password',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAssignmentsIndexRoute =
   AuthenticatedAssignmentsIndexRouteImport.update({
@@ -221,9 +233,11 @@ const AuthenticatedCoursesCourseIdAssignmentsAssignmentIdSubmissionsSubmissionId
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/courses': typeof AuthenticatedCoursesRouteRouteWithChildren
+  '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/sign-up': typeof AuthSignUpRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/api/forgot-password': typeof ApiForgotPasswordRoute
   '/assignments/new': typeof AuthenticatedAssignmentsNewRoute
   '/courses/$courseId': typeof AuthenticatedCoursesCourseIdRouteWithChildren
   '/courses/new': typeof AuthenticatedCoursesNewRoute
@@ -250,9 +264,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
   '/sign-up': typeof AuthSignUpRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/api/forgot-password': typeof ApiForgotPasswordRoute
   '/assignments/new': typeof AuthenticatedAssignmentsNewRoute
   '/courses/new': typeof AuthenticatedCoursesNewRoute
   '/lessons/new': typeof AuthenticatedLessonsNewRoute
@@ -282,9 +298,11 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteRouteWithChildren
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/_authenticated/courses': typeof AuthenticatedCoursesRouteRouteWithChildren
+  '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/sign-up': typeof AuthSignUpRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/api/forgot-password': typeof ApiForgotPasswordRoute
   '/_authenticated/assignments/new': typeof AuthenticatedAssignmentsNewRoute
   '/_authenticated/courses/$courseId': typeof AuthenticatedCoursesCourseIdRouteWithChildren
   '/_authenticated/courses/new': typeof AuthenticatedCoursesNewRoute
@@ -314,9 +332,11 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/courses'
+    | '/forgot-password'
     | '/login'
     | '/sign-up'
     | '/dashboard'
+    | '/api/forgot-password'
     | '/assignments/new'
     | '/courses/$courseId'
     | '/courses/new'
@@ -343,9 +363,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/forgot-password'
     | '/login'
     | '/sign-up'
     | '/dashboard'
+    | '/api/forgot-password'
     | '/assignments/new'
     | '/courses/new'
     | '/lessons/new'
@@ -374,9 +396,11 @@ export interface FileRouteTypes {
     | '/_auth'
     | '/_authenticated'
     | '/_authenticated/courses'
+    | '/_auth/forgot-password'
     | '/_auth/login'
     | '/_auth/sign-up'
     | '/_authenticated/dashboard'
+    | '/api/forgot-password'
     | '/_authenticated/assignments/new'
     | '/_authenticated/courses/$courseId'
     | '/_authenticated/courses/new'
@@ -406,6 +430,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  ApiForgotPasswordRoute: typeof ApiForgotPasswordRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -431,6 +456,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_auth/forgot-password': {
+      id: '/_auth/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordRouteImport
+      parentRoute: typeof AuthRouteRoute
     }
     '/_auth/login': {
       id: '/_auth/login'
@@ -459,6 +491,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/forgot-password': {
+      id: '/api/forgot-password'
+      path: '/api/forgot-password'
+      fullPath: '/api/forgot-password'
+      preLoaderRoute: typeof ApiForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/assignments/': {
       id: '/_authenticated/assignments/'
@@ -625,11 +664,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthRouteRouteChildren {
+  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthSignUpRoute: typeof AuthSignUpRoute
 }
 
 const AuthRouteRouteChildren: AuthRouteRouteChildren = {
+  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthSignUpRoute: AuthSignUpRoute,
 }
@@ -739,6 +780,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRouteRoute: AuthRouteRouteWithChildren,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  ApiForgotPasswordRoute: ApiForgotPasswordRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
