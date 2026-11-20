@@ -208,6 +208,16 @@ export async function seedEnrollmentForAllUsers(
   });
 }
 
+/**
+ * The Example text seedAssignments writes for each assignment (PR #71
+ * review). Specs that assert on the Example text quote this helper
+ * instead of rebuilding the string, so a change to the seeder text
+ * cannot leave a stale copy in a spec.
+ */
+export function seedAssignmentExample(title: string): string {
+  return `Example for e2e assignment ${title}`;
+}
+
 /** Same as seedLessons but for assignments (example column). */
 export async function seedAssignments(
   courseId: number,
@@ -221,7 +231,7 @@ export async function seedAssignments(
       sql: "INSERT INTO assignments (title, example, course_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?) RETURNING id",
       args: [
         title,
-        `Example for e2e assignment ${title}`,
+        seedAssignmentExample(title),
         courseId,
         nowPlus(i),
         nowPlus(i),

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { loginViaUi } from "./helpers/auth";
 import {
+  seedAssignmentExample,
   seedAssignments,
   seedCourse,
   seedQuestions,
@@ -14,9 +15,9 @@ import { TEST_USER } from "./test-user";
 
 /**
  * Seeds one course and one assignment owned by TEST_USER and returns the
- * assignment id. The example text is the generated one from seedAssignments
- * ("Example for e2e assignment <title>"), so the AI questions tab's
- * assertion can quote it without a custom seeder.
+ * assignment id. The example text comes from the shared seeder helper
+ * (seedAssignmentExample), so the AI questions tab's assertion cannot go
+ * stale if the seeder text changes (PR #71 review).
  */
 async function seedAssignmentForAuthor(assignmentTitle: string) {
   const courseId = await seedCourse(TEST_USER.email, {
@@ -24,7 +25,7 @@ async function seedAssignmentForAuthor(assignmentTitle: string) {
     description: "Course authored by the E2E test user for the tabs issue.",
   });
   const [assignmentId] = await seedAssignments(courseId, [assignmentTitle]);
-  return { assignmentId, example: `Example for e2e assignment ${assignmentTitle}` };
+  return { assignmentId, example: seedAssignmentExample(assignmentTitle) };
 }
 
 test.describe("assignment detail page tabs (issue #70)", () => {

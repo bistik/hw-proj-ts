@@ -33,12 +33,13 @@ export const Route = createFileRoute(
     if (!assignment.courseId) throw notFound();
     // The breadcrumb names the course, so the loader fetches it too. The
     // author guard already ran in getAssignmentById; this read stays
-    // author-scoped the same way.
-    const course = await getCourseByIdAndAuthor({
-      data: { courseId: assignment.courseId },
-    });
+    // author-scoped the same way. The two reads are independent, so they
+    // run in parallel (PR #71 review).
+    const [course, questions] = await Promise.all([
+      getCourseByIdAndAuthor({ data: { courseId: assignment.courseId } }),
+      getQuestions({ data: assignmentId }),
+    ]);
     if (!course) throw notFound();
-    const questions = await getQuestions({ data: assignmentId });
 
     return { assignment, course, questions };
   },
