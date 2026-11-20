@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+import FormErrorAlert from "@/components/form-error-alert";
+
 // Issue #27: one page at /forgot-password. Without a token it shows the email
 // request form; opened with ?token=<signed token> (the link the reset email
 // carries) it shows the new password form.
@@ -53,11 +55,7 @@ function RequestResetForm({ sent, error }: RequestResetFormProps) {
         </div>
       ) : (
         <>
-          {error && (
-            <div role="alert" className="alert alert-error">
-              <span>{error}</span>
-            </div>
-          )}
+          {error && <FormErrorAlert errorMsg={error} />}
           <fieldset className="fieldset">
             <legend className="fieldset-legend">Email</legend>
             <input
@@ -87,11 +85,7 @@ function ResetPasswordForm({ token, error }: ResetPasswordFormProps) {
     <form method="post" action="/api/forgot-password">
       <h2 className="text-2xl my-4">Reset password</h2>
       <input type="hidden" name="token" value={token} />
-      {error && (
-        <div role="alert" className="alert alert-error">
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <FormErrorAlert errorMsg={error} />}
       <fieldset className="fieldset">
         <legend className="fieldset-legend">
           <span>Password</span>
