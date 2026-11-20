@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ensureSignedUp, loginViaUi } from "./helpers/auth";
+import { loginViaUi } from "./helpers/auth";
 import {
   seedAssignments,
   seedCourse,
@@ -40,7 +40,12 @@ test.describe("assignment detail page tabs (issue #70)", () => {
 
     // The page is a daisyUI tabs widget: the three radio inputs render the
     // tab buttons, like the course detail page's tabs-border widget.
-    const questionsTab = page.getByRole("radio", { name: "Questions" });
+    // exact: true keeps the Questions locator from also matching the
+    // "AI questions" radio (name matching is substring by default).
+    const questionsTab = page.getByRole("radio", {
+      name: "Questions",
+      exact: true,
+    });
     const addQuestionTab = page.getByRole("radio", { name: "Add question" });
     const aiQuestionsTab = page.getByRole("radio", { name: "AI questions" });
     await expect(questionsTab).toBeVisible();
@@ -81,7 +86,7 @@ test.describe("assignment detail page tabs (issue #70)", () => {
     await page.goto(`/assignments/${assignmentId}`);
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("radio", { name: "Questions" }).click();
+    await page.getByRole("radio", { name: "Questions", exact: true }).click();
     await expect(
       page.getByRole("heading", { name: "Questions", exact: true }),
     ).toBeVisible();
@@ -112,7 +117,7 @@ test.describe("assignment detail page tabs (issue #70)", () => {
 
     await page.getByRole("radio", { name: "Add question" }).click();
     await expect(
-      page.getByRole("heading", { name: "Add question" }),
+      page.getByRole("heading", { name: "Add question", exact: true }),
     ).toBeVisible();
 
     // The existing add-question form lives in this tab: the Question and
@@ -141,7 +146,7 @@ test.describe("assignment detail page tabs (issue #70)", () => {
 
     await page.getByRole("radio", { name: "AI questions" }).click();
     await expect(
-      page.getByRole("heading", { name: "AI questions" }),
+      page.getByRole("heading", { name: "AI questions", exact: true }),
     ).toBeVisible();
 
     // The tab shows the assignment's Example text.
