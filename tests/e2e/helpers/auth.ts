@@ -3,8 +3,9 @@ import { ensureEmailVerified } from "./db";
 import { TEST_USER } from "../test-user";
 
 // The E2E webServer runs on a dedicated port (see playwright.config.ts, which
-// lists the same constant).
-const BASE_URL = "http://localhost:3100";
+// lists the same constant). Exported, so specs address the API with the same
+// base URL instead of hardcoding it.
+export const BASE_URL = "http://localhost:3100";
 
 /**
  * Signs a user up through the better-auth email API, which handles password

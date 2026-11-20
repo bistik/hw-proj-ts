@@ -1,10 +1,10 @@
-import { expect, test, type Page } from "@playwright/test";
-import { loginViaUi, signUpViaApi } from "./helpers/auth";
+import { expect, test, type Browser, type Page } from "@playwright/test";
+import { BASE_URL, loginViaUi, signUpViaApi } from "./helpers/auth";
 import {
-  getMailpitMessage,
-  isMailpitAvailable,
-  waitForMailpitMessage,
-} from "./helpers/mailpit";
+  fillResetForm,
+  requestResetAndGetLink,
+} from "./helpers/forgot-password";
+import { isMailpitAvailable } from "./helpers/mailpit";
 
 // Issue #68: better-auth does not revoke existing sessions after a password
 // reset, so a stolen session stays valid after the password change. These
@@ -35,36 +35,8 @@ test.describe("forgot password revokes pre-reset sessions", () => {
     };
   }
 
-  // Same extraction rules as forgot-password.spec.ts: the reset email's link
-  // points back to /forgot-password?token=... and the email is told apart
-  // from the welcome and verification emails by its subject.
-  const RESET_LINK_PATTERN =
-    /(https?:\/\/[^\s"'<>]+forgot-password\?[^"'<>\s]+)/;
-
-  /**
-   * Submits the email request form on /forgot-password for `email` and waits
-   * for the reset email in Mailpit, returning its reset link.
-   */
-  async function requestResetAndGetLink(
-    page: Page,
-    email: string,
-  ): Promise<string | null> {
-    await page.goto("/forgot-password");
-    await page.getByPlaceholder("Email").fill(email);
-    await page.getByRole("button", { name: /send|reset/i }).click();
-
-    const summary = await waitForMailpitMessage(email, (message) =>
-      /password/i.test(message.Subject ?? ""),
-    );
-    expect(
-      summary,
-      `reset email to ${email} should appear in Mailpit`,
-    ).toBeTruthy();
-    const message = await getMailpitMessage(summary!.ID);
-    if (!message) return null;
-    const body = `${message.HTML ?? ""}\n${message.Text ?? ""}`;
-    return body.match(RESET_LINK_PATTERN)?.[1] ?? null;
-  }
+  // Same extraction rules and selectors as forgot-password.spec.ts, now in
+  // the shared helpers/forgot-password.ts module.
 
   /**
    * Applies the new password through the reset form on the emailed link and
@@ -76,12 +48,7 @@ test.describe("forgot password revokes pre-reset sessions", () => {
     link: string,
   ) {
     await page.goto(link);
-    await page
-      .getByPlaceholder("Password", { exact: true })
-      .fill(user.newPassword);
-    await page
-      .getByPlaceholder("Confirm Password", { exact: true })
-      .fill(user.newPassword);
+    await fillResetForm(page, user.newPassword, user.newPassword);
     await page.getByRole("button", { name: /reset/i }).click();
     await expect(page).toHaveURL(/\/login/);
   }
@@ -93,7 +60,7 @@ test.describe("forgot password revokes pre-reset sessions", () => {
    * pre-reset session cookie.
    */
   async function resetPasswordWithLivePreResetSession(
-    browser: import("@playwright/test").Browser,
+    browser: Browser,
     user: ReturnType<typeof uniqueUser>,
   ): Promise<{ attackerPage: Page }> {
     await signUpViaApi(user);
@@ -132,12 +99,13 @@ test.describe("forgot password revokes pre-reset sessions", () => {
       // context-scoped request shares the context's cookies, so this call
       // carries the stolen session exactly as the attacker's browser would.
       const response = await attackerPage.context().request.get(
-        "http://localhost:3100/api/auth/get-session",
+        // Same base URL as helpers/auth.ts (the E2E webServer's port).
+        `${BASE_URL}/api/auth/get-session`,
         {
           headers: {
             // better-auth rejects null-origin requests; present the app's
             // own base URL (mirrors signUpViaApi).
-            Origin: "http://localhost:3100",
+            Origin: BASE_URL,
           },
         },
       );
