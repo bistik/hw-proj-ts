@@ -7,6 +7,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "test:e2e": "playwright test",
+    "test:rate-limit": "playwright test -c playwright.rate-limit.config.ts",
     "db:push:e2e": "drizzle-kit push --config=drizzle.e2e.config.ts --force",
     "db:migrate": "drizzle-kit migrate",
     "deploy": "npm run build && wrangler deploy",
