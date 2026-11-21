@@ -8,6 +8,7 @@
     "build": "vite build",
     "test:e2e": "playwright test",
     "test:rate-limit": "playwright test -c playwright.rate-limit.config.ts",
+    "test:unit": "vitest run",
     "db:push:e2e": "drizzle-kit push --config=drizzle.e2e.config.ts --force",
     "db:migrate": "drizzle-kit migrate",
     "deploy": "npm run build && wrangler deploy",
@@ -26,8 +27,8 @@
     "@tanstack/react-form": "^1.33.5",
     "@tanstack/react-router": "^1.170.44",
     "@tanstack/react-start": "^1.169.2",
-    "@uiw/react-md-editor": "^4.2.4",
     "@uiw/react-markdown-preview": "^5.2.1",
+    "@uiw/react-md-editor": "^4.2.4",
     "better-auth": "^1.7.10",
     "dotenv": "^18.0.8",
     "drizzle-orm": "^0.45.4",
@@ -52,6 +53,7 @@
     "drizzle-kit": "^0.31.11",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",
+    "vitest": "^5.1.1",
     "wrangler": "^4.156.2"
   }
 }
