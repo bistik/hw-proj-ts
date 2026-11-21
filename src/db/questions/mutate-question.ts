@@ -20,6 +20,38 @@ export async function dbCreateQuestion(data: {
     .then((res) => res[0]);
 }
 
+/**
+ * Inserts every question item in one transaction (issue #73). The
+ * positions start after the highest existing position of the assignment,
+ * then increase by one in input order. A failure rolls back the whole
+ * insert, so the assignment never keeps a partial list of questions.
+ */
+export async function dbCreateQuestions(data: {
+  assignmentId: number;
+  questions: {
+    questionText: string;
+    answer: string;
+  }[];
+}) {
+  return db.transaction(async (tx) => {
+    const [{ maxPosition }] = await tx
+      .select({ maxPosition: max(questionsTable.position) })
+      .from(questionsTable)
+      .where(eq(questionsTable.assignmentId, data.assignmentId));
+
+    return tx
+      .insert(questionsTable)
+      .values(
+        data.questions.map((question, index) => ({
+          ...question,
+          assignmentId: data.assignmentId,
+          position: (maxPosition ?? -1) + 1 + index,
+        })),
+      )
+      .returning({ questionId: questionsTable.id });
+  });
+}
+
 export async function dbUpdateQuestion(
   data: {
     questionText: string;

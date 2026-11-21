@@ -66,6 +66,26 @@ export const questionFormSchema = z.object({
     .positive("Please select a valid assignment"),
 });
 
+// Issue #73: bulk creation of questions. The list must hold at least one
+// item, and every item needs a non-empty questionText and answer, like
+// questionFormSchema. The assignment id follows questionFormSchema too.
+export const questionsBulkFormSchema = z.object({
+  assignmentId: z
+    .number({
+      error: "Please select an assignment",
+    })
+    .int()
+    .positive("Please select a valid assignment"),
+  questions: z
+    .array(
+      z.object({
+        questionText: z.string().min(1, { message: "Question text is required" }),
+        answer: z.string().min(1, { message: "Answer is required" }),
+      }),
+    )
+    .min(1, { message: "At least one question is required" }),
+});
+
 export const questionUpdateFormSchema = questionFormSchema
   .pick({ questionText: true, answer: true })
   .extend({
