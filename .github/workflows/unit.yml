@@ -1,0 +1,22 @@
+name: Unit tests
+
+on:
+  pull_request:
+
+jobs:
+  # Fast job: no Playwright browsers and no env placeholders are needed.
+  # tests/unit/setup.ts sets its own test env vars.
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22 # match deploy.yml
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:unit
