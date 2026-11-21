@@ -10,7 +10,7 @@ export const BASE_URL = "http://localhost:3101";
 // Limit values pinned by playwright.rate-limit.config.ts. The spec uses
 // them to compute exact thresholds.
 export const PER_ADDRESS_LIMIT = 3;
-export const PER_IP_LIMIT = 10;
+export const PER_IP_LIMIT = 20;
 
 /**
  * Returns an address that no earlier request used. Per-address counters
@@ -55,6 +55,26 @@ export async function signUpViaApi(user: {
       Origin: BASE_URL,
     },
     body: JSON.stringify(user),
+  });
+}
+
+/**
+ * Posts the JSON body to better-auth's request-password-reset endpoint.
+ * better-auth registers this endpoint itself, and it emails the same
+ * reset link as /api/forgot-password, so the limiter must cover it too.
+ * Allowed requests answer 200 (no redirect to follow).
+ */
+export async function postRequestPasswordReset(
+  email: string,
+): Promise<Response> {
+  return fetch(`${BASE_URL}/api/auth/request-password-reset`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      // better-auth rejects a null origin; send the app's own base URL.
+      Origin: BASE_URL,
+    },
+    body: JSON.stringify({ email }),
   });
 }
 

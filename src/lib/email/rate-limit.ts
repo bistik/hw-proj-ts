@@ -1,5 +1,7 @@
 // Issue #67: rate limit for the public email-sending endpoints
-// (POST /api/forgot-password and POST /api/auth/sign-up/email).
+// (POST /api/forgot-password and the better-auth endpoints
+// POST /api/auth/sign-up/email, POST /api/auth/send-verification-email
+// and POST /api/auth/request-password-reset).
 //
 // Contract (tests/rate-limit/rate-limit.spec.ts):
 //  1. Requests for one target address stop at EMAIL_RATE_LIMIT_PER_ADDRESS.
@@ -54,12 +56,18 @@ function windowMs(): number {
 
 /**
  * Best-effort client IP. TanStack Start handlers only expose the Request,
- * so the address comes from the X-Forwarded-For header that a proxy or
- * the platform adds. Without a proxy (local dev, E2E) every request falls
- * back to one shared key, which is exactly the "one client IP" model the
- * contract describes.
+ * so the address comes from proxy headers:
+ *  - CF-Connecting-IP: Cloudflare sets it from the connection, so a client
+ *    cannot spoof it. Cloudflare is the deploy target (wrangler deploy).
+ *  - X-Forwarded-For: other proxies. Its first entry is client-controlled
+ *    when Cloudflare is in front, so it is only a fallback.
+ * Without such a header (local dev, E2E) every request falls back to one
+ * shared key, which is exactly the "one client IP" model the contract
+ * describes.
  */
 export function clientIp(request: Request): string {
+  const cfConnectingIp = request.headers.get("cf-connecting-ip")?.trim();
+  if (cfConnectingIp) return cfConnectingIp;
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) {
     const first = forwarded.split(",")[0]?.trim();

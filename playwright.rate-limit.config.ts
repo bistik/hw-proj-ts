@@ -59,7 +59,7 @@ export default defineConfig({
       // implementation must read these env vars. Production defaults may
       // differ; this suite pins low values so thresholds are exact.
       EMAIL_RATE_LIMIT_PER_ADDRESS: "3",
-      EMAIL_RATE_LIMIT_PER_IP: "10",
+      EMAIL_RATE_LIMIT_PER_IP: "20",
       EMAIL_RATE_LIMIT_WINDOW_SECONDS: "900",
     },
   },

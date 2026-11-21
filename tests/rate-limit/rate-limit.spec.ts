@@ -1,9 +1,13 @@
 import { expect, test } from "@playwright/test";
-import { countMailpitMessages, isMailpitAvailable } from "../e2e/helpers/mailpit";
+import {
+  countMailpitMessages,
+  isMailpitAvailable,
+} from "../e2e/helpers/mailpit";
 import {
   PER_ADDRESS_LIMIT,
   PER_IP_LIMIT,
   postForgotPassword,
+  postRequestPasswordReset,
   signUpViaApi,
   uniqueEmail,
   waitForMailpitCount,
@@ -16,12 +20,14 @@ import {
 // Contract:
 //  1. POST /api/forgot-password counts requests per target address. After
 //     EMAIL_RATE_LIMIT_PER_ADDRESS (3 here) requests for one address,
-//     further requests answer 429 and send no more email.
+//     further requests answer 429 and send no more email. The same limit
+//     applies to POST /api/auth/request-password-reset, which emails the
+//     same reset link and carries the address in its JSON body.
 //  2. The per-address limit applies to the address only. A block on one
 //     address does not affect other addresses.
 //  3. The endpoint also counts requests per client IP. A burst to many
 //     different addresses from one IP stops at EMAIL_RATE_LIMIT_PER_IP
-//     (10 here). Requests for addresses without an account count too: the
+//     (20 here). Requests for addresses without an account count too: the
 //     endpoint answers them like existing ones, so the limiter must not
 //     depend on account existence.
 //  4. The per-IP bucket is shared by all email-sending endpoints. When
@@ -38,7 +44,7 @@ import {
 //
 // Limits are read from env vars: EMAIL_RATE_LIMIT_PER_ADDRESS,
 // EMAIL_RATE_LIMIT_PER_IP, EMAIL_RATE_LIMIT_WINDOW_SECONDS. Production may
-// use other defaults. This suite pins 3/10/900 in
+// use other defaults. This suite pins 3/20/900 in
 // playwright.rate-limit.config.ts.
 //
 // Test order matters. All tests run on one client IP (localhost) against
@@ -59,7 +65,7 @@ function expectRetryAfter(response: Response) {
 test.describe("rate limit on email-sending endpoints (issue #67)", () => {
   test("caps forgot-password requests per target address, then answers 429 without more email", async () => {
     const email = uniqueEmail("rate-limit-address");
-    // The sign-up consumes 1 of the 10 per-IP slots (contract: requests
+    // The sign-up consumes 1 of the 20 per-IP slots (contract: requests
     // count, not emails). Bucket after this test: 1 sign-up + 4
     // forgot-password requests = 5 slots at most.
     const signUp = await signUpViaApi({
@@ -96,18 +102,67 @@ test.describe("rate limit on email-sending endpoints (issue #67)", () => {
       // Wait out any in-flight send, then prove the blocked request sent
       // no fourth email.
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      const count = await countMailpitMessages(
+      const count = await countMailpitMessages(email, (message) =>
+        /password/i.test(message.Subject ?? ""),
+      );
+      expect(count).toBe(PER_ADDRESS_LIMIT);
+    }
+  });
+
+  test("caps request-password-reset requests per target address, then answers 429 without more email", async () => {
+    // request-password-reset is better-auth's own endpoint for the same
+    // reset email as forgot-password. It must obey the same per-address
+    // limit (contract 1), so the limiter reads the address from its JSON
+    // body. Without that check the endpoint bypasses both buckets.
+    const email = uniqueEmail("rate-limit-reset");
+    // The sign-up consumes 1 of the per-IP slots (requests count, not
+    // emails). Bucket after this test: 5 + 1 sign-up + 4 requests = 10
+    // slots at most.
+    const signUp = await signUpViaApi({
+      name: "Rate Limit Reset User",
+      email,
+      password: "rate-limit-1234",
+    });
+    expect(signUp.ok, "sign-up must succeed: the bucket has room").toBe(true);
+
+    for (let i = 1; i <= PER_ADDRESS_LIMIT; i++) {
+      const response = await postRequestPasswordReset(email);
+      expect(
+        response.status,
+        `request ${i} of ${PER_ADDRESS_LIMIT} is under the per-address limit`,
+      ).toBe(200);
+    }
+
+    // The reset emails can lag behind the responses. Poll until all three
+    // are in the mailbox before the blocked request.
+    if (await isMailpitAvailable()) {
+      const count = await waitForMailpitCount(
         email,
         (message) => /password/i.test(message.Subject ?? ""),
+        PER_ADDRESS_LIMIT,
+      );
+      expect(count).toBe(PER_ADDRESS_LIMIT);
+    }
+
+    const blocked = await postRequestPasswordReset(email);
+    expect(blocked.status).toBe(429);
+    expectRetryAfter(blocked);
+
+    if (await isMailpitAvailable()) {
+      // Wait out any in-flight send, then prove the blocked request sent
+      // no fourth email.
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const count = await countMailpitMessages(email, (message) =>
+        /password/i.test(message.Subject ?? ""),
       );
       expect(count).toBe(PER_ADDRESS_LIMIT);
     }
   });
 
   test("a per-address block does not affect other addresses", async () => {
-    // The previous test blocked one address. This test uses a fresh one.
-    // Bucket so far: 5 slots at most. The sign-up below takes 1 more, the
-    // request 1 more: 7 of 10, still under the per-IP limit.
+    // The previous tests blocked two addresses. This test uses a fresh
+    // one. Bucket so far: 10 slots at most. The sign-up below takes 1
+    // more, the request 1 more: 12 of 20, still under the per-IP limit.
     const email = uniqueEmail("rate-limit-other");
     const signUp = await signUpViaApi({
       name: "Rate Limit Other User",
@@ -124,7 +179,7 @@ test.describe("rate limit on email-sending endpoints (issue #67)", () => {
   });
 
   test("caps the total per client IP across many addresses", async () => {
-    // Bucket so far: 7 slots at most. These requests use fresh addresses
+    // Bucket so far: 12 slots at most. These requests use fresh addresses
     // without an account. They must count anyway (contract 3): the
     // endpoint answers unknown addresses like existing ones.
     const maxAttempts = PER_IP_LIMIT + 5;
@@ -147,11 +202,11 @@ test.describe("rate limit on email-sending endpoints (issue #67)", () => {
       blocked,
       `no 429 within ${maxAttempts} requests from one IP: the per-IP limit is missing or too high`,
     ).toBe(true);
-    // 10 slots exist and 7 are used at most, so at most 3 of these
+    // 20 slots exist and 12 are used at most, so at most 8 of these
     // requests can succeed. A larger number means the limit is not
     // honored. At least 1 must succeed, or earlier tests already filled
     // the bucket.
-    expect(successes).toBeLessThanOrEqual(PER_IP_LIMIT - 7);
+    expect(successes).toBeLessThanOrEqual(PER_IP_LIMIT - 12);
     expect(successes).toBeGreaterThanOrEqual(1);
   });
 
