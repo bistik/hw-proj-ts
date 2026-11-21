@@ -11,8 +11,19 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import { useState } from "react";
+import { z } from "zod";
+
+// The sign-up form navigates here with ?signUp=true (issue #60): the
+// dashboard then confirms the registration and asks the user to verify
+// the email address. TanStack Router serializes the boolean as the plain
+// "true" string, and the default parser reads it back as a boolean.
+const dashboardSearchSchema = z.object({
+  signUp: z.boolean().optional(),
+});
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  validateSearch: (search: Record<string, unknown>) =>
+    dashboardSearchSchema.catch({}).parse(search),
   loader: async () => {
     const invitations = await getInvitations();
     return { invitations };
@@ -23,6 +34,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function RouteComponent() {
   const { user } = Route.useRouteContext();
   const { invitations } = Route.useLoaderData();
+  const { signUp } = Route.useSearch();
   const router = useRouter();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +71,16 @@ function RouteComponent() {
     <div>
       <h2>Welcome back! {user.name}</h2>
       <p>dashboard"!</p>
+
+      {/* Issue #60: shown only on the visit right after the sign-up
+          form redirects here. States both facts: the registration
+          succeeded, and the email address still needs verification. */}
+      {signUp && (
+        <div role="status" className="alert alert-success my-4">
+          You registered successfully. Check your inbox and verify your email
+          address.
+        </div>
+      )}
 
       {error && <FormErrorAlert errorMsg={error} />}
 
