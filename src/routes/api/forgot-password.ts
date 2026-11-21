@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { checkEmailRateLimit } from "@/lib/email/rate-limit";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
@@ -41,7 +42,7 @@ export const Route = createFileRoute("/api/forgot-password")({
         if (typeof token === "string" && token !== "") {
           return handleResetPassword(token, formData);
         }
-        return handleRequestReset(formData);
+        return handleRequestReset(request, formData);
       },
     },
   },
@@ -53,8 +54,17 @@ export const Route = createFileRoute("/api/forgot-password")({
  * get the same redirect as known ones (better-auth already answers this
  * way, and a failed send is only logged).
  */
-async function handleRequestReset(formData: FormData): Promise<Response> {
+async function handleRequestReset(
+  request: Request,
+  formData: FormData,
+): Promise<Response> {
   const email = String(formData.get("email") ?? "").trim();
+  // Issue #67: every request counts against the per-IP bucket and the
+  // per-address bucket for the target address, before anything else. The
+  // count must not depend on account existence or on the email format:
+  // blocked and invalid requests consume their slot like any other.
+  const limited = checkEmailRateLimit(request, email);
+  if (limited) return limited;
   if (!z.email().safeParse(email).success) {
     return seeOther(
       `${FORGOT_PASSWORD_URL}?error=${encodeURIComponent(
