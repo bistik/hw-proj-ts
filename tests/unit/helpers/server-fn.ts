@@ -22,8 +22,13 @@ export async function executeServerFn(
   fn: ServerFnStub,
   data: unknown,
 ): Promise<{ result?: unknown; error?: unknown }> {
+  // The real server runtime fills the full StartStorageContext. The
+  // compiled stub reads only contextAfterGlobalMiddlewares, so a
+  // partial context is safe for this helper.
   return (await runWithStartContext(
-    { contextAfterGlobalMiddlewares: {} },
+    { contextAfterGlobalMiddlewares: {} } as unknown as Parameters<
+      typeof runWithStartContext
+    >[0],
     () => fn({ method: "POST", data }),
   )) as { result?: unknown; error?: unknown };
 }

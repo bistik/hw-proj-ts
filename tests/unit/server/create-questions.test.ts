@@ -1,13 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { dbGetAssignment } from "@/db/assignments/get-assignment";
 import { requireUserOwnsCourse } from "@/db/authz";
-import {
-  dbCreateQuestion,
-  dbCreateQuestions,
-  dbDeleteQuestion,
-  dbUpdateQuestion,
-} from "@/db/questions/mutate-question";
-import { getCurrentUser } from "@/lib/auth";
+import { dbCreateQuestions } from "@/db/questions/mutate-question";
 import * as serverModule from "@/server/questions/mutate-question";
 import { executeServerFn, loadServerFnStub } from "../helpers/server-fn";
 

@@ -66,9 +66,11 @@ export const questionFormSchema = z.object({
     .positive("Please select a valid assignment"),
 });
 
-// Issue #73: bulk creation of questions. The list must hold at least one
-// item, and every item needs a non-empty questionText and answer, like
-// questionFormSchema. The assignment id follows questionFormSchema too.
+// Issue #73: bulk creation of questions. The list must hold at least
+// one item, and every item needs a non-empty questionText and answer,
+// like questionFormSchema. The assignment id follows questionFormSchema
+// too. The cap of 100 items stops one POST from carrying thousands
+// of items.
 export const questionsBulkFormSchema = z.object({
   assignmentId: z
     .number({
@@ -83,7 +85,8 @@ export const questionsBulkFormSchema = z.object({
         answer: z.string().min(1, { message: "Answer is required" }),
       }),
     )
-    .min(1, { message: "At least one question is required" }),
+    .min(1, { message: "At least one question is required" })
+    .max(100, { message: "A submission cannot hold more than 100 questions" }),
 });
 
 export const questionUpdateFormSchema = questionFormSchema

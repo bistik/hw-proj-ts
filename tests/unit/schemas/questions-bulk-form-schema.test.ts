@@ -6,6 +6,8 @@ import { questionsBulkFormSchema } from "@/schemas/course-schema";
 // - The payload holds an assignment id and a list of question items.
 // - Each item holds a non-empty questionText and a non-empty answer.
 // - The list must hold at least one item.
+// - The list must hold at most 100 items, so one POST cannot carry
+//   thousands of items.
 // - The assignment id must be a positive integer, like
 //   questionFormSchema.
 
@@ -72,6 +74,17 @@ describe("questionsBulkFormSchema (issue #73)", () => {
     const result = questionsBulkFormSchema.safeParse({
       assignmentId: 7,
       questions: [{ questionText: "Question?" }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a questions array that holds more than 100 items", () => {
+    const result = questionsBulkFormSchema.safeParse({
+      assignmentId: 7,
+      questions: Array.from({ length: 101 }, (_, index) => ({
+        questionText: `Question ${index + 1}`,
+        answer: `Answer ${index + 1}`,
+      })),
     });
     expect(result.success).toBe(false);
   });
