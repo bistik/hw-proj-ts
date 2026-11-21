@@ -46,7 +46,14 @@ function RouteComponent() {
       },
       {
         onSuccess: async (ctx) => {
-          await navigate({ to: "/dashboard", replace: true });
+          // The flag tells the dashboard that this visit comes from a
+          // successful sign-up, so it greets the user and asks them to
+          // verify the email address (issue #60).
+          await navigate({
+            to: "/dashboard",
+            search: { signUp: true },
+            replace: true,
+          });
         },
         onError: (ctx) => {
           alert(ctx.error.message);
@@ -158,9 +165,23 @@ function RouteComponent() {
           );
         }}
       </form.Field>
-      <button className="btn bg-primary mt-2" type="submit">
-        Signup
-      </button>
+      {/* Issue #60: the button must not accept a second submission
+          while better-auth creates the account. The label stays
+          "Signup" (no "Signing up..." swap) so the accessible name is
+          stable during the pending window; the daisyUI loading spinner
+          marks the pending state instead. */}
+      <form.Subscribe selector={(state) => state.isSubmitting}>
+        {(isSubmitting) => (
+          <button
+            className="btn bg-primary mt-2"
+            type="submit"
+            disabled={isSubmitting}
+          >
+            {isSubmitting && <span className="loading loading-spinner"></span>}
+            Signup
+          </button>
+        )}
+      </form.Subscribe>
     </form>
   );
 }
