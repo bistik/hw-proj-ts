@@ -212,8 +212,8 @@ function AssignmentDetailComponent() {
   }) {
     let created;
     try {
-      // createQuestions returns one row per inserted question, so the
-      // rows tell how many questions and answers were generated.
+      // generateQuestions returns the inserted rows, one per question,
+      // so the rows tell how many questions and answers were generated.
       created = await generateQuestions({ data: value });
     } catch (err) {
       console.error("Error in generating questions", err);

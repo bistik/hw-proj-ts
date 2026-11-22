@@ -1,10 +1,10 @@
 import { dbGetAssignment } from "@/db/assignments/get-assignment";
 import { requireUserOwnsCourse } from "@/db/authz";
+import { dbCreateQuestions } from "@/db/questions/mutate-question";
 import { generateQuestionsWithLlm } from "@/lib/ai/llm";
 import { buildQuestionPrompt } from "@/lib/ai/prompt";
 import { authMiddleware } from "@/middlewares/auth-middleware";
 import { aiQuestionsFormSchema } from "@/schemas/course-schema";
-import { createQuestions } from "@/server/questions/mutate-question";
 import { createServerFn } from "@tanstack/react-start";
 
 /**
@@ -15,10 +15,15 @@ import { createServerFn } from "@tanstack/react-start";
  * prompt example comes from the assignment row, never from the client,
  * so a caller cannot point the model at another assignment's example.
  * An assignment without an example is rejected: the model would have
- * nothing to learn from (PR #80 review). The generated questions go to
- * the createQuestions server fn scoped to this assignment, and the fn
- * returns what createQuestions returns. An AI service failure becomes
- * "Could not generate questions." with the original error as its cause.
+ * nothing to learn from (PR #80 review).
+ *
+ * The fn guards the insert itself and writes through dbCreateQuestions,
+ * scoped to the loaded assignment — a server fn does not re-enter
+ * another server fn, so the validator, the middleware, and the guards
+ * run once (PR #80 follow-up). The fn returns the inserted rows, one
+ * per question, so the caller can report the count. An AI or insert
+ * failure becomes "Could not generate questions." with the original
+ * error as its cause.
  */
 export const generateQuestions = createServerFn({ method: "POST" })
   .validator(aiQuestionsFormSchema)
@@ -59,7 +64,13 @@ export const generateQuestions = createServerFn({ method: "POST" })
       throw new Error("Could not generate questions.", { cause: err });
     }
 
-    return createQuestions({
-      data: { assignmentId: assignment.id, questions },
-    });
+    try {
+      return await dbCreateQuestions({
+        assignmentId: assignment.id,
+        questions,
+      });
+    } catch (err) {
+      console.error("Error in inserting the generated questions", err);
+      throw new Error("Could not generate questions.", { cause: err });
+    }
   });

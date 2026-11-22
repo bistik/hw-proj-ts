@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { dbGetAssignment } from "@/db/assignments/get-assignment";
 import { requireUserOwnsCourse } from "@/db/authz";
+import { dbCreateQuestions } from "@/db/questions/mutate-question";
 import { buildQuestionPrompt } from "@/lib/ai/prompt";
 import { generateQuestionsWithLlm } from "@/lib/ai/llm";
 import * as serverModule from "@/server/questions/generate-questions";
-import { createQuestions } from "@/server/questions/mutate-question";
 import { executeServerFn, loadServerFnStub } from "../helpers/server-fn";
 
 // Issue #79, test-driven development red phase: these tests fail until
@@ -16,18 +16,18 @@ import { executeServerFn, loadServerFnStub } from "../helpers/server-fn";
 // - The fn loads the assignment and rejects an unknown one with
 //   "Course not found".
 // - The fn requires the caller to own the course of the assignment.
-// - The fn builds the prompt from the example stored on the assignment
-//   row (not from client input), the filter, and the count.
 // - The fn rejects an assignment with no example before it calls the
 //   AI service (PR #80 review).
+// - The fn builds the prompt from the example stored on the assignment
+//   row (not from client input), the filter, and the count.
 // - The fn calls the AI service once with the built messages and the
 //   requested count, so a generate cannot return more than asked for.
-// - The fn passes the AI questions to the createQuestions server fn,
-//   together with the loaded assignment's id, so the questions stay
-//   scoped to this assignment.
-// - The fn returns the value of createQuestions.
-// - An AI service failure becomes "Could not generate questions." and
-//   keeps the original error as its cause.
+// - The fn writes the AI questions through dbCreateQuestions, scoped
+//   to the loaded assignment — a server fn does not re-enter another
+//   server fn, so the guards run once (PR #80 follow-up).
+// - The fn returns the inserted rows, one per question.
+// - An AI service or insert failure becomes "Could not generate
+//   questions." and keeps the original error as its cause.
 
 vi.mock("@/lib/auth", () => ({
   getCurrentUser: vi.fn(async () => ({ id: "user-1" })),
@@ -59,11 +59,11 @@ vi.mock("@/lib/ai/llm", () => ({
   ]),
 }));
 
-vi.mock("@/server/questions/mutate-question", () => ({
-  createQuestion: vi.fn(),
-  createQuestions: vi.fn(),
-  updateQuestion: vi.fn(),
-  deleteQuestion: vi.fn(),
+vi.mock("@/db/questions/mutate-question", () => ({
+  dbCreateQuestions: vi.fn(async () => [
+    { questionId: 11 },
+    { questionId: 12 },
+  ]),
 }));
 
 const assignment = {
@@ -92,7 +92,7 @@ const dbGetAssignmentMock = vi.mocked(dbGetAssignment);
 const requireUserOwnsCourseMock = vi.mocked(requireUserOwnsCourse);
 const buildQuestionPromptMock = vi.mocked(buildQuestionPrompt);
 const generateQuestionsWithLlmMock = vi.mocked(generateQuestionsWithLlm);
-const createQuestionsMock = vi.mocked(createQuestions);
+const dbCreateQuestionsMock = vi.mocked(dbCreateQuestions);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -106,17 +106,15 @@ describe("generateQuestions (issue #79)", () => {
     expect(fn?.method).toBe("POST");
   });
 
-  it("sends the generated questions to createQuestions scoped to the assignment", async () => {
-    createQuestionsMock.mockResolvedValueOnce([
-      { questionId: 11 },
-      { questionId: 12 },
-    ]);
+  it("writes the generated questions through dbCreateQuestions scoped to the assignment", async () => {
     const fn = await loadServerFnStub(
       "@/server/questions/generate-questions.ts",
       "generateQuestions",
     );
     const response = await executeServerFn(fn, payload);
 
+    // The fn returns the inserted rows, so the caller can report the
+    // count of generated questions and answers.
     expect(response.result).toEqual([{ questionId: 11 }, { questionId: 12 }]);
     expect(dbGetAssignmentMock).toHaveBeenCalledWith(7);
     expect(requireUserOwnsCourseMock).toHaveBeenCalledWith(10, "user-1");
@@ -134,9 +132,14 @@ describe("generateQuestions (issue #79)", () => {
       // list is capped at what the author asked for.
       { session: "hw-proj-ts-assignment-7", count: payload.count },
     );
-    expect(createQuestionsMock).toHaveBeenCalledTimes(1);
-    expect(createQuestionsMock).toHaveBeenCalledWith({
-      data: { assignmentId: 7, questions: llmQuestions },
+    // PR #80 follow-up: the insert goes straight to the db helper, not
+    // through another server fn, so the guards above run only once.
+    expect(dbGetAssignmentMock).toHaveBeenCalledTimes(1);
+    expect(requireUserOwnsCourseMock).toHaveBeenCalledTimes(1);
+    expect(dbCreateQuestionsMock).toHaveBeenCalledTimes(1);
+    expect(dbCreateQuestionsMock).toHaveBeenCalledWith({
+      assignmentId: 7,
+      questions: llmQuestions,
     });
   });
 
@@ -149,7 +152,7 @@ describe("generateQuestions (issue #79)", () => {
     const response = await executeServerFn(fn, payload);
     expect((response.error as Error).message).toBe("Course not found");
     expect(generateQuestionsWithLlmMock).not.toHaveBeenCalled();
-    expect(createQuestionsMock).not.toHaveBeenCalled();
+    expect(dbCreateQuestionsMock).not.toHaveBeenCalled();
   });
 
   it("denies a caller who does not own the course", async () => {
@@ -165,7 +168,7 @@ describe("generateQuestions (issue #79)", () => {
       "User is not the author of the course",
     );
     expect(generateQuestionsWithLlmMock).not.toHaveBeenCalled();
-    expect(createQuestionsMock).not.toHaveBeenCalled();
+    expect(dbCreateQuestionsMock).not.toHaveBeenCalled();
   });
 
   it("rejects an assignment with no example before it calls the LLM", async () => {
@@ -188,7 +191,7 @@ describe("generateQuestions (issue #79)", () => {
       "This assignment has no example yet. Add an example first.",
     );
     expect(generateQuestionsWithLlmMock).not.toHaveBeenCalled();
-    expect(createQuestionsMock).not.toHaveBeenCalled();
+    expect(dbCreateQuestionsMock).not.toHaveBeenCalled();
   });
 
   it("wraps an AI service failure in a clear error", async () => {
@@ -202,7 +205,22 @@ describe("generateQuestions (issue #79)", () => {
     const error = response.error as Error;
     expect(error.message).toBe("Could not generate questions.");
     expect(error.cause).toBe(cause);
-    expect(createQuestionsMock).not.toHaveBeenCalled();
+    expect(dbCreateQuestionsMock).not.toHaveBeenCalled();
+  });
+
+  it("wraps an insert failure in the same clear error", async () => {
+    // PR #80 follow-up: the fn owns the insert, so a database failure
+    // also becomes the generate error, not a create error.
+    const cause = new Error("SQLITE_BUSY");
+    dbCreateQuestionsMock.mockRejectedValueOnce(cause);
+    const fn = await loadServerFnStub(
+      "@/server/questions/generate-questions.ts",
+      "generateQuestions",
+    );
+    const response = await executeServerFn(fn, payload);
+    const error = response.error as Error;
+    expect(error.message).toBe("Could not generate questions.");
+    expect(error.cause).toBe(cause);
   });
 
   it("rejects a count above the dropdown maximum before any work", async () => {
@@ -218,7 +236,7 @@ describe("generateQuestions (issue #79)", () => {
     expect(dbGetAssignmentMock).not.toHaveBeenCalled();
     expect(buildQuestionPromptMock).not.toHaveBeenCalled();
     expect(generateQuestionsWithLlmMock).not.toHaveBeenCalled();
-    expect(createQuestionsMock).not.toHaveBeenCalled();
+    expect(dbCreateQuestionsMock).not.toHaveBeenCalled();
   });
 
   it("rejects a filter that is too long before any work", async () => {
@@ -234,6 +252,6 @@ describe("generateQuestions (issue #79)", () => {
     expect(dbGetAssignmentMock).not.toHaveBeenCalled();
     expect(buildQuestionPromptMock).not.toHaveBeenCalled();
     expect(generateQuestionsWithLlmMock).not.toHaveBeenCalled();
-    expect(createQuestionsMock).not.toHaveBeenCalled();
+    expect(dbCreateQuestionsMock).not.toHaveBeenCalled();
   });
 });

@@ -37,9 +37,9 @@ export async function executeServerFn(
  * Imports a "?tss-serverfn-split" module and returns the stub for one
  * server function. Example:
  *
- *   const createQuestions = await loadServerFnStub(
- *     "@/server/questions/mutate-question.ts",
- *     "createQuestions",
+ *   const generateQuestions = await loadServerFnStub(
+ *     "@/server/questions/generate-questions.ts",
+ *     "generateQuestions",
  *   );
  */
 export async function loadServerFnStub(
