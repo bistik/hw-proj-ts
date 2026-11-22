@@ -15,9 +15,9 @@ import { OTHER_USER, TEST_USER } from "./test-user";
 // so the router renders 404) keeps the form out of reach for everyone
 // else, and the student view has no AI questions tab at all.
 //
-// The generate happy path needs a stand-in for the LLM service. That
-// spec lands with the green-phase implementation, once the chat
-// completions base URL can point at a local mock service.
+// The generate happy path needs a stand-in for the LLM service. Issue
+// #81 tracks that spec: OPENCODE_BASE_URL can now point the chat
+// completions client at a local mock service.
 
 test.describe("AI questions (issue #79)", () => {
   test("only the course author can reach the AI questions form", async ({
