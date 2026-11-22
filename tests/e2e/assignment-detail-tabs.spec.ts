@@ -73,6 +73,53 @@ test.describe("assignment detail page tabs (issue #70)", () => {
     await expect(titleHeading).toBeVisible();
   });
 
+  test("the active tab lives in the ?tab= search param (PR #80 review)", async ({
+    page,
+  }) => {
+    const { assignmentId } = await seedAssignmentForAuthor(
+      "Tab URL assignment",
+    );
+
+    await loginViaUi(page);
+    await page.goto(`/assignments/${assignmentId}`);
+    await page.waitForLoadState("networkidle");
+
+    // The Questions tab is the default and keeps a clean URL.
+    await expect(page).toHaveURL(new RegExp(`/assignments/${assignmentId}$`));
+
+    // A tab click writes the tab into the URL, so every tab is linkable.
+    await page.getByRole("radio", { name: "AI questions" }).click();
+    await expect(page).toHaveURL(
+      new RegExp(`/assignments/${assignmentId}\\?tab=ai-questions$`),
+    );
+    await expect(
+      page.getByRole("heading", { name: "AI questions", exact: true }),
+    ).toBeVisible();
+
+    // A reload keeps the tab: the search param drives the radios.
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    await expect(
+      page.getByRole("radio", { name: "AI questions" }),
+    ).toBeChecked();
+    await expect(
+      page.getByRole("heading", { name: "AI questions", exact: true }),
+    ).toBeVisible();
+
+    // A direct link to a tab opens that tab without any click.
+    await page.goto(
+      `/assignments/${assignmentId}?tab=add-question`,
+    );
+    await page.waitForLoadState("networkidle");
+    await expect(
+      page.getByRole("radio", { name: "Add question" }),
+    ).toBeChecked();
+
+    // The Questions tab click clears the param again.
+    await page.getByRole("radio", { name: "Questions", exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/assignments/${assignmentId}$`));
+  });
+
   test("the Questions tab lists existing questions with edit and delete actions", async ({
     page,
   }) => {

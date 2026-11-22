@@ -15,6 +15,7 @@ import { getQuestions } from "@/server/questions/get-questions";
 import { useForm } from "@tanstack/react-form";
 import {
   createFileRoute,
+  getRouteApi,
   Link,
   notFound,
   useRouter,
@@ -24,9 +25,40 @@ import ConfirmModal from "@/components/confirm-modal";
 import FormErrorAlert from "@/components/form-error-alert";
 import z from "zod";
 
+// Issue #70: the author's assignment detail page splits into three tabs.
+// The labels double as the radios' accessible names, which the e2e specs
+// use to address the tabs.
+const assignmentDetailTabs = [
+  { value: "questions", label: "Questions" },
+  { value: "add-question", label: "Add question" },
+  { value: "ai-questions", label: "AI questions" },
+] as const;
+
+type AssignmentDetailTab = (typeof assignmentDetailTabs)[number]["value"];
+
+// The tab values as a tuple for z.enum, so the search schema and the
+// tabs const cannot drift.
+const assignmentDetailTabValues = [
+  ...assignmentDetailTabs.map((tab) => tab.value),
+] as [AssignmentDetailTab, ...AssignmentDetailTab[]];
+
+// PR #80 review: the active tab lives in the ?tab= search param (same
+// pattern as the course detail page), so every tab is a linkable URL
+// and a successful generate can land the author on the Questions tab.
+// An invalid or missing tab falls back to the Questions tab.
+const assignmentDetailSearchSchema = z.object({
+  tab: z.enum(assignmentDetailTabValues).optional(),
+});
+
 export const Route = createFileRoute(
   "/_authenticated/assignments/$assignmentId/",
 )({
+  validateSearch: (search: Record<string, unknown>) =>
+    assignmentDetailSearchSchema.catch({}).parse(search),
+  // The loader loads all three tabs' data at once, so a tab search
+  // change must not re-run it; only params changes and router.invalidate
+  // reload the data.
+  loaderDeps: () => ({}),
   loader: async ({ params }) => {
     const assignmentId = Number(params.assignmentId);
     if (!Number.isInteger(assignmentId) || assignmentId <= 0) throw notFound();
@@ -113,16 +145,9 @@ function AuthorQuestionRow({
   );
 }
 
-// Issue #70: the author's assignment detail page splits into three tabs.
-// The labels double as the radios' accessible names, which the e2e specs
-// use to address the tabs.
-const assignmentDetailTabs = [
-  { value: "questions", label: "Questions" },
-  { value: "add-question", label: "Add question" },
-  { value: "ai-questions", label: "AI questions" },
-] as const;
-
-type AssignmentDetailTab = (typeof assignmentDetailTabs)[number]["value"];
+const assignmentRouteApi = getRouteApi(
+  "/_authenticated/assignments/$assignmentId/",
+);
 
 // The option values for the AI tab's "Number of questions" dropdown
 // (issue #70: numbers 1 to 20). The aiQuestionsFormSchema count keeps
@@ -132,9 +157,19 @@ const aiQuestionCountOptions = Array.from({ length: 20 }, (_, i) => i + 1);
 function AssignmentDetailComponent() {
   const { assignment, course, questions } = Route.useLoaderData();
   const router = useRouter();
+  const navigate = assignmentRouteApi.useNavigate();
   // The Questions tab is the default: it holds the existing rows, so the
   // author lands on the list they most likely came to check.
-  const [activeTab, setActiveTab] = useState<AssignmentDetailTab>("questions");
+  const { tab } = Route.useSearch();
+  const activeTab = tab ?? "questions";
+  // PR #80 review: the outcome of the last generate. The alert above
+  // the tabs reports how many questions and answers were generated.
+  const [generatedCount, setGeneratedCount] = useState(0);
+  const handleTabChange = (newTab: AssignmentDetailTab) => {
+    // The tab switch updates the URL, so the tab survives a reload and
+    // the Questions default stays a clean URL.
+    void navigate({ search: newTab === "questions" ? {} : { tab: newTab } });
+  };
   const handleSubmit = async function ({
     value,
   }: {
@@ -165,16 +200,21 @@ function AssignmentDetailComponent() {
   // prompt on the server from the assignment's stored example, so the
   // form carries only the count and the filter. The filter narrows the
   // scope of the generated questions and answers. After a generate, the
-  // route reloads so the Questions tab lists the new rows. A failure
-  // renders through errorMap.onSubmit (same pattern as the new-lesson
-  // form), so the author sees why nothing appeared (PR #80 review).
+  // route reloads and switches to the Questions tab (PR #80 review),
+  // which lists the new rows, and the alert above the tabs reports how
+  // many questions and answers were generated. A failure renders through
+  // errorMap.onSubmit (same pattern as the new-lesson form), so the
+  // author sees why nothing appeared.
   const handleGenerateSubmit = async function ({
     value,
   }: {
     value: z.infer<typeof aiQuestionsFormSchema>;
   }) {
+    let created;
     try {
-      await generateQuestions({ data: value });
+      // createQuestions returns one row per inserted question, so the
+      // rows tell how many questions and answers were generated.
+      created = await generateQuestions({ data: value });
     } catch (err) {
       console.error("Error in generating questions", err);
       // One error string everywhere: the server fn wraps its failures
@@ -188,7 +228,11 @@ function AssignmentDetailComponent() {
       return;
     }
     aiForm.reset();
-    router.invalidate();
+    setGeneratedCount(created.length);
+    await router.invalidate();
+    // PR #80 review: land on the Questions tab, so the author sees the
+    // generated rows immediately.
+    void navigate({ search: {} });
   };
   const aiForm = useForm({
     defaultValues: {
@@ -236,10 +280,19 @@ function AssignmentDetailComponent() {
           Edit assignment
         </Link>
       </h2>
+      {/* PR #80 review: the outcome of the last generate stays above the
+          tabs, so it survives the switch to the Questions tab. */}
+      {generatedCount > 0 && (
+        <div role="status" className="alert alert-success mb-4">
+          Generated {generatedCount}{" "}
+          {generatedCount === 1 ? "question and answer" : "questions and answers"}.
+        </div>
+      )}
       {/* Same daisyUI tabs-border widget as the course detail page: one
           radio input per tab, and each radio immediately followed by its
           own tab-content div (daisyUI only shows the panel that directly
-          follows the checked radio). */}
+          follows the checked radio). The tab switch updates the ?tab=
+          search param (PR #80 review). */}
       <div className="tabs tabs-border" role="tablist">
         <input
           type="radio"
@@ -247,7 +300,7 @@ function AssignmentDetailComponent() {
           className="tab"
           aria-label="Questions"
           checked={activeTab === "questions"}
-          onChange={() => setActiveTab("questions")}
+          onChange={() => handleTabChange("questions")}
         />
         <div className="tab-content border-0 bg-base-100 p-10 min-h-96">
           {/* The Questions panel stays mounted while other tabs show: the
@@ -279,7 +332,7 @@ function AssignmentDetailComponent() {
           className="tab"
           aria-label="Add question"
           checked={activeTab === "add-question"}
-          onChange={() => setActiveTab("add-question")}
+          onChange={() => handleTabChange("add-question")}
         />
         <div className="tab-content border-0 bg-base-100 p-10 min-h-96">
           {/* The add-question form stays mounted while other tabs show, so
@@ -322,7 +375,7 @@ function AssignmentDetailComponent() {
           className="tab"
           aria-label="AI questions"
           checked={activeTab === "ai-questions"}
-          onChange={() => setActiveTab("ai-questions")}
+          onChange={() => handleTabChange("ai-questions")}
         />
         <div className="tab-content border-0 bg-base-100 p-10 min-h-96">
           {/* The AI tab content renders only while the tab is active.
