@@ -12,6 +12,11 @@ const LLM_DEFAULT_BASE_URL = "https://opencode.ai/inference/go/openai/v1";
 // OpenCode Go asks every client to identify itself with its own user
 // agent instead of a generic SDK name.
 const LLM_USER_AGENT = "hw-proj-ts/1.0";
+// The SDK defaults hold one request for up to 10 minutes and retry it
+// twice, so one failed generate could block the author's request for
+// half an hour (PR #80 review). The call gives up after 30 seconds and
+// never retries: the author can press Generate again.
+const LLM_TIMEOUT_MS = 30_000;
 
 // The model answers with JSON in this shape (see buildQuestionPrompt).
 // An empty questionText or answer makes the item unusable, so both must
@@ -61,14 +66,19 @@ function extractQuestionsJson(content: string): unknown {
  * request. Content that is not JSON in the expected shape becomes
  * "Could not parse the generated questions."
  *
+ * The count caps the parsed list (PR #80 review): the model may
+ * overshoot, so the fn returns at most options.count questions. Fewer
+ * questions pass through unchanged; the count is best-effort, because a
+ * model may stop early.
+ *
  * The OpenCode Go endpoint also requires a stable x-opencode-session
  * header per conversation, so it can route the requests and cache the
  * prompt. The caller names the conversation (one assignment in this
- * app); without an option the fn generates one random session id.
+ * app).
  */
 export async function generateQuestionsWithLlm(
   messages: ChatMessage[],
-  options: { session: string } = { session: crypto.randomUUID() },
+  options: { session: string; count: number },
 ): Promise<LlmQuestion[]> {
   const apiKey = process.env.OPENCODE_API_KEY;
   if (!apiKey) {
@@ -80,6 +90,10 @@ export async function generateQuestionsWithLlm(
   const client = new OpenAI({
     apiKey,
     baseURL,
+    // PR #80 review: a failed generate must fail fast, not hold the
+    // request through the SDK's 10-minute default and two retries.
+    timeout: LLM_TIMEOUT_MS,
+    maxRetries: 0,
     defaultHeaders: {
       "User-Agent": LLM_USER_AGENT,
       "x-opencode-session": options.session,
@@ -99,5 +113,10 @@ export async function generateQuestionsWithLlm(
   if (!parsed.success) {
     throw new Error("Could not parse the generated questions.");
   }
-  return parsed.data.questions;
+  // PR #80 review: never return more questions than requested. Fewer
+  // pass through, so a silent overshoot cannot reach the database.
+  const questions = parsed.data.questions;
+  return questions.length > options.count
+    ? questions.slice(0, options.count)
+    : questions;
 }

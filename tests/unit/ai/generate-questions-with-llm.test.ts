@@ -13,6 +13,10 @@ import { generateQuestionsWithLlm } from "@/lib/ai/llm";
 // - The model's answer must be JSON in the shape
 //   { "questions": [{ "questionText": ..., "answer": ... }] }; the fn
 //   returns the parsed items.
+// - The fn never returns more items than the requested count (PR #80
+//   review): an overshooting model is trimmed to the count.
+// - The fn never retries a failed request (PR #80 review): the client
+//   sets maxRetries 0 and a short timeout.
 // - Content that is not that JSON becomes "Could not parse the
 //   generated questions."
 //
@@ -25,6 +29,8 @@ const messages = [
   { role: "user", content: "user prompt" },
 ];
 
+const defaultOptions = { session: "unit-test-session", count: 10 };
+
 const parsedQuestions = [
   { questionText: "What is 2 + 2?", answer: "4" },
   { questionText: "What is 3 + 3?", answer: "6" },
@@ -34,6 +40,9 @@ const validContent = JSON.stringify({ questions: parsedQuestions });
 
 /** The content that the fake chat-completion endpoint answers with. */
 let respondContent = validContent;
+
+/** The HTTP status the fake endpoint answers with. */
+let respondStatus = 200;
 
 type CapturedRequest = {
   url: string;
@@ -82,12 +91,16 @@ async function fetchMock(input: unknown, init?: RequestInit): Promise<Response> 
     session: request.headers.get("x-opencode-session"),
     body: await request.json(),
   });
+  if (respondStatus !== 200) {
+    return new Response("upstream error", { status: respondStatus });
+  }
   return chatCompletionResponse(respondContent);
 }
 
 beforeEach(() => {
   capturedRequests.length = 0;
   respondContent = validContent;
+  respondStatus = 200;
   process.env.OPENCODE_API_KEY = "unit-test-key";
   vi.stubGlobal("fetch", vi.fn(fetchMock));
 });
@@ -99,7 +112,10 @@ afterEach(() => {
 
 describe("generateQuestionsWithLlm (issue #79)", () => {
   it("posts the messages to the chat completions endpoint with the configured model and key", async () => {
-    const questions = await generateQuestionsWithLlm(messages);
+    const questions = await generateQuestionsWithLlm(
+      messages,
+      defaultOptions,
+    );
 
     expect(questions).toEqual(parsedQuestions);
     expect(capturedRequests).toHaveLength(1);
@@ -112,12 +128,13 @@ describe("generateQuestionsWithLlm (issue #79)", () => {
     // The OpenAI SDK's default user agent must not leak: the fn
     // identifies itself, and a session id is always present.
     expect(request.userAgent).toBe("hw-proj-ts/1.0");
-    expect(request.session).toBeTruthy();
+    expect(request.session).toBe("unit-test-session");
   });
 
   it("sends the caller's session id in the x-opencode-session header", async () => {
     await generateQuestionsWithLlm(messages, {
       session: "hw-proj-ts-assignment-7",
+      count: 10,
     });
 
     expect(capturedRequests).toHaveLength(1);
@@ -127,18 +144,18 @@ describe("generateQuestionsWithLlm (issue #79)", () => {
   it("throws a clear error when OPENCODE_API_KEY is not set", async () => {
     delete process.env.OPENCODE_API_KEY;
 
-    await expect(generateQuestionsWithLlm(messages)).rejects.toThrow(
-      /OPENCODE_API_KEY/,
-    );
+    await expect(
+      generateQuestionsWithLlm(messages, defaultOptions),
+    ).rejects.toThrow(/OPENCODE_API_KEY/);
     expect(capturedRequests).toHaveLength(0);
   });
 
   it("rejects a response whose content is not JSON", async () => {
     respondContent = "The model wrote plain prose instead.";
 
-    await expect(generateQuestionsWithLlm(messages)).rejects.toThrow(
-      "Could not parse the generated questions.",
-    );
+    await expect(
+      generateQuestionsWithLlm(messages, defaultOptions),
+    ).rejects.toThrow("Could not parse the generated questions.");
   });
 
   it("rejects a response whose JSON does not match the expected shape", async () => {
@@ -146,14 +163,44 @@ describe("generateQuestionsWithLlm (issue #79)", () => {
     respondContent = JSON.stringify({
       questions: [{ questionText: "What is 2 + 2?", answer: "" }],
     });
-    await expect(generateQuestionsWithLlm(messages)).rejects.toThrow(
-      "Could not parse the generated questions.",
-    );
+    await expect(
+      generateQuestionsWithLlm(messages, defaultOptions),
+    ).rejects.toThrow("Could not parse the generated questions.");
 
     // A different outer shape is not usable either.
     respondContent = JSON.stringify({ items: parsedQuestions });
-    await expect(generateQuestionsWithLlm(messages)).rejects.toThrow(
-      "Could not parse the generated questions.",
-    );
+    await expect(
+      generateQuestionsWithLlm(messages, defaultOptions),
+    ).rejects.toThrow("Could not parse the generated questions.");
+  });
+
+  it("returns at most the requested count when the model overshoots", async () => {
+    respondContent = JSON.stringify({
+      questions: [
+        ...parsedQuestions,
+        { questionText: "What is 4 + 4?", answer: "8" },
+      ],
+    });
+
+    const questions = await generateQuestionsWithLlm(messages, {
+      session: "unit-test-session",
+      count: 2,
+    });
+
+    // PR #80 review: a silent overshoot must not reach the database;
+    // the fn keeps only the requested number of items.
+    expect(questions).toEqual(parsedQuestions);
+  });
+
+  it("does not retry a failed request", async () => {
+    respondStatus = 500;
+
+    // PR #80 review: the SDK defaults retry twice with a 10-minute
+    // timeout each. The client sets maxRetries 0, so one failed
+    // generate means exactly one request.
+    await expect(
+      generateQuestionsWithLlm(messages, defaultOptions),
+    ).rejects.toThrow();
+    expect(capturedRequests).toHaveLength(1);
   });
 });
