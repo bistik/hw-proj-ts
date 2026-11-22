@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { ensureSignedUp, loginViaUi } from "./helpers/auth";
 import {
+  clearAssignmentExample,
   seedAssignments,
   seedCourse,
   seedEnrollment,
@@ -17,7 +18,9 @@ import { OTHER_USER, TEST_USER } from "./test-user";
 //
 // The generate happy path needs a stand-in for the LLM service. Issue
 // #81 tracks that spec: OPENCODE_BASE_URL can now point the chat
-// completions client at a local mock service.
+// completions client at a local mock service. The PR #80 review also
+// requires: the generate form stays disabled until the assignment has
+// an example (no LLM call needed for that case).
 
 test.describe("AI questions (issue #79)", () => {
   test("only the course author can reach the AI questions form", async ({
@@ -53,5 +56,40 @@ test.describe("AI questions (issue #79)", () => {
     await expect(
       page.getByRole("radio", { name: "AI questions" }),
     ).toHaveCount(0);
+  });
+
+  test("the generate form stays disabled until the assignment has an example", async ({
+    page,
+  }) => {
+    const courseId = await seedCourse(TEST_USER.email, {
+      title: `AI questions no-example course ${Date.now()}`,
+      description:
+        "Course for the AI questions no-example case (PR #80 review).",
+    });
+    const [assignmentId] = await seedAssignments(courseId, [
+      "AI questions no-example assignment",
+    ]);
+    await clearAssignmentExample(assignmentId);
+
+    await loginViaUi(page, TEST_USER);
+    await page.goto(`/assignments/${assignmentId}`);
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("radio", { name: "AI questions" }).click();
+
+    // The tab explains the missing example instead of showing a dead
+    // form with no reason (PR #80 review).
+    await expect(
+      page.getByText(
+        "No example yet. Add an example on the Edit assignment page first.",
+      ),
+    ).toBeVisible();
+
+    // Without an example the LLM would receive an empty example block,
+    // so the generate button stays disabled (PR #80 review). The server
+    // fn rejects the request as well.
+    await expect(
+      page.getByRole("button", { name: "Generate questions" }),
+    ).toBeDisabled();
   });
 });

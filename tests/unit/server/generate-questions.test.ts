@@ -18,7 +18,10 @@ import { executeServerFn, loadServerFnStub } from "../helpers/server-fn";
 // - The fn requires the caller to own the course of the assignment.
 // - The fn builds the prompt from the example stored on the assignment
 //   row (not from client input), the filter, and the count.
-// - The fn calls the AI service once with the built messages.
+// - The fn rejects an assignment with no example before it calls the
+//   AI service (PR #80 review).
+// - The fn calls the AI service once with the built messages and the
+//   requested count, so a generate cannot return more than asked for.
 // - The fn passes the AI questions to the createQuestions server fn,
 //   together with the loaded assignment's id, so the questions stay
 //   scoped to this assignment.
@@ -127,7 +130,9 @@ describe("generateQuestions (issue #79)", () => {
     expect(generateQuestionsWithLlmMock).toHaveBeenCalledTimes(1);
     expect(generateQuestionsWithLlmMock).toHaveBeenCalledWith(
       promptMessages,
-      { session: "hw-proj-ts-assignment-7" },
+      // PR #80 review: the count travels to the LLM fn, so the parsed
+      // list is capped at what the author asked for.
+      { session: "hw-proj-ts-assignment-7", count: payload.count },
     );
     expect(createQuestionsMock).toHaveBeenCalledTimes(1);
     expect(createQuestionsMock).toHaveBeenCalledWith({
@@ -158,6 +163,29 @@ describe("generateQuestions (issue #79)", () => {
     const response = await executeServerFn(fn, payload);
     expect((response.error as Error).message).toBe(
       "User is not the author of the course",
+    );
+    expect(generateQuestionsWithLlmMock).not.toHaveBeenCalled();
+    expect(createQuestionsMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an assignment with no example before it calls the LLM", async () => {
+    // PR #80 review: the model has nothing to learn from without an
+    // example, so the generate request fails with a clear message.
+    dbGetAssignmentMock.mockResolvedValueOnce({
+      id: 7,
+      courseId: 10,
+      title: "No-example assignment",
+      example: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const fn = await loadServerFnStub(
+      "@/server/questions/generate-questions.ts",
+      "generateQuestions",
+    );
+    const response = await executeServerFn(fn, payload);
+    expect((response.error as Error).message).toBe(
+      "This assignment has no example yet. Add an example first.",
     );
     expect(generateQuestionsWithLlmMock).not.toHaveBeenCalled();
     expect(createQuestionsMock).not.toHaveBeenCalled();

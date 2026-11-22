@@ -243,6 +243,20 @@ export async function seedAssignments(
 }
 
 /**
+ * Clears an assignment's example (sets it to NULL). For specs that pin
+ * the no-example UI: the AI questions tab disables the generate form
+ * until the assignment has an example (PR #80 review).
+ */
+export async function clearAssignmentExample(
+  assignmentId: number,
+): Promise<void> {
+  await client.execute({
+    sql: "UPDATE assignments SET example = NULL WHERE id = ?",
+    args: [assignmentId],
+  });
+}
+
+/**
  * Seeds questions for an assignment directly in the e2e database, with
  * consecutive positions 0..n-1 (the student page orders questions by
  * position and derives the displayed Q# from it).
