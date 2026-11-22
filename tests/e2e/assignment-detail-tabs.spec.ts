@@ -11,7 +11,8 @@ import { TEST_USER } from "./test-user";
 // Issue #70: split the author's assignment detail page (/assignments/<id>)
 // into three tabs — Questions, Add question, AI questions — and keep the
 // assignment title above the tabs. The AI questions tab shows the
-// assignment's Example text plus a generate form that is disabled for now.
+// assignment's Example text plus a generate form (issue #79 makes the
+// form live).
 
 /**
  * Seeds one course and one assignment owned by TEST_USER and returns the
@@ -134,7 +135,7 @@ test.describe("assignment detail page tabs (issue #70)", () => {
     ).toBeVisible();
   });
 
-  test("the AI questions tab shows the example and the disabled generate form", async ({
+  test("the AI questions tab shows the example and the live generate form", async ({
     page,
   }) => {
     const { assignmentId, example } = await seedAssignmentForAuthor(
@@ -182,9 +183,10 @@ test.describe("assignment detail page tabs (issue #70)", () => {
     });
     await expect(generateButton).toBeVisible();
 
-    // The whole form is disabled for now (issue #70: no AI backend yet).
-    await expect(numberSelect).toBeDisabled();
-    await expect(instructionTextarea).toBeDisabled();
-    await expect(generateButton).toBeDisabled();
+    // The whole form is live (issue #79): the author can pick a count,
+    // type an instruction, and press Generate questions.
+    await expect(numberSelect).toBeEnabled();
+    await expect(instructionTextarea).toBeEnabled();
+    await expect(generateButton).toBeEnabled();
   });
 });
