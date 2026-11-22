@@ -1,0 +1,15 @@
+# Runtime vars for the workerd SSR during local dev (vite dev with the
+# cloudflare plugin). workerd ignores the shell environment and .env, so
+# values the server code reads from process.env must live here.
+# Copy this file to .dev.vars and fill in the values.
+#
+# LLM question generation (issue #79). The key authenticates against the
+# OpenCode gateway. In production, set it once with:
+#   wrangler secret put OPENCODE_API_KEY
+OPENCODE_API_KEY=
+# Optional: overrides the default model (mimo-v2.6-flash).
+OPENCODE_MODEL=
+# Optional: overrides the chat completions endpoint, for example a local
+# stand-in service for tests. Default:
+# https://opencode.ai/inference/go/openai/v1
+OPENCODE_BASE_URL=

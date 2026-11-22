@@ -66,27 +66,30 @@ export const questionFormSchema = z.object({
     .positive("Please select a valid assignment"),
 });
 
-// Issue #73: bulk creation of questions. The list must hold at least
-// one item, and every item needs a non-empty questionText and answer,
-// like questionFormSchema. The assignment id follows questionFormSchema
-// too. The cap of 100 items stops one POST from carrying thousands
-// of items.
-export const questionsBulkFormSchema = z.object({
+// Issue #79: the AI questions generate form. The count matches the AI
+// tab's "Number of questions" dropdown (issue #70: 1 to 20), so a
+// payload cannot ask for more questions than the dropdown allows. The
+// filter narrows the scope of the generated questions and answers
+// ("limit answers to whole numbers under 100") and is capped at 300
+// characters: enough room for one clear filter, no room for a long
+// prompt-injection text. The example is not part of the payload: the
+// server fn reads it from the assignment row, so a client cannot swap
+// in its own.
+export const aiQuestionsFormSchema = z.object({
   assignmentId: z
     .number({
       error: "Please select an assignment",
     })
     .int()
     .positive("Please select a valid assignment"),
-  questions: z
-    .array(
-      z.object({
-        questionText: z.string().min(1, { message: "Question text is required" }),
-        answer: z.string().min(1, { message: "Answer is required" }),
-      }),
-    )
-    .min(1, { message: "At least one question is required" })
-    .max(100, { message: "A submission cannot hold more than 100 questions" }),
+  count: z
+    .number({
+      error: "Please select the number of questions",
+    })
+    .int()
+    .min(1, { message: "Select at least one question" })
+    .max(20, { message: "Select at most 20 questions" }),
+  filter: z.string().max(300, { message: "The filter is too long" }),
 });
 
 export const questionUpdateFormSchema = questionFormSchema

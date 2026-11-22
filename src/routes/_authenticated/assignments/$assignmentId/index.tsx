@@ -1,8 +1,12 @@
 import { TextField } from "@/components/text-field";
 import { SubmitButton } from "@/components/submit-button";
-import { questionFormSchema } from "@/schemas/course-schema";
+import {
+  aiQuestionsFormSchema,
+  questionFormSchema,
+} from "@/schemas/course-schema";
 import { getAssignmentById } from "@/server/assignments/get-assignment";
 import { getCourseByIdAndAuthor } from "@/server/courses/get-course";
+import { generateQuestions } from "@/server/questions/generate-questions";
 import {
   createQuestion,
   deleteQuestion,
@@ -11,17 +15,50 @@ import { getQuestions } from "@/server/questions/get-questions";
 import { useForm } from "@tanstack/react-form";
 import {
   createFileRoute,
+  getRouteApi,
   Link,
   notFound,
   useRouter,
 } from "@tanstack/react-router";
 import { useState } from "react";
 import ConfirmModal from "@/components/confirm-modal";
+import FormErrorAlert from "@/components/form-error-alert";
 import z from "zod";
+
+// Issue #70: the author's assignment detail page splits into three tabs.
+// The labels double as the radios' accessible names, which the e2e specs
+// use to address the tabs.
+const assignmentDetailTabs = [
+  { value: "questions", label: "Questions" },
+  { value: "add-question", label: "Add question" },
+  { value: "ai-questions", label: "AI questions" },
+] as const;
+
+type AssignmentDetailTab = (typeof assignmentDetailTabs)[number]["value"];
+
+// The tab values as a tuple for z.enum, so the search schema and the
+// tabs const cannot drift.
+const assignmentDetailTabValues = [
+  ...assignmentDetailTabs.map((tab) => tab.value),
+] as [AssignmentDetailTab, ...AssignmentDetailTab[]];
+
+// PR #80 review: the active tab lives in the ?tab= search param (same
+// pattern as the course detail page), so every tab is a linkable URL
+// and a successful generate can land the author on the Questions tab.
+// An invalid or missing tab falls back to the Questions tab.
+const assignmentDetailSearchSchema = z.object({
+  tab: z.enum(assignmentDetailTabValues).optional(),
+});
 
 export const Route = createFileRoute(
   "/_authenticated/assignments/$assignmentId/",
 )({
+  validateSearch: (search: Record<string, unknown>) =>
+    assignmentDetailSearchSchema.catch({}).parse(search),
+  // The loader loads all three tabs' data at once, so a tab search
+  // change must not re-run it; only params changes and router.invalidate
+  // reload the data.
+  loaderDeps: () => ({}),
   loader: async ({ params }) => {
     const assignmentId = Number(params.assignmentId);
     if (!Number.isInteger(assignmentId) || assignmentId <= 0) throw notFound();
@@ -108,27 +145,31 @@ function AuthorQuestionRow({
   );
 }
 
-// Issue #70: the author's assignment detail page splits into three tabs.
-// The labels double as the radios' accessible names, which the e2e specs
-// use to address the tabs.
-const assignmentDetailTabs = [
-  { value: "questions", label: "Questions" },
-  { value: "add-question", label: "Add question" },
-  { value: "ai-questions", label: "AI questions" },
-] as const;
+const assignmentRouteApi = getRouteApi(
+  "/_authenticated/assignments/$assignmentId/",
+);
 
-type AssignmentDetailTab = (typeof assignmentDetailTabs)[number]["value"];
-
-// The option values for the AI tab's disabled "Number of questions"
-// dropdown (issue #70: numbers 1 to 20).
+// The option values for the AI tab's "Number of questions" dropdown
+// (issue #70: numbers 1 to 20). The aiQuestionsFormSchema count keeps
+// the same bounds, so a submit can never exceed the dropdown.
 const aiQuestionCountOptions = Array.from({ length: 20 }, (_, i) => i + 1);
 
 function AssignmentDetailComponent() {
   const { assignment, course, questions } = Route.useLoaderData();
   const router = useRouter();
+  const navigate = assignmentRouteApi.useNavigate();
   // The Questions tab is the default: it holds the existing rows, so the
   // author lands on the list they most likely came to check.
-  const [activeTab, setActiveTab] = useState<AssignmentDetailTab>("questions");
+  const { tab } = Route.useSearch();
+  const activeTab = tab ?? "questions";
+  // PR #80 review: the outcome of the last generate. The alert above
+  // the tabs reports how many questions and answers were generated.
+  const [generatedCount, setGeneratedCount] = useState(0);
+  const handleTabChange = (newTab: AssignmentDetailTab) => {
+    // The tab switch updates the URL, so the tab survives a reload and
+    // the Questions default stays a clean URL.
+    void navigate({ search: newTab === "questions" ? {} : { tab: newTab } });
+  };
   const handleSubmit = async function ({
     value,
   }: {
@@ -154,6 +195,55 @@ function AssignmentDetailComponent() {
       onBlur: questionFormSchema,
     },
     onSubmit: handleSubmit,
+  });
+  // Issue #79: the AI questions form is live. The submit builds the
+  // prompt on the server from the assignment's stored example, so the
+  // form carries only the count and the filter. The filter narrows the
+  // scope of the generated questions and answers. After a generate, the
+  // route reloads and switches to the Questions tab (PR #80 review),
+  // which lists the new rows, and the alert above the tabs reports how
+  // many questions and answers were generated. A failure renders through
+  // errorMap.onSubmit (same pattern as the new-lesson form), so the
+  // author sees why nothing appeared.
+  const handleGenerateSubmit = async function ({
+    value,
+  }: {
+    value: z.infer<typeof aiQuestionsFormSchema>;
+  }) {
+    let created;
+    try {
+      // generateQuestions returns the inserted rows, one per question,
+      // so the rows tell how many questions and answers were generated.
+      created = await generateQuestions({ data: value });
+    } catch (err) {
+      console.error("Error in generating questions", err);
+      // One error string everywhere: the server fn wraps its failures
+      // in the same message (PR #80 review).
+      aiForm.setErrorMap({
+        onSubmit: {
+          form: "Could not generate questions.",
+          fields: {},
+        },
+      });
+      return;
+    }
+    aiForm.reset();
+    setGeneratedCount(created.length);
+    await router.invalidate();
+    // PR #80 review: land on the Questions tab, so the author sees the
+    // generated rows immediately.
+    void navigate({ search: {} });
+  };
+  const aiForm = useForm({
+    defaultValues: {
+      assignmentId: assignment.id,
+      count: 1,
+      filter: "",
+    },
+    validators: {
+      onSubmit: aiQuestionsFormSchema,
+    },
+    onSubmit: handleGenerateSubmit,
   });
   return (
     <div>
@@ -190,10 +280,19 @@ function AssignmentDetailComponent() {
           Edit assignment
         </Link>
       </h2>
+      {/* PR #80 review: the outcome of the last generate stays above the
+          tabs, so it survives the switch to the Questions tab. */}
+      {generatedCount > 0 && (
+        <div role="status" className="alert alert-success mb-4">
+          Generated {generatedCount}{" "}
+          {generatedCount === 1 ? "question and answer" : "questions and answers"}.
+        </div>
+      )}
       {/* Same daisyUI tabs-border widget as the course detail page: one
           radio input per tab, and each radio immediately followed by its
           own tab-content div (daisyUI only shows the panel that directly
-          follows the checked radio). */}
+          follows the checked radio). The tab switch updates the ?tab=
+          search param (PR #80 review). */}
       <div className="tabs tabs-border" role="tablist">
         <input
           type="radio"
@@ -201,7 +300,7 @@ function AssignmentDetailComponent() {
           className="tab"
           aria-label="Questions"
           checked={activeTab === "questions"}
-          onChange={() => setActiveTab("questions")}
+          onChange={() => handleTabChange("questions")}
         />
         <div className="tab-content border-0 bg-base-100 p-10 min-h-96">
           {/* The Questions panel stays mounted while other tabs show: the
@@ -233,7 +332,7 @@ function AssignmentDetailComponent() {
           className="tab"
           aria-label="Add question"
           checked={activeTab === "add-question"}
-          onChange={() => setActiveTab("add-question")}
+          onChange={() => handleTabChange("add-question")}
         />
         <div className="tab-content border-0 bg-base-100 p-10 min-h-96">
           {/* The add-question form stays mounted while other tabs show, so
@@ -276,49 +375,105 @@ function AssignmentDetailComponent() {
           className="tab"
           aria-label="AI questions"
           checked={activeTab === "ai-questions"}
-          onChange={() => setActiveTab("ai-questions")}
+          onChange={() => handleTabChange("ai-questions")}
         />
         <div className="tab-content border-0 bg-base-100 p-10 min-h-96">
-          {/* The AI tab is a disabled placeholder (issue #70: no AI backend
-              yet), so its content renders only while the tab is active.
-              Keeping it out of the DOM on the other tabs also avoids a
-              locator collision in the e2e specs: the "Number of questions"
-              fieldset's legend contains "question", which would match the
-              same fieldset locators the add-question form is addressed by. */}
+          {/* The AI tab content renders only while the tab is active.
+              Keeping it out of the DOM on the other tabs avoids a
+              locator collision in the e2e specs: the "Number of
+              questions" fieldset's legend contains "question", which
+              would match the same fieldset locators the add-question
+              form is addressed by. */}
           {activeTab === "ai-questions" && (
             <div>
               <h2>AI questions</h2>
-              <p>{assignment.example ?? "No example yet"}</p>
+              {/* PR #80 review: without an example the LLM has nothing
+                  to learn from, so the generate button stays disabled
+                  and this text tells the author what to do next. The
+                  server fn rejects the request as well. */}
+              <p>
+                {assignment.example ??
+                  "No example yet. Add an example on the Edit assignment page first."}
+              </p>
               <p>Generate questions based on the examples</p>
               <form
                 onSubmit={(e) => {
-                  // The whole form is disabled, so this submit cannot
-                  // fire; the handler only exists to keep the form inert
-                  // if that ever changes.
                   e.preventDefault();
+                  e.stopPropagation();
+                  aiForm.handleSubmit();
                 }}
               >
-                <fieldset className="fieldset">
-                  <legend className="fieldset-legend">
-                    Number of questions
-                  </legend>
-                  <select className="select" disabled>
-                    {aiQuestionCountOptions.map((count) => (
-                      <option key={count} value={count}>
-                        {count}
-                      </option>
-                    ))}
-                  </select>
-                </fieldset>
-                <fieldset className="fieldset">
-                  <legend className="fieldset-legend">
-                    Additional instruction
-                  </legend>
-                  <textarea className="textarea" rows={3} disabled />
-                </fieldset>
-                <button type="button" className="btn" disabled>
-                  Generate questions
-                </button>
+                {/* A failed generate renders here (PR #80 review): the
+                    LLM call fails more often than a database insert, so
+                    the author must see the error, not only the spinner
+                    stop. */}
+                <aiForm.Subscribe selector={(state) => state.errorMap.onSubmit}>
+                  {(error) =>
+                    typeof error === "string" ? (
+                      <FormErrorAlert errorMsg={error} />
+                    ) : null
+                  }
+                </aiForm.Subscribe>
+                <aiForm.Field name="count">
+                  {(field) => (
+                    <fieldset className="fieldset">
+                      <legend className="fieldset-legend">
+                        Number of questions
+                      </legend>
+                      <select
+                        className="select"
+                        name={field.name}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) =>
+                          field.handleChange(Number(e.target.value))
+                        }
+                      >
+                        {aiQuestionCountOptions.map((count) => (
+                          <option key={count} value={count}>
+                            {count}
+                          </option>
+                        ))}
+                      </select>
+                    </fieldset>
+                  )}
+                </aiForm.Field>
+                <aiForm.Field name="filter">
+                  {(field) => (
+                    <fieldset className="fieldset">
+                      <legend className="fieldset-legend">Filter</legend>
+                      <textarea
+                        className="textarea"
+                        rows={3}
+                        name={field.name}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                      />
+                      <p className="fieldset-label">
+                        Optional: narrows the scope of the generated
+                        questions and answers.
+                      </p>
+                    </fieldset>
+                  )}
+                </aiForm.Field>
+                {/* Same pending pattern as the add-question form: the
+                    button disables and shows the daisyUI loading spinner
+                    while the LLM call runs, so a second submit cannot
+                    start. The label stays the same, so the accessible
+                    name does not change mid-submit. The button also
+                    stays disabled while the assignment has no example
+                    (PR #80 review). */}
+                <aiForm.Subscribe selector={(state) => state.isSubmitting}>
+                  {(isSubmitting) => (
+                    <SubmitButton
+                      label="Generate questions"
+                      submittingLabel="Generate questions"
+                      isSubmitting={isSubmitting}
+                      disabled={!assignment.example}
+                    />
+                  )}
+                </aiForm.Subscribe>
               </form>
             </div>
           )}
