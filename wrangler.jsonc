@@ -16,7 +16,10 @@
   // Non-secret worker vars. EMAIL_FROM must be an address on the email domain
   // onboarded in the Cloudflare dashboard (Email Service > Email Sending).
   // Change it here; it deploys with `wrangler deploy`. Add more non-secret
-  // config here, secrets go through `wrangler secret put <NAME>` instead.
+  // config here, secrets go through `wrangler secret put <NAME>` instead —
+  // for example OPENCODE_API_KEY, the LLM gateway key for question
+  // generation (issue #79). For local dev, copy .dev.vars.example to
+  // .dev.vars: workerd ignores the shell environment.
   "vars": {
     "EMAIL_FROM": "no-reply@ldh.bianes.dev",
   },
