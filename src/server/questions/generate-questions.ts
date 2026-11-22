@@ -37,7 +37,11 @@ export const generateQuestions = createServerFn({ method: "POST" })
 
     let questions;
     try {
-      questions = await generateQuestionsWithLlm(messages);
+      // One stable session id per assignment: repeated generates on the
+      // same assignment keep the routing and the prompt cache warm.
+      questions = await generateQuestionsWithLlm(messages, {
+        session: `hw-proj-ts-assignment-${assignment.id}`,
+      });
     } catch (err) {
       console.error("Error in generating questions with the LLM", err);
       throw new Error("Could not generate questions.", { cause: err });

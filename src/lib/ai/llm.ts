@@ -9,6 +9,9 @@ import type { ChatMessage } from "@/lib/ai/prompt";
 
 const LLM_MODEL = "mimo-v2.6-flash";
 const LLM_DEFAULT_BASE_URL = "https://opencode.ai/inference/go/openai/v1";
+// OpenCode Go asks every client to identify itself with its own user
+// agent instead of a generic SDK name.
+const LLM_USER_AGENT = "hw-proj-ts/1.0";
 
 // The model answers with JSON in this shape (see buildQuestionPrompt).
 // An empty questionText or answer makes the item unusable, so both must
@@ -57,9 +60,15 @@ function extractQuestionsJson(content: string): unknown {
  * the parsed questions. A missing OPENCODE_API_KEY throws before any
  * request. Content that is not JSON in the expected shape becomes
  * "Could not parse the generated questions."
+ *
+ * The OpenCode Go endpoint also requires a stable x-opencode-session
+ * header per conversation, so it can route the requests and cache the
+ * prompt. The caller names the conversation (one assignment in this
+ * app); without an option the fn generates one random session id.
  */
 export async function generateQuestionsWithLlm(
   messages: ChatMessage[],
+  options: { session: string } = { session: crypto.randomUUID() },
 ): Promise<LlmQuestion[]> {
   const apiKey = process.env.OPENCODE_API_KEY;
   if (!apiKey) {
@@ -68,7 +77,14 @@ export async function generateQuestionsWithLlm(
     );
   }
   const baseURL = process.env.OPENCODE_BASE_URL ?? LLM_DEFAULT_BASE_URL;
-  const client = new OpenAI({ apiKey, baseURL });
+  const client = new OpenAI({
+    apiKey,
+    baseURL,
+    defaultHeaders: {
+      "User-Agent": LLM_USER_AGENT,
+      "x-opencode-session": options.session,
+    },
+  });
 
   const completion = await client.chat.completions.create({
     model: LLM_MODEL,

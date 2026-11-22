@@ -2,13 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { generateQuestionsWithLlm } from "@/lib/ai/llm";
 
 // Issue #79, test-driven development red phase: these tests fail until
-// generateQuestionsWithLlm exists (the openai package is not installed
-// yet either). The contract:
+// generateQuestionsWithLlm exists. The contract:
 // - The fn wraps the OpenAI SDK chat completions API.
 // - The fn reads OPENCODE_API_KEY from the environment and sends it as
 //   the bearer token.
 // - The fn uses the model "mimo-v2.6-flash".
 // - The fn posts the given messages to the chat completions endpoint.
+// - The fn identifies itself with its own user agent and sends a
+//   session id in x-opencode-session (OpenCode Go requires both).
 // - The model's answer must be JSON in the shape
 //   { "questions": [{ "questionText": ..., "answer": ... }] }; the fn
 //   returns the parsed items.
@@ -38,6 +39,8 @@ type CapturedRequest = {
   url: string;
   method: string;
   authorization: string | null;
+  userAgent: string | null;
+  session: string | null;
   body: {
     model: string;
     messages: Array<{ role: string; content: string }>;
@@ -75,6 +78,8 @@ async function fetchMock(input: unknown, init?: RequestInit): Promise<Response> 
     url: request.url,
     method: request.method,
     authorization: request.headers.get("authorization"),
+    userAgent: request.headers.get("user-agent"),
+    session: request.headers.get("x-opencode-session"),
     body: await request.json(),
   });
   return chatCompletionResponse(respondContent);
@@ -104,6 +109,19 @@ describe("generateQuestionsWithLlm (issue #79)", () => {
     expect(request.authorization).toBe("Bearer unit-test-key");
     expect(request.body.model).toBe("mimo-v2.6-flash");
     expect(request.body.messages).toEqual(messages);
+    // The OpenAI SDK's default user agent must not leak: the fn
+    // identifies itself, and a session id is always present.
+    expect(request.userAgent).toBe("hw-proj-ts/1.0");
+    expect(request.session).toBeTruthy();
+  });
+
+  it("sends the caller's session id in the x-opencode-session header", async () => {
+    await generateQuestionsWithLlm(messages, {
+      session: "hw-proj-ts-assignment-7",
+    });
+
+    expect(capturedRequests).toHaveLength(1);
+    expect(capturedRequests[0]!.session).toBe("hw-proj-ts-assignment-7");
   });
 
   it("throws a clear error when OPENCODE_API_KEY is not set", async () => {

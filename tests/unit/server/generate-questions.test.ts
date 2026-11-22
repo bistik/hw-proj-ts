@@ -125,7 +125,10 @@ describe("generateQuestions (issue #79)", () => {
       count: payload.count,
     });
     expect(generateQuestionsWithLlmMock).toHaveBeenCalledTimes(1);
-    expect(generateQuestionsWithLlmMock).toHaveBeenCalledWith(promptMessages);
+    expect(generateQuestionsWithLlmMock).toHaveBeenCalledWith(
+      promptMessages,
+      { session: "hw-proj-ts-assignment-7" },
+    );
     expect(createQuestionsMock).toHaveBeenCalledTimes(1);
     expect(createQuestionsMock).toHaveBeenCalledWith({
       data: { assignmentId: 7, questions: llmQuestions },
