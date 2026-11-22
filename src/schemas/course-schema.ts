@@ -66,29 +66,6 @@ export const questionFormSchema = z.object({
     .positive("Please select a valid assignment"),
 });
 
-// Issue #73: bulk creation of questions. The list must hold at least
-// one item, and every item needs a non-empty questionText and answer,
-// like questionFormSchema. The assignment id follows questionFormSchema
-// too. The cap of 100 items stops one POST from carrying thousands
-// of items.
-export const questionsBulkFormSchema = z.object({
-  assignmentId: z
-    .number({
-      error: "Please select an assignment",
-    })
-    .int()
-    .positive("Please select a valid assignment"),
-  questions: z
-    .array(
-      z.object({
-        questionText: z.string().min(1, { message: "Question text is required" }),
-        answer: z.string().min(1, { message: "Answer is required" }),
-      }),
-    )
-    .min(1, { message: "At least one question is required" })
-    .max(100, { message: "A submission cannot hold more than 100 questions" }),
-});
-
 // Issue #79: the AI questions generate form. The count matches the AI
 // tab's "Number of questions" dropdown (issue #70: 1 to 20), so a
 // payload cannot ask for more questions than the dropdown allows. The

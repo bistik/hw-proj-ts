@@ -2,7 +2,6 @@ import { dbGetAssignment } from "@/db/assignments/get-assignment";
 import { requireUserOwnsCourse } from "@/db/authz";
 import {
   dbCreateQuestion,
-  dbCreateQuestions,
   dbDeleteQuestion,
   dbUpdateQuestion,
 } from "@/db/questions/mutate-question";
@@ -11,7 +10,6 @@ import { authMiddleware } from "@/middlewares/auth-middleware";
 import {
   deleteQuestionSchema,
   questionFormSchema,
-  questionsBulkFormSchema,
   questionUpdateFormSchema,
 } from "@/schemas/course-schema";
 import { createServerFn } from "@tanstack/react-start";
@@ -31,30 +29,6 @@ export const createQuestion = createServerFn({ method: "POST" })
     } catch (err) {
       console.error("Error in inserting a question record", err);
       throw new Error("Could not create a question.", { cause: err });
-    }
-  });
-
-/**
- * Creates every question of one submission in one call (issue #73). The
- * validator rejects an empty list before the fn touches the database.
- * The ownership check runs before the insert, and a database failure
- * becomes "Could not create questions." with the original error as its
- * cause.
- */
-export const createQuestions = createServerFn({ method: "POST" })
-  .validator(questionsBulkFormSchema)
-  .middleware([authMiddleware])
-  .handler(async ({ data, context }) => {
-    const assignment = await dbGetAssignment(data.assignmentId);
-    if (!assignment?.courseId) {
-      throw new Error("Course not found");
-    }
-    await requireUserOwnsCourse(assignment.courseId, context.user.id);
-    try {
-      return await dbCreateQuestions(data);
-    } catch (err) {
-      console.error("Error in inserting question records", err);
-      throw new Error("Could not create questions.", { cause: err });
     }
   });
 
