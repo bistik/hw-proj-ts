@@ -21,6 +21,7 @@ import {
 } from "@tanstack/react-router";
 import { useState } from "react";
 import ConfirmModal from "@/components/confirm-modal";
+import FormErrorAlert from "@/components/form-error-alert";
 import z from "zod";
 
 export const Route = createFileRoute(
@@ -164,7 +165,9 @@ function AssignmentDetailComponent() {
   // prompt on the server from the assignment's stored example, so the
   // form carries only the count and the filter. The filter narrows the
   // scope of the generated questions and answers. After a generate, the
-  // route reloads so the Questions tab lists the new rows.
+  // route reloads so the Questions tab lists the new rows. A failure
+  // renders through errorMap.onSubmit (same pattern as the new-lesson
+  // form), so the author sees why nothing appeared (PR #80 review).
   const handleGenerateSubmit = async function ({
     value,
   }: {
@@ -172,12 +175,20 @@ function AssignmentDetailComponent() {
   }) {
     try {
       await generateQuestions({ data: value });
-      aiForm.reset();
-      router.invalidate();
     } catch (err) {
       console.error("Error in generating questions", err);
-      throw new Error("Could not generate questions", { cause: err });
+      // One error string everywhere: the server fn wraps its failures
+      // in the same message (PR #80 review).
+      aiForm.setErrorMap({
+        onSubmit: {
+          form: "Could not generate questions.",
+          fields: {},
+        },
+      });
+      return;
     }
+    aiForm.reset();
+    router.invalidate();
   };
   const aiForm = useForm({
     defaultValues: {
@@ -323,7 +334,14 @@ function AssignmentDetailComponent() {
           {activeTab === "ai-questions" && (
             <div>
               <h2>AI questions</h2>
-              <p>{assignment.example ?? "No example yet"}</p>
+              {/* PR #80 review: without an example the LLM has nothing
+                  to learn from, so the generate button stays disabled
+                  and this text tells the author what to do next. The
+                  server fn rejects the request as well. */}
+              <p>
+                {assignment.example ??
+                  "No example yet. Add an example on the Edit assignment page first."}
+              </p>
               <p>Generate questions based on the examples</p>
               <form
                 onSubmit={(e) => {
@@ -332,6 +350,17 @@ function AssignmentDetailComponent() {
                   aiForm.handleSubmit();
                 }}
               >
+                {/* A failed generate renders here (PR #80 review): the
+                    LLM call fails more often than a database insert, so
+                    the author must see the error, not only the spinner
+                    stop. */}
+                <aiForm.Subscribe selector={(state) => state.errorMap.onSubmit}>
+                  {(error) =>
+                    typeof error === "string" ? (
+                      <FormErrorAlert errorMsg={error} />
+                    ) : null
+                  }
+                </aiForm.Subscribe>
                 <aiForm.Field name="count">
                   {(field) => (
                     <fieldset className="fieldset">
@@ -379,13 +408,16 @@ function AssignmentDetailComponent() {
                     button disables and shows the daisyUI loading spinner
                     while the LLM call runs, so a second submit cannot
                     start. The label stays the same, so the accessible
-                    name does not change mid-submit. */}
+                    name does not change mid-submit. The button also
+                    stays disabled while the assignment has no example
+                    (PR #80 review). */}
                 <aiForm.Subscribe selector={(state) => state.isSubmitting}>
                   {(isSubmitting) => (
                     <SubmitButton
                       label="Generate questions"
                       submittingLabel="Generate questions"
                       isSubmitting={isSubmitting}
+                      disabled={!assignment.example}
                     />
                   )}
                 </aiForm.Subscribe>
