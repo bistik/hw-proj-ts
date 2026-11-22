@@ -89,6 +89,32 @@ export const questionsBulkFormSchema = z.object({
     .max(100, { message: "A submission cannot hold more than 100 questions" }),
 });
 
+// Issue #79: the AI questions generate form. The count matches the AI
+// tab's "Number of questions" dropdown (issue #70: 1 to 20), so a
+// payload cannot ask for more questions than the dropdown allows. The
+// additional instruction is capped at 300 characters: enough room for
+// one clear instruction, no room for a long prompt-injection text. The
+// example is not part of the payload: the server fn reads it from the
+// assignment row, so a client cannot swap in its own.
+export const aiQuestionsFormSchema = z.object({
+  assignmentId: z
+    .number({
+      error: "Please select an assignment",
+    })
+    .int()
+    .positive("Please select a valid assignment"),
+  count: z
+    .number({
+      error: "Please select the number of questions",
+    })
+    .int()
+    .min(1, { message: "Select at least one question" })
+    .max(20, { message: "Select at most 20 questions" }),
+  additionalInstruction: z
+    .string()
+    .max(300, { message: "The additional instruction is too long" }),
+});
+
 export const questionUpdateFormSchema = questionFormSchema
   .pick({ questionText: true, answer: true })
   .extend({

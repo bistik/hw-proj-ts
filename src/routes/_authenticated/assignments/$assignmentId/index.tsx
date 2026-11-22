@@ -1,8 +1,12 @@
 import { TextField } from "@/components/text-field";
 import { SubmitButton } from "@/components/submit-button";
-import { questionFormSchema } from "@/schemas/course-schema";
+import {
+  aiQuestionsFormSchema,
+  questionFormSchema,
+} from "@/schemas/course-schema";
 import { getAssignmentById } from "@/server/assignments/get-assignment";
 import { getCourseByIdAndAuthor } from "@/server/courses/get-course";
+import { generateQuestions } from "@/server/questions/generate-questions";
 import {
   createQuestion,
   deleteQuestion,
@@ -119,8 +123,9 @@ const assignmentDetailTabs = [
 
 type AssignmentDetailTab = (typeof assignmentDetailTabs)[number]["value"];
 
-// The option values for the AI tab's disabled "Number of questions"
-// dropdown (issue #70: numbers 1 to 20).
+// The option values for the AI tab's "Number of questions" dropdown
+// (issue #70: numbers 1 to 20). The aiQuestionsFormSchema count keeps
+// the same bounds, so a submit can never exceed the dropdown.
 const aiQuestionCountOptions = Array.from({ length: 20 }, (_, i) => i + 1);
 
 function AssignmentDetailComponent() {
@@ -154,6 +159,36 @@ function AssignmentDetailComponent() {
       onBlur: questionFormSchema,
     },
     onSubmit: handleSubmit,
+  });
+  // Issue #79: the AI questions form is live. The submit builds the
+  // prompt on the server from the assignment's stored example, so the
+  // form carries only the count and the additional instruction. After
+  // a generate, the route reloads so the Questions tab lists the new
+  // rows.
+  const handleGenerateSubmit = async function ({
+    value,
+  }: {
+    value: z.infer<typeof aiQuestionsFormSchema>;
+  }) {
+    try {
+      await generateQuestions({ data: value });
+      aiForm.reset();
+      router.invalidate();
+    } catch (err) {
+      console.error("Error in generating questions", err);
+      throw new Error("Could not generate questions", { cause: err });
+    }
+  };
+  const aiForm = useForm({
+    defaultValues: {
+      assignmentId: assignment.id,
+      count: 1,
+      additionalInstruction: "",
+    },
+    validators: {
+      onSubmit: aiQuestionsFormSchema,
+    },
+    onSubmit: handleGenerateSubmit,
   });
   return (
     <div>
@@ -279,12 +314,12 @@ function AssignmentDetailComponent() {
           onChange={() => setActiveTab("ai-questions")}
         />
         <div className="tab-content border-0 bg-base-100 p-10 min-h-96">
-          {/* The AI tab is a disabled placeholder (issue #70: no AI backend
-              yet), so its content renders only while the tab is active.
-              Keeping it out of the DOM on the other tabs also avoids a
-              locator collision in the e2e specs: the "Number of questions"
-              fieldset's legend contains "question", which would match the
-              same fieldset locators the add-question form is addressed by. */}
+          {/* The AI tab content renders only while the tab is active.
+              Keeping it out of the DOM on the other tabs avoids a
+              locator collision in the e2e specs: the "Number of
+              questions" fieldset's legend contains "question", which
+              would match the same fieldset locators the add-question
+              form is addressed by. */}
           {activeTab === "ai-questions" && (
             <div>
               <h2>AI questions</h2>
@@ -292,33 +327,66 @@ function AssignmentDetailComponent() {
               <p>Generate questions based on the examples</p>
               <form
                 onSubmit={(e) => {
-                  // The whole form is disabled, so this submit cannot
-                  // fire; the handler only exists to keep the form inert
-                  // if that ever changes.
                   e.preventDefault();
+                  e.stopPropagation();
+                  aiForm.handleSubmit();
                 }}
               >
-                <fieldset className="fieldset">
-                  <legend className="fieldset-legend">
-                    Number of questions
-                  </legend>
-                  <select className="select" disabled>
-                    {aiQuestionCountOptions.map((count) => (
-                      <option key={count} value={count}>
-                        {count}
-                      </option>
-                    ))}
-                  </select>
-                </fieldset>
-                <fieldset className="fieldset">
-                  <legend className="fieldset-legend">
-                    Additional instruction
-                  </legend>
-                  <textarea className="textarea" rows={3} disabled />
-                </fieldset>
-                <button type="button" className="btn" disabled>
-                  Generate questions
-                </button>
+                <aiForm.Field name="count">
+                  {(field) => (
+                    <fieldset className="fieldset">
+                      <legend className="fieldset-legend">
+                        Number of questions
+                      </legend>
+                      <select
+                        className="select"
+                        name={field.name}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) =>
+                          field.handleChange(Number(e.target.value))
+                        }
+                      >
+                        {aiQuestionCountOptions.map((count) => (
+                          <option key={count} value={count}>
+                            {count}
+                          </option>
+                        ))}
+                      </select>
+                    </fieldset>
+                  )}
+                </aiForm.Field>
+                <aiForm.Field name="additionalInstruction">
+                  {(field) => (
+                    <fieldset className="fieldset">
+                      <legend className="fieldset-legend">
+                        Additional instruction
+                      </legend>
+                      <textarea
+                        className="textarea"
+                        rows={3}
+                        name={field.name}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                      />
+                    </fieldset>
+                  )}
+                </aiForm.Field>
+                {/* Same pending pattern as the add-question form: the
+                    button disables and shows the daisyUI loading spinner
+                    while the LLM call runs, so a second submit cannot
+                    start. The label stays the same, so the accessible
+                    name does not change mid-submit. */}
+                <aiForm.Subscribe selector={(state) => state.isSubmitting}>
+                  {(isSubmitting) => (
+                    <SubmitButton
+                      label="Generate questions"
+                      submittingLabel="Generate questions"
+                      isSubmitting={isSubmitting}
+                    />
+                  )}
+                </aiForm.Subscribe>
               </form>
             </div>
           )}
