@@ -162,9 +162,9 @@ function AssignmentDetailComponent() {
   });
   // Issue #79: the AI questions form is live. The submit builds the
   // prompt on the server from the assignment's stored example, so the
-  // form carries only the count and the additional instruction. After
-  // a generate, the route reloads so the Questions tab lists the new
-  // rows.
+  // form carries only the count and the filter. The filter narrows the
+  // scope of the generated questions and answers. After a generate, the
+  // route reloads so the Questions tab lists the new rows.
   const handleGenerateSubmit = async function ({
     value,
   }: {
@@ -183,7 +183,7 @@ function AssignmentDetailComponent() {
     defaultValues: {
       assignmentId: assignment.id,
       count: 1,
-      additionalInstruction: "",
+      filter: "",
     },
     validators: {
       onSubmit: aiQuestionsFormSchema,
@@ -356,12 +356,10 @@ function AssignmentDetailComponent() {
                     </fieldset>
                   )}
                 </aiForm.Field>
-                <aiForm.Field name="additionalInstruction">
+                <aiForm.Field name="filter">
                   {(field) => (
                     <fieldset className="fieldset">
-                      <legend className="fieldset-legend">
-                        Additional instruction
-                      </legend>
+                      <legend className="fieldset-legend">Filter</legend>
                       <textarea
                         className="textarea"
                         rows={3}
@@ -370,6 +368,10 @@ function AssignmentDetailComponent() {
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
                       />
+                      <p className="fieldset-label">
+                        Optional: narrows the scope of the generated
+                        questions and answers.
+                      </p>
                     </fieldset>
                   )}
                 </aiForm.Field>

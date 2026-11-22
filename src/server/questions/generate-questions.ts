@@ -31,7 +31,7 @@ export const generateQuestions = createServerFn({ method: "POST" })
 
     const messages = buildQuestionPrompt({
       example: assignment.example ?? "",
-      additionalInstruction: data.additionalInstruction,
+      filter: data.filter,
       count: data.count,
     });
 

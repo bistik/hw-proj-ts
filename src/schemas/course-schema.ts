@@ -92,10 +92,12 @@ export const questionsBulkFormSchema = z.object({
 // Issue #79: the AI questions generate form. The count matches the AI
 // tab's "Number of questions" dropdown (issue #70: 1 to 20), so a
 // payload cannot ask for more questions than the dropdown allows. The
-// additional instruction is capped at 300 characters: enough room for
-// one clear instruction, no room for a long prompt-injection text. The
-// example is not part of the payload: the server fn reads it from the
-// assignment row, so a client cannot swap in its own.
+// filter narrows the scope of the generated questions and answers
+// ("limit answers to whole numbers under 100") and is capped at 300
+// characters: enough room for one clear filter, no room for a long
+// prompt-injection text. The example is not part of the payload: the
+// server fn reads it from the assignment row, so a client cannot swap
+// in its own.
 export const aiQuestionsFormSchema = z.object({
   assignmentId: z
     .number({
@@ -110,9 +112,7 @@ export const aiQuestionsFormSchema = z.object({
     .int()
     .min(1, { message: "Select at least one question" })
     .max(20, { message: "Select at most 20 questions" }),
-  additionalInstruction: z
-    .string()
-    .max(300, { message: "The additional instruction is too long" }),
+  filter: z.string().max(300, { message: "The filter is too long" }),
 });
 
 export const questionUpdateFormSchema = questionFormSchema

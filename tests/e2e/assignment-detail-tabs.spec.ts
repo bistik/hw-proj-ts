@@ -170,12 +170,12 @@ test.describe("assignment detail page tabs (issue #70)", () => {
       await expect(options.nth(value - 1)).toHaveText(String(value));
     }
 
-    // [Additional instruction] textarea with 3 rows.
-    const instructionTextarea = page.locator(
-      'fieldset:has-text("Additional instruction") textarea',
+    // [Filter] textarea with 3 rows.
+    const filterTextarea = page.locator(
+      'fieldset:has-text("Filter") textarea',
     );
-    await expect(instructionTextarea).toBeVisible();
-    await expect(instructionTextarea).toHaveAttribute("rows", "3");
+    await expect(filterTextarea).toBeVisible();
+    await expect(filterTextarea).toHaveAttribute("rows", "3");
 
     // [Generate questions] button.
     const generateButton = page.getByRole("button", {
@@ -184,9 +184,10 @@ test.describe("assignment detail page tabs (issue #70)", () => {
     await expect(generateButton).toBeVisible();
 
     // The whole form is live (issue #79): the author can pick a count,
-    // type an instruction, and press Generate questions.
+    // type a filter that narrows the scope, and press Generate
+    // questions.
     await expect(numberSelect).toBeEnabled();
-    await expect(instructionTextarea).toBeEnabled();
+    await expect(filterTextarea).toBeEnabled();
     await expect(generateButton).toBeEnabled();
   });
 });

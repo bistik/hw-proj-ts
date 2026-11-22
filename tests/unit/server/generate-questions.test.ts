@@ -17,8 +17,7 @@ import { executeServerFn, loadServerFnStub } from "../helpers/server-fn";
 //   "Course not found".
 // - The fn requires the caller to own the course of the assignment.
 // - The fn builds the prompt from the example stored on the assignment
-//   row (not from client input), the additional instruction, and the
-//   count.
+//   row (not from client input), the filter, and the count.
 // - The fn calls the AI service once with the built messages.
 // - The fn passes the AI questions to the createQuestions server fn,
 //   together with the loaded assignment's id, so the questions stay
@@ -73,7 +72,7 @@ const assignment = {
 const payload = {
   assignmentId: 7,
   count: 10,
-  additionalInstruction: "Limit answers to whole numbers under 100.",
+  filter: "Limit answers to whole numbers under 100.",
 };
 
 const promptMessages = [
@@ -122,7 +121,7 @@ describe("generateQuestions (issue #79)", () => {
     // cannot point the model at another assignment's example.
     expect(buildQuestionPromptMock).toHaveBeenCalledWith({
       example: assignment.example,
-      additionalInstruction: payload.additionalInstruction,
+      filter: payload.filter,
       count: payload.count,
     });
     expect(generateQuestionsWithLlmMock).toHaveBeenCalledTimes(1);
@@ -191,14 +190,14 @@ describe("generateQuestions (issue #79)", () => {
     expect(createQuestionsMock).not.toHaveBeenCalled();
   });
 
-  it("rejects an additional instruction that is too long before any work", async () => {
+  it("rejects a filter that is too long before any work", async () => {
     const fn = await loadServerFnStub(
       "@/server/questions/generate-questions.ts",
       "generateQuestions",
     );
     const response = await executeServerFn(fn, {
       ...payload,
-      additionalInstruction: "a".repeat(301),
+      filter: "a".repeat(301),
     });
     expect(response.error).toBeDefined();
     expect(dbGetAssignmentMock).not.toHaveBeenCalled();
