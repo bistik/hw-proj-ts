@@ -6,7 +6,8 @@ import { generateQuestionsWithLlm } from "@/lib/ai/llm";
 // - The fn wraps the OpenAI SDK chat completions API.
 // - The fn reads OPENCODE_API_KEY from the environment and sends it as
 //   the bearer token.
-// - The fn uses the model "mimo-v2.6-flash".
+// - The fn uses the model "mimo-v2.6-flash" by default; OPENCODE_MODEL
+//   overrides it (PR #80 review).
 // - The fn posts the given messages to the chat completions endpoint.
 // - The fn identifies itself with its own user agent and sends a
 //   session id in x-opencode-session (OpenCode Go requires both).
@@ -108,6 +109,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   delete process.env.OPENCODE_API_KEY;
+  delete process.env.OPENCODE_MODEL;
 });
 
 describe("generateQuestionsWithLlm (issue #79)", () => {
@@ -129,6 +131,16 @@ describe("generateQuestionsWithLlm (issue #79)", () => {
     // identifies itself, and a session id is always present.
     expect(request.userAgent).toBe("hw-proj-ts/1.0");
     expect(request.session).toBe("unit-test-session");
+  });
+
+  it("uses OPENCODE_MODEL instead of the default model when it is set", async () => {
+    // PR #80 review: the model is a default, so the environment can
+    // point the fn at another model.
+    process.env.OPENCODE_MODEL = "unit-test-model";
+
+    await generateQuestionsWithLlm(messages, defaultOptions);
+
+    expect(capturedRequests[0]!.body.model).toBe("unit-test-model");
   });
 
   it("sends the caller's session id in the x-opencode-session header", async () => {

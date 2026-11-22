@@ -7,6 +7,8 @@
 # OpenCode gateway. In production, set it once with:
 #   wrangler secret put OPENCODE_API_KEY
 OPENCODE_API_KEY=
+# Optional: overrides the default model (mimo-v2.6-flash).
+OPENCODE_MODEL=
 # Optional: overrides the chat completions endpoint, for example a local
 # stand-in service for tests. Default:
 # https://opencode.ai/inference/go/openai/v1

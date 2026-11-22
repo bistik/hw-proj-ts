@@ -4,10 +4,12 @@ import type { ChatMessage } from "@/lib/ai/prompt";
 
 // Issue #79: the question generation runs through the OpenAI-compatible
 // chat completions API of the OpenCode gateway. The key comes from
-// OPENCODE_API_KEY; OPENCODE_BASE_URL overrides the endpoint, so a test
-// or a local setup can point the fn at a stand-in service.
+// OPENCODE_API_KEY. The model and the endpoint below are defaults (PR
+// #80 review): OPENCODE_MODEL and OPENCODE_BASE_URL override them, so a
+// test or a local setup can point the fn at another model or a
+// stand-in service.
 
-const LLM_MODEL = "mimo-v2.6-flash";
+const LLM_DEFAULT_MODEL = "mimo-v2.6-flash";
 const LLM_DEFAULT_BASE_URL = "https://opencode.ai/inference/go/openai/v1";
 // OpenCode Go asks every client to identify itself with its own user
 // agent instead of a generic SDK name.
@@ -87,6 +89,8 @@ export async function generateQuestionsWithLlm(
     );
   }
   const baseURL = process.env.OPENCODE_BASE_URL ?? LLM_DEFAULT_BASE_URL;
+  // PR #80 review: the model is a default, not a hard-coded choice.
+  const model = process.env.OPENCODE_MODEL ?? LLM_DEFAULT_MODEL;
   const client = new OpenAI({
     apiKey,
     baseURL,
@@ -101,7 +105,7 @@ export async function generateQuestionsWithLlm(
   });
 
   const completion = await client.chat.completions.create({
-    model: LLM_MODEL,
+    model,
     // The builder emits only "system" and "user" messages; the SDK's
     // param type narrows the role union, so the wide ChatMessage type
     // needs this cast.
