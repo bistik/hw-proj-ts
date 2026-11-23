@@ -15,7 +15,10 @@ import {
 // - A student "has not submitted" (issue #41) when their submission row
 //   for the assignment has no submitted_at value, or when the student
 //   has no submission row at all.
-// - The students are the enrollment rows of the assignment's course.
+// - The students are the enrollment rows of the assignment's course
+//   with status "active" or "completed" — the same definition of
+//   "student of the course" as the rest of the app. Enrollments with
+//   status "invited", "declined", or "dropped" never count.
 // - The helper returns true when at least one student has not
 //   submitted, and false otherwise.
 // - Students of other courses and submissions of other assignments
@@ -90,5 +93,48 @@ describe("dbHasUnsubmittedWork (issue #41)", () => {
 
     expect(await dbHasUnsubmittedWork(207)).toBe(false);
     expect(await dbHasUnsubmittedWork(208)).toBe(true);
+  });
+
+  it("ignores an invited student who has no submission row", async () => {
+    await seedUser("u-invited");
+    await seedCourse(27, "author-20");
+    await seedAssignment(209, 27);
+    // The invite flow creates enrollment rows with status "invited".
+    // The student never accepted, so they cannot open the course and
+    // can never submit. They must not block the delete.
+    await seedEnrollment("u-invited", 27, "invited");
+
+    expect(await dbHasUnsubmittedWork(209)).toBe(false);
+  });
+
+  it("ignores a dropped student who has no submission row", async () => {
+    await seedUser("u-dropped");
+    await seedCourse(28, "author-20");
+    await seedAssignment(210, 28);
+    // The student left the course, so they cannot submit anymore.
+    await seedEnrollment("u-dropped", 28, "dropped");
+
+    expect(await dbHasUnsubmittedWork(210)).toBe(false);
+  });
+
+  it("counts a completed student who has not submitted", async () => {
+    await seedUser("u-completed");
+    await seedCourse(29, "author-20");
+    await seedAssignment(211, 29);
+    // "completed" is the second accepted status, so this student
+    // still counts as a student of the course.
+    await seedEnrollment("u-completed", 29, "completed");
+
+    expect(await dbHasUnsubmittedWork(211)).toBe(true);
+  });
+
+  it("blocks the delete when an active student is pending next to a dropped one", async () => {
+    await seedUser("u-pending-active");
+    await seedCourse(30, "author-20");
+    await seedAssignment(212, 30);
+    await seedEnrollment("u-pending-active", 30);
+    await seedEnrollment("u-dropped", 30, "dropped");
+
+    expect(await dbHasUnsubmittedWork(212)).toBe(true);
   });
 });

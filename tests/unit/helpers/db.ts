@@ -3,28 +3,38 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db/";
 
 /**
- * Creates every table from the real migration file
- * drizzle/0000_purple_giant_girl.sql: users, courses, enrollments,
- * course_items, lessons, assignments, questions, submissions, and
- * answers. The in-memory database therefore keeps the production
- * constraints, including the foreign keys that cascade an assignment
- * delete to its questions, submissions, and answers (issue #41). A
- * migration edit cannot make the test schema drift from the production
- * schema.
+ * Creates every table by running the real migration files
+ * (drizzle/*.sql) in the order of drizzle/meta/_journal.json — the
+ * same order as `npm run db:migrate`. The in-memory database therefore
+ * keeps the production schema, including the foreign keys that cascade
+ * an assignment delete to its questions, submissions, and answers
+ * (issue #41). Migration 0003 removed the early enrollments status
+ * check, so a seeded enrollment may carry any status, for example
+ * "invited". A migration edit cannot make the test schema drift from
+ * the production schema.
  */
 export async function createSchema(): Promise<void> {
-  const migration = readFileSync(
-    new URL("../../../drizzle/0000_purple_giant_girl.sql", import.meta.url),
-    "utf8",
-  );
-  // drizzle separates the migration statements with this marker. The
-  // database client runs one statement per call, so this loop runs
-  // each statement alone.
-  for (const statement of migration.split("--> statement-breakpoint")) {
-    if (statement.trim().length === 0) {
-      continue;
+  const journal = JSON.parse(
+    readFileSync(
+      new URL("../../../drizzle/meta/_journal.json", import.meta.url),
+      "utf8",
+    ),
+  ) as { entries: Array<{ tag: string }> };
+
+  for (const { tag } of journal.entries) {
+    const migration = readFileSync(
+      new URL(`../../../drizzle/${tag}.sql`, import.meta.url),
+      "utf8",
+    );
+    // drizzle separates the migration statements with this marker. The
+    // database client runs one statement per call, so this loop runs
+    // each statement alone.
+    for (const statement of migration.split("--> statement-breakpoint")) {
+      if (statement.trim().length === 0) {
+        continue;
+      }
+      await db.run(sql.raw(statement));
     }
-    await db.run(sql.raw(statement));
   }
 }
 

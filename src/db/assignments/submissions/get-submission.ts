@@ -7,7 +7,7 @@ import {
   submissionAnswersTable,
   users,
 } from "@/db/schema";
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 
 export async function dbGetSubmissionsByCourse(courseId: number) {
   return (
@@ -150,6 +150,13 @@ export async function dbGetSubmissionForReview(submissionId: number) {
  * matches both cases — a submission row without submitted_at, and no
  * submission row at all (the left join yields null there). A submitted
  * row filters out, so only the pending students survive.
+ *
+ * Only enrollments with status "active" or "completed" count, the
+ * same definition of "student of the course" as requireUserEnrolledIn
+ * Course (src/db/authz.ts) and the course reads (src/db/courses/
+ * get-course.ts). An "invited" student never accepted the invite, so
+ * they cannot open the course and can never submit; "declined" and
+ * "dropped" students left the course. None of them blocks the delete.
  */
 export async function dbHasUnsubmittedWork(assignmentId: number) {
   const pending = await db
@@ -169,6 +176,7 @@ export async function dbHasUnsubmittedWork(assignmentId: number) {
     .where(
       and(
         eq(assignmentsTable.id, assignmentId),
+        inArray(enrollmentsTable.status, ["active", "completed"]),
         isNull(assignmentSubmissionsTable.submittedAt),
       ),
     )

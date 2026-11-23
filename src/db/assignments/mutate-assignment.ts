@@ -73,7 +73,11 @@ export async function dbUpdateAssignment(data: {
  *
  * The where clauses scope both deletes to the course, so a caller that
  * mixed up course and assignment ids cannot delete rows of another
- * course. The questions, submissions, and submission answers go with
+ * course. The assignments row goes first: when it does not match (a
+ * race or inconsistent data), the transaction changes nothing and
+ * returns null. The outline row is deleted only when the assignment
+ * delete returned an id, so "nothing deleted" always means no row
+ * changed. The questions, submissions, and submission answers go with
  * the assignment through the schema's foreign keys (database cascade).
  */
 export const dbDeleteAssignment = async function (data: {
@@ -81,16 +85,6 @@ export const dbDeleteAssignment = async function (data: {
   assignmentId: number;
 }) {
   return db.transaction(async (tx) => {
-    await tx
-      .delete(courseItemsTable)
-      .where(
-        and(
-          eq(courseItemsTable.courseId, data.courseId),
-          eq(courseItemsTable.itemType, "assignment"),
-          eq(courseItemsTable.itemId, data.assignmentId),
-        ),
-      );
-
     const deleted = await tx
       .delete(assignmentsTable)
       .where(
@@ -101,6 +95,21 @@ export const dbDeleteAssignment = async function (data: {
       )
       .returning({ assignmentId: assignmentsTable.id });
 
-    return deleted[0] ?? null;
+    const assignment = deleted[0] ?? null;
+    if (!assignment) {
+      return null;
+    }
+
+    await tx
+      .delete(courseItemsTable)
+      .where(
+        and(
+          eq(courseItemsTable.courseId, data.courseId),
+          eq(courseItemsTable.itemType, "assignment"),
+          eq(courseItemsTable.itemId, data.assignmentId),
+        ),
+      );
+
+    return assignment;
   });
 };
