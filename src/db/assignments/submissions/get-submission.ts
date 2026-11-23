@@ -2,11 +2,12 @@ import { db } from "@/db";
 import {
   assignmentSubmissionsTable,
   assignmentsTable,
+  enrollmentsTable,
   questionsTable,
   submissionAnswersTable,
   users,
 } from "@/db/schema";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 
 export async function dbGetSubmissionsByCourse(courseId: number) {
   return (
@@ -134,4 +135,44 @@ export async function dbGetSubmissionForReview(submissionId: number) {
     .orderBy(asc(questionsTable.position));
 
   return { submission, assignee, questions };
+}
+
+/**
+ * Issue #41 guard: reports whether a student of the assignment's course
+ * has not submitted the assignment — their submission row has no
+ * submitted_at value, or they have no submission row at all. The helper
+ * takes only the assignment id and derives the course by itself, so a
+ * caller cannot scope the check to the wrong course.
+ *
+ * One query answers it: the inner join ties the enrollments of the
+ * course to the assignment row, and the left join keeps every enrolled
+ * student even without a submission row. isNull(submitted_at) then
+ * matches both cases — a submission row without submitted_at, and no
+ * submission row at all (the left join yields null there). A submitted
+ * row filters out, so only the pending students survive.
+ */
+export async function dbHasUnsubmittedWork(assignmentId: number) {
+  const pending = await db
+    .select({ submissionId: assignmentSubmissionsTable.id })
+    .from(enrollmentsTable)
+    .innerJoin(
+      assignmentsTable,
+      eq(enrollmentsTable.courseId, assignmentsTable.courseId),
+    )
+    .leftJoin(
+      assignmentSubmissionsTable,
+      and(
+        eq(assignmentSubmissionsTable.assignmentId, assignmentsTable.id),
+        eq(assignmentSubmissionsTable.assigneeId, enrollmentsTable.userId),
+      ),
+    )
+    .where(
+      and(
+        eq(assignmentsTable.id, assignmentId),
+        isNull(assignmentSubmissionsTable.submittedAt),
+      ),
+    )
+    .limit(1);
+
+  return pending.length > 0;
 }

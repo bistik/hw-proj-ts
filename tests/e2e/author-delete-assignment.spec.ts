@@ -143,7 +143,10 @@ test.describe("author deletes an assignment (issue #41)", () => {
     page,
   }) => {
     await ensureSignedUp(OTHER_USER);
-    const title = `Unsubmitted course ${Date.now()}`;
+    // The title must not contain the word "unsubmitted": the assertion
+    // below finds the delete error by that word, and strict mode
+    // forbids a second match on the course title heading.
+    const title = `Blocked delete course ${Date.now()}`;
     const courseId = await seedCourse(TEST_USER.email, {
       title,
       description: "Course whose assignment a student has not submitted.",
