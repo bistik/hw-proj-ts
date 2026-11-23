@@ -1,6 +1,8 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import ConfirmModal from "@/components/confirm-modal";
+import FormErrorAlert from "@/components/form-error-alert";
+import { deleteAssignment } from "@/server/assignments/mutate-assignment";
 import { deleteLesson } from "@/server/lessons/mutate-lesson";
 
 /** Identifies one outline row: the coordinates the move server fn takes. */
@@ -54,10 +56,13 @@ function itemTypeBadgeClass(itemType: "lesson" | "assignment") {
  * disables and the clicked button shows a loading spinner — a second
  * reorder cannot start before the first one lands.
  *
- * Lesson cards carry a "Delete lesson" action (issue #40): it opens the
- * ConfirmModal and, on Okay, deletes the lesson row and its course_items
- * outline row through the deleteLesson server fn, then reloads the route
- * data. Assignment cards get no delete action (issue #41 covers them).
+ * Lesson cards carry a "Delete lesson" action (issue #40) and assignment
+ * cards a "Delete assignment" action (issue #41): each opens the
+ * ConfirmModal and, on Okay, deletes the item row and its course_items
+ * outline row through the matching server fn, then reloads the route
+ * data. The assignment delete refuses to run while a student of the
+ * course has not submitted: the server fn answers with an error, the
+ * modal closes, and the card shows the message through FormErrorAlert.
  */
 export default function AuthorCourseItemCard({
   itemType,
@@ -72,6 +77,10 @@ export default function AuthorCourseItemCard({
 }: AuthorCourseItemCardProps) {
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  // The error message from the last delete attempt, or null when it
+  // worked. The card shows it through FormErrorAlert, like the route's
+  // move error (issue #43).
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const showMoveUp = !isFirst;
   const showMoveDown = !isLast;
   // Every move button disables while any outline move is in flight, so a
@@ -86,6 +95,34 @@ export default function AuthorCourseItemCard({
   // the same card disable without one.
   const moveUpPending = isMovingCard && moving.direction === "up";
   const moveDownPending = isMovingCard && moving.direction === "down";
+  // The delete action label and confirm text depend on the item type,
+  // so each modal names what the delete removes.
+  const itemTypeName = itemType === "lesson" ? "lesson" : "assignment";
+
+  // Deletes the item row and its outline row through the matching
+  // server fn, then reloads the route so the outline drops the card.
+  // The catch keeps the ConfirmModal's flow intact: the fn's message
+  // (e.g. "Cannot delete an assignment with unsubmitted work.") shows
+  // on the card instead of an unhandled rejection behind the modal.
+  const handleDelete = async () => {
+    try {
+      if (itemType === "lesson") {
+        await deleteLesson({ data: { lessonId: itemId } });
+      } else {
+        await deleteAssignment({ data: { assignmentId: itemId } });
+      }
+    } catch (err) {
+      console.error(`Error in deleting ${itemType} ${itemId}`, err);
+      setDeleteError(
+        err instanceof Error
+          ? err.message
+          : `Could not delete the ${itemTypeName}. Please try again.`,
+      );
+      return;
+    }
+    setDeleteError(null);
+    await router.invalidate();
+  };
   return (
     <div className="card w-full bg-base-100 border-2 border-base-300 shadow-md">
       {/* Header strip: item title link, with the type badge on the right
@@ -115,102 +152,101 @@ export default function AuthorCourseItemCard({
         </span>
       </div>
 
-      {/* Main window content area: the move controls and, on lesson cards,
-          the delete action. [Move down] calls the moveCourseItemDown server
-          fn through the route's onMoveDown handler (issue #43); [Move up]
-          calls the moveCourseItemUp server fn through the route's onMoveUp
-          handler (issue #44). A single-item assignment card shows no
-          button, so the body renders only when something can be shown. */}
-      {(showMoveUp || showMoveDown || itemType === "lesson") && (
-        <div className="card-body">
-          <div className="card-actions justify-end">
-            {showMoveUp && (
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                disabled={moveDisabled}
-                onClick={onMoveUp}
-              >
-                {moveUpPending ? (
-                  // daisyUI spinner while the move server fn runs, like the
-                  // ConfirmModal's Okay button (issue #43).
-                  <span className="loading loading-spinner"></span>
-                ) : (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                    className="inline-block h-4 w-4 stroke-current"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2.25"
-                      d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18"
-                    />
-                  </svg>
-                )}
-                Move up
-              </button>
-            )}
-            {showMoveDown && (
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                disabled={moveDisabled}
-                onClick={onMoveDown}
-              >
-                {moveDownPending ? (
-                  // daisyUI spinner while the move server fn runs, like the
-                  // ConfirmModal's Okay button (issue #43).
-                  <span className="loading loading-spinner"></span>
-                ) : (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                    className="inline-block h-4 w-4 stroke-current"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2.25"
-                      d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3"
-                    />
-                  </svg>
-                )}
-                Move down
-              </button>
-            )}
-            {itemType === "lesson" && (
-              <button
-                type="button"
-                className="btn btn-error btn-sm"
-                onClick={() => setDeleteOpen(true)}
-              >
-                Delete lesson
-              </button>
-            )}
-          </div>
+      {/* Main window content area: the move controls and the delete
+          action. [Move down] calls the moveCourseItemDown server fn
+          through the route's onMoveDown handler (issue #43); [Move up]
+          calls the moveCourseItemUp server fn through the route's
+          onMoveUp handler (issue #44). Both item types carry a delete
+          action (issues #40 and #41), so the body always renders. */}
+      <div className="card-body">
+        {deleteError !== null && <FormErrorAlert errorMsg={deleteError} />}
+        <div className="card-actions justify-end">
+          {showMoveUp && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              disabled={moveDisabled}
+              onClick={onMoveUp}
+            >
+              {moveUpPending ? (
+                // daisyUI spinner while the move server fn runs, like the
+                // ConfirmModal's Okay button (issue #43).
+                <span className="loading loading-spinner"></span>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  className="inline-block h-4 w-4 stroke-current"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2.25"
+                    d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18"
+                  />
+                </svg>
+              )}
+              Move up
+            </button>
+          )}
+          {showMoveDown && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              disabled={moveDisabled}
+              onClick={onMoveDown}
+            >
+              {moveDownPending ? (
+                // daisyUI spinner while the move server fn runs, like the
+                // ConfirmModal's Okay button (issue #43).
+                <span className="loading loading-spinner"></span>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  className="inline-block h-4 w-4 stroke-current"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2.25"
+                    d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3"
+                  />
+                </svg>
+              )}
+              Move down
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn-error btn-sm"
+            onClick={() => {
+              // A new delete attempt clears the error from the
+              // previous one, so the alert always shows the outcome
+              // of the latest attempt.
+              setDeleteError(null);
+              setDeleteOpen(true);
+            }}
+          >
+            {itemType === "lesson" ? "Delete lesson" : "Delete assignment"}
+          </button>
         </div>
-      )}
+      </div>
 
-      {itemType === "lesson" && (
+      {/* The ConfirmModal exists in the DOM only while it is open: the
+          outline holds one card per item, and a permanently mounted
+          dialog per card would give the page several .modal-box
+          elements, so a spec that locates the open modal by class
+          would match all of them at once. */}
+      {deleteOpen && (
         <ConfirmModal
           open={deleteOpen}
-          message={`Delete lesson "${title}"? This cannot be undone.`}
-          onConfirm={async () => {
-            // Remove the lesson and its outline row, then reload the route
-            // so the outline drops the card. The ConfirmModal keeps the
-            // button spinning until this resolves, so the delete cannot be
-            // double-fired while the page reloads.
-            await deleteLesson({
-              data: { lessonId: itemId },
-            });
-            await router.invalidate();
-          }}
+          message={`Delete ${itemTypeName} "${title}"? This cannot be undone.`}
+          onConfirm={handleDelete}
           onClose={() => setDeleteOpen(false)}
         />
       )}

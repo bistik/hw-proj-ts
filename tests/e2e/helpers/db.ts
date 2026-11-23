@@ -453,6 +453,49 @@ export async function getLessonRow(
 }
 
 /**
+ * Reads the assignment row with the given id. Returns null when the row
+ * is missing — which is the behaviour under test in issue #41 (delete
+ * an assignment), so this read helper (unlike the seeders) must not
+ * throw.
+ */
+export async function getAssignmentRow(
+  assignmentId: number,
+): Promise<{ course_id: number; title: string } | null> {
+  const result = await client.execute({
+    sql: "SELECT course_id, title FROM assignments WHERE id = ?",
+    args: [assignmentId],
+  });
+  const row = result.rows[0];
+  if (!row) {
+    return null;
+  }
+  return { course_id: Number(row.course_id), title: String(row.title) };
+}
+
+/**
+ * Reads the assignment_submissions row with the given id. Returns null
+ * when the row is missing — which is the cascade behaviour under test
+ * in issue #41 (delete an assignment), so this read helper (unlike the
+ * seeders) must not throw.
+ */
+export async function getSubmissionRow(
+  submissionId: number,
+): Promise<{ assignment_id: number; submitted_at: number | null } | null> {
+  const result = await client.execute({
+    sql: "SELECT assignment_id, submitted_at FROM assignment_submissions WHERE id = ?",
+    args: [submissionId],
+  });
+  const row = result.rows[0];
+  if (!row) {
+    return null;
+  }
+  return {
+    assignment_id: Number(row.assignment_id),
+    submitted_at: row.submitted_at === null ? null : Number(row.submitted_at),
+  };
+}
+
+/**
  * Reads the question row with the given id. Returns null when the row is
  * missing — which is the behaviour under test in issue #54 (delete a
  * question), so this read helper (unlike the seeders) must not throw.

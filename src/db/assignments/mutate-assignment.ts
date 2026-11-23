@@ -1,6 +1,6 @@
 import { db } from "@/db/";
 import { assignmentsTable, courseItemsTable } from "../schema";
-import { eq, max } from "drizzle-orm";
+import { and, eq, max } from "drizzle-orm";
 
 /**
  * Inserts the assignment row and its course_items outline row in one
@@ -58,3 +58,58 @@ export async function dbUpdateAssignment(data: {
 
   return updated ?? null;
 }
+
+/**
+ * Deletes the assignment row and its course_items outline row in one
+ * transaction (issue #41). course_items has no foreign key on item_id
+ * (lesson and assignment ids share one value space), so the database
+ * cannot cascade the outline row: the app must delete it here, in the
+ * same transaction, or the outline keeps pointing at a missing
+ * assignment.
+ *
+ * The delete does not renumber the other outline rows: their positions
+ * stay as they are (the course_items_course_position_unique index has
+ * no collision with gaps).
+ *
+ * The where clauses scope both deletes to the course, so a caller that
+ * mixed up course and assignment ids cannot delete rows of another
+ * course. The assignments row goes first: when it does not match (a
+ * race or inconsistent data), the transaction changes nothing and
+ * returns null. The outline row is deleted only when the assignment
+ * delete returned an id, so "nothing deleted" always means no row
+ * changed. The questions, submissions, and submission answers go with
+ * the assignment through the schema's foreign keys (database cascade).
+ */
+export const dbDeleteAssignment = async function (data: {
+  courseId: number;
+  assignmentId: number;
+}) {
+  return db.transaction(async (tx) => {
+    const deleted = await tx
+      .delete(assignmentsTable)
+      .where(
+        and(
+          eq(assignmentsTable.id, data.assignmentId),
+          eq(assignmentsTable.courseId, data.courseId),
+        ),
+      )
+      .returning({ assignmentId: assignmentsTable.id });
+
+    const assignment = deleted[0] ?? null;
+    if (!assignment) {
+      return null;
+    }
+
+    await tx
+      .delete(courseItemsTable)
+      .where(
+        and(
+          eq(courseItemsTable.courseId, data.courseId),
+          eq(courseItemsTable.itemType, "assignment"),
+          eq(courseItemsTable.itemId, data.assignmentId),
+        ),
+      );
+
+    return assignment;
+  });
+};

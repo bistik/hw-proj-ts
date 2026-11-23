@@ -17,7 +17,7 @@ export async function dbGetAssignment(assignmentId: number) {
 export async function dbGetAssignmentByIdAndAuthor(
   assignmentId: number,
   authorId: string,
-) {
+): Promise<typeof assignmentsTable.$inferSelect | undefined> {
   const result = await db
     .select({ assignment: assignmentsTable })
     .from(assignmentsTable)
