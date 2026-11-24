@@ -280,6 +280,9 @@ function AssignmentDetailComponent() {
           Edit assignment
         </Link>
       </h2>
+      {/* Issue #84: the points render below the assignment title, so
+          every tab shows them. */}
+      <p className="mb-6">Points: {assignment.points}</p>
       {/* PR #80 review: the outcome of the last generate stays above the
           tabs, so it survives the switch to the Questions tab. */}
       {generatedCount > 0 && (

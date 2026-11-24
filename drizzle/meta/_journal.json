@@ -43,6 +43,13 @@
       "when": 1795057713420,
       "tag": "0005_add-invites-table",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1795511187399,
+      "tag": "0006_add-points-to-assignments",
+      "breakpoints": true
     }
   ]
 }

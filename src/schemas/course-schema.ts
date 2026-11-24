@@ -47,12 +47,24 @@ export const assignmentFormSchema = z.object({
     })
     .int()
     .positive("Please select a valid course"),
+  // Issue #84: an assignment gets a points field. The form's "points"
+  // dropdown offers exactly 1 to 10, so a payload cannot ask for points
+  // outside the dropdown. The points are required: the detail page
+  // displays them below the assignment title.
+  points: z
+    .number({
+      error: "Please select the points",
+    })
+    .int()
+    .min(1, { message: "Select at least one point" })
+    .max(10, { message: "Select at most 10 points" }),
 });
 
 export const defaultValuesAssignment: z.input<typeof assignmentFormSchema> = {
   title: "",
   example: "",
   courseId: 0,
+  points: 1,
 };
 
 export const questionFormSchema = z.object({
@@ -181,6 +193,16 @@ export const assignmentUpdateFormSchema = z.object({
   assignmentId: z.number().int().positive("Invalid assignment id"),
   title: z.string().trim().min(1, { message: "Title is required" }),
   example: z.string(),
+  // Issue #84: the update payload holds the same points field with the
+  // same bounds as the create payload, so the edit form cannot save
+  // points outside the dropdown.
+  points: z
+    .number({
+      error: "Please select the points",
+    })
+    .int()
+    .min(1, { message: "Select at least one point" })
+    .max(10, { message: "Select at most 10 points" }),
 });
 
 export const courseUpdateFormSchema = z.object({

@@ -13,6 +13,7 @@ export async function dbCreateAssignment(data: {
   title: string;
   courseId: number;
   example: string;
+  points: number;
 }) {
   return db.transaction(async (tx) => {
     const assignment = await tx
@@ -21,6 +22,7 @@ export async function dbCreateAssignment(data: {
         title: data.title,
         courseId: data.courseId,
         example: data.example || null,
+        points: data.points,
       })
       .returning({ assignmentId: assignmentsTable.id })
       .then((res) => res[0]);
@@ -49,10 +51,15 @@ export async function dbUpdateAssignment(data: {
   title: string;
   assignmentId: number;
   example: string;
+  points: number;
 }) {
   const [updated] = await db
     .update(assignmentsTable)
-    .set({ title: data.title, example: data.example || null })
+    .set({
+      title: data.title,
+      example: data.example || null,
+      points: data.points,
+    })
     .where(eq(assignmentsTable.id, data.assignmentId))
     .returning();
 

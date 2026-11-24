@@ -59,6 +59,10 @@ export const assignmentsTable = sqliteTable("assignments", {
   id: int().primaryKey({ autoIncrement: true }),
   title: text().notNull(),
   example: text(),
+  // Issue #84: the assignment's points, chosen from the 1 to 10 dropdown
+  // on the create and edit forms. The default keeps older rows and rows
+  // inserted without points valid.
+  points: int("points").notNull().default(1),
   courseId: int("course_id").references(() => coursesTable.id, {
     onDelete: "cascade",
   }),

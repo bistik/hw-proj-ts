@@ -1,0 +1,1 @@
+ALTER TABLE `assignments` ADD `points` integer DEFAULT 1 NOT NULL;

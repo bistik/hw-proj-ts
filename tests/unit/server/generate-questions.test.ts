@@ -179,6 +179,7 @@ describe("generateQuestions (issue #79)", () => {
       courseId: 10,
       title: "No-example assignment",
       example: null,
+      points: 1,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
