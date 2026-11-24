@@ -473,6 +473,27 @@ export async function getAssignmentRow(
 }
 
 /**
+ * Reads the stored value of an assignment's check_on_submit column
+ * (issue #86). The author sets it through the "Check answers on submit"
+ * checkbox on the create and edit forms. Throws when the row is
+ * missing, because that is always a test bug (a wrong id), not the
+ * behaviour under test.
+ */
+export async function getAssignmentCheckOnSubmit(
+  assignmentId: number,
+): Promise<boolean> {
+  const result = await client.execute({
+    sql: "SELECT check_on_submit FROM assignments WHERE id = ?",
+    args: [assignmentId],
+  });
+  const value = result.rows[0]?.check_on_submit;
+  if (value === undefined) {
+    throw new Error(`[e2e] no assignment found with id ${assignmentId}`);
+  }
+  return Boolean(value);
+}
+
+/**
  * Reads the assignment_submissions row with the given id. Returns null
  * when the row is missing — which is the cascade behaviour under test
  * in issue #41 (delete an assignment), so this read helper (unlike the

@@ -12,7 +12,12 @@ import { expect, type Page } from "@playwright/test";
 export async function createAssignmentViaUi(
   page: Page,
   courseId: number,
-  assignment: { title: string; example: string; points?: number },
+  assignment: {
+    title: string;
+    example: string;
+    points?: number;
+    checkOnSubmit?: boolean;
+  },
 ) {
   await page.goto(`/courses/${courseId}/assignments/new`);
   // Like loginViaUi: wait for hydration so the React submit handler
@@ -30,6 +35,16 @@ export async function createAssignmentViaUi(
     await page
       .locator('fieldset:has-text("Points") select')
       .selectOption(String(assignment.points));
+  }
+  // Issue #86: the form has a "Check answers on submit" checkbox. Only
+  // set when the caller passes checkOnSubmit, so the existing callers
+  // keep working. check()/uncheck() wait for the checkbox, so a form
+  // without it fails right here.
+  if (assignment.checkOnSubmit !== undefined) {
+    const checkbox = page.locator(
+      'fieldset:has-text("Check answers on submit") input[type="checkbox"]',
+    );
+    await (assignment.checkOnSubmit ? checkbox.check() : checkbox.uncheck());
   }
 
   // Like loginViaUi: in dev the first click can race the module graph load
