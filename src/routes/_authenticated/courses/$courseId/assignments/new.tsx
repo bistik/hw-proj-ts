@@ -75,6 +75,8 @@ function NewAssignmentComponent() {
       example: "",
       courseId: course.id,
       points: 1,
+      // Issue #86: the checkbox is off/unchecked by default.
+      checkOnSubmit: false,
     },
     validators: {
       onSubmit: assignmentFormSchema,
@@ -138,6 +140,27 @@ function NewAssignmentComponent() {
                   </option>
                 ))}
               </select>
+            </fieldset>
+          )}
+        </form.Field>
+        {/* Issue #86: the "Check answers on submit" checkbox, same
+            fieldset/legend pattern as the Points field. The form always
+            submits the checkbox value, so the payload always holds the
+            required checkOnSubmit field. */}
+        <form.Field name="checkOnSubmit">
+          {(field) => (
+            <fieldset className="fieldset">
+              <legend className="fieldset-legend">
+                Check answers on submit
+              </legend>
+              <input
+                type="checkbox"
+                className="checkbox"
+                name={field.name}
+                checked={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.checked)}
+              />
             </fieldset>
           )}
         </form.Field>

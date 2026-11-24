@@ -283,6 +283,11 @@ function AssignmentDetailComponent() {
       {/* Issue #84: the points render below the assignment title, so
           every tab shows them. */}
       <p className="mb-6">Points: {assignment.points}</p>
+      {/* Issue #86: the toggle renders below the points, so every tab
+          shows the stored value ("Yes" for on, "No" for off). */}
+      <p className="mb-6">
+        Check answers on submit: {assignment.checkOnSubmit ? "Yes" : "No"}
+      </p>
       {/* PR #80 review: the outcome of the last generate stays above the
           tabs, so it survives the switch to the Questions tab. */}
       {generatedCount > 0 && (

@@ -54,6 +54,9 @@ function EditAssignmentComponent() {
       // Issue #84: prefill the dropdown with the stored points, so a
       // title-only edit cannot reset them.
       points: assignment.points,
+      // Issue #86: prefill the checkbox with the stored value, so a
+      // title-only edit cannot reset the toggle.
+      checkOnSubmit: assignment.checkOnSubmit ?? false,
     },
     validators: {
       onSubmit: assignmentUpdateFormSchema,
@@ -102,6 +105,25 @@ function EditAssignmentComponent() {
                   </option>
                 ))}
               </select>
+            </fieldset>
+          )}
+        </form.Field>
+        {/* Issue #86: the same "Check answers on submit" checkbox as the
+            create form, prefilled with the stored value. */}
+        <form.Field name="checkOnSubmit">
+          {(field) => (
+            <fieldset className="fieldset">
+              <legend className="fieldset-legend">
+                Check answers on submit
+              </legend>
+              <input
+                type="checkbox"
+                className="checkbox"
+                name={field.name}
+                checked={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.checked)}
+              />
             </fieldset>
           )}
         </form.Field>

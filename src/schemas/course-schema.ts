@@ -58,6 +58,10 @@ export const assignmentFormSchema = z.object({
     .int()
     .min(1, { message: "Select at least one point" })
     .max(10, { message: "Select at most 10 points" }),
+  // Issue #86: the assignment's "Check answers on submit" toggle. The
+  // field is required: the form always submits the checkbox value, so a
+  // payload without the field cannot come from the real form.
+  checkOnSubmit: z.boolean(),
 });
 
 export const defaultValuesAssignment: z.input<typeof assignmentFormSchema> = {
@@ -65,6 +69,8 @@ export const defaultValuesAssignment: z.input<typeof assignmentFormSchema> = {
   example: "",
   courseId: 0,
   points: 1,
+  // Issue #86: the checkbox is off/unchecked by default.
+  checkOnSubmit: false,
 };
 
 export const questionFormSchema = z.object({
@@ -203,6 +209,9 @@ export const assignmentUpdateFormSchema = z.object({
     .int()
     .min(1, { message: "Select at least one point" })
     .max(10, { message: "Select at most 10 points" }),
+  // Issue #86: the update payload holds the same toggle field as the
+  // create payload, so the edit form cannot lose or skip the checkbox.
+  checkOnSubmit: z.boolean(),
 });
 
 export const courseUpdateFormSchema = z.object({

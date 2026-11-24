@@ -20,12 +20,16 @@ const validCreatePayload = {
   title: "Points assignment",
   example: "Example for the points assignment",
   courseId: 3,
+  // Issue #86 added a required checkOnSubmit field to both payloads,
+  // so a valid payload must carry it too.
+  checkOnSubmit: false,
 };
 
 const validUpdatePayload = {
   assignmentId: 9,
   title: "Points assignment",
   example: "Example for the points assignment",
+  checkOnSubmit: false,
 };
 
 describe("assignmentFormSchema points (issue #84)", () => {
