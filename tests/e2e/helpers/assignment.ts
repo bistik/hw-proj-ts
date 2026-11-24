@@ -12,7 +12,7 @@ import { expect, type Page } from "@playwright/test";
 export async function createAssignmentViaUi(
   page: Page,
   courseId: number,
-  assignment: { title: string; example: string },
+  assignment: { title: string; example: string; points?: number },
 ) {
   await page.goto(`/courses/${courseId}/assignments/new`);
   // Like loginViaUi: wait for hydration so the React submit handler
@@ -22,6 +22,15 @@ export async function createAssignmentViaUi(
   await page
     .locator('fieldset:has-text("Example") textarea')
     .fill(assignment.example);
+  // Issue #84: the form has a "points" dropdown (issue text: label
+  // 'points', values 1-10). Only filled when the caller passes points,
+  // so the existing two-field callers keep working. selectOption waits
+  // for the dropdown, so a form without it fails right here.
+  if (assignment.points !== undefined) {
+    await page
+      .locator('fieldset:has-text("Points") select')
+      .selectOption(String(assignment.points));
+  }
 
   // Like loginViaUi: in dev the first click can race the module graph load
   // and do nothing (no navigation, no error); a later click submits.
