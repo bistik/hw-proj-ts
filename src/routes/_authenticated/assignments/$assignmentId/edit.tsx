@@ -56,7 +56,7 @@ function EditAssignmentComponent() {
       points: assignment.points,
       // Issue #86: prefill the checkbox with the stored value, so a
       // title-only edit cannot reset the toggle.
-      checkOnSubmit: assignment.checkOnSubmit ?? false,
+      checkOnSubmit: assignment.checkOnSubmit,
     },
     validators: {
       onSubmit: assignmentUpdateFormSchema,
