@@ -50,6 +50,13 @@
       "when": 1795511187399,
       "tag": "0006_add-points-to-assignments",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1795528472867,
+      "tag": "0007_add-check-on-submit-to-assignments",
+      "breakpoints": true
     }
   ]
 }

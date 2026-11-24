@@ -180,6 +180,7 @@ describe("generateQuestions (issue #79)", () => {
       title: "No-example assignment",
       example: null,
       points: 1,
+      checkOnSubmit: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     });

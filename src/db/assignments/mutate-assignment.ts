@@ -14,6 +14,7 @@ export async function dbCreateAssignment(data: {
   courseId: number;
   example: string;
   points: number;
+  checkOnSubmit: boolean;
 }) {
   return db.transaction(async (tx) => {
     const assignment = await tx
@@ -23,6 +24,7 @@ export async function dbCreateAssignment(data: {
         courseId: data.courseId,
         example: data.example || null,
         points: data.points,
+        checkOnSubmit: data.checkOnSubmit,
       })
       .returning({ assignmentId: assignmentsTable.id })
       .then((res) => res[0]);
@@ -52,6 +54,7 @@ export async function dbUpdateAssignment(data: {
   assignmentId: number;
   example: string;
   points: number;
+  checkOnSubmit: boolean;
 }) {
   const [updated] = await db
     .update(assignmentsTable)
@@ -59,6 +62,7 @@ export async function dbUpdateAssignment(data: {
       title: data.title,
       example: data.example || null,
       points: data.points,
+      checkOnSubmit: data.checkOnSubmit,
     })
     .where(eq(assignmentsTable.id, data.assignmentId))
     .returning();

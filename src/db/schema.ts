@@ -63,6 +63,19 @@ export const assignmentsTable = sqliteTable("assignments", {
   // on the create and edit forms. The default keeps older rows and rows
   // inserted without points valid.
   points: int("points").notNull().default(1),
+  // Issue #86: the author sets this toggle through the "Check answers
+  // on submit" checkbox on the create and edit forms. The default keeps
+  // older rows and rows inserted without the toggle valid (off).
+  //
+  // drizzle-kit push note (0.31.11): push reads `default: false` as "no
+  // default" (a falsy check), so a FIRST push of this column against a
+  // non-empty assignments table plans a destructive `delete from
+  // assignments;` before the ADD COLUMN. Add the column once by hand
+  // (see drizzle/0007_add-check-on-submit-to-assignments.sql) and every
+  // later push reports no changes.
+  checkOnSubmit: int("check_on_submit", { mode: "boolean" })
+    .notNull()
+    .default(false),
   courseId: int("course_id").references(() => coursesTable.id, {
     onDelete: "cascade",
   }),
