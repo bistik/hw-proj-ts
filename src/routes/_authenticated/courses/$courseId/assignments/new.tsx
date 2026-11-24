@@ -25,6 +25,10 @@ export const Route = createFileRoute(
   component: NewAssignmentComponent,
 });
 
+// Issue #84: the points dropdown offers exactly 1 to 10, nothing below
+// 1, nothing above 10, no gaps, in order.
+const pointsOptions = Array.from({ length: 10 }, (_, i) => i + 1);
+
 function NewAssignmentComponent() {
   const { course } = Route.useLoaderData();
   const navigate = useNavigate();
@@ -70,6 +74,7 @@ function NewAssignmentComponent() {
       title: "",
       example: "",
       courseId: course.id,
+      points: 1,
     },
     validators: {
       onSubmit: assignmentFormSchema,
@@ -114,6 +119,26 @@ function NewAssignmentComponent() {
         <form.Field name="example">
           {(field) => (
             <TextField field={field} label="Example" multiline rows={8} />
+          )}
+        </form.Field>
+        <form.Field name="points">
+          {(field) => (
+            <fieldset className="fieldset">
+              <legend className="fieldset-legend">Points</legend>
+              <select
+                className="select"
+                name={field.name}
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(Number(e.target.value))}
+              >
+                {pointsOptions.map((points) => (
+                  <option key={points} value={points}>
+                    {points}
+                  </option>
+                ))}
+              </select>
+            </fieldset>
           )}
         </form.Field>
         <form.Subscribe selector={(state) => state.isSubmitting}>

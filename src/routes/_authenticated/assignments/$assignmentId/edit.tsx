@@ -25,6 +25,10 @@ export const Route = createFileRoute(
   component: EditAssignmentComponent,
 });
 
+// Issue #84: the points dropdown offers exactly 1 to 10, same as the
+// create form.
+const pointsOptions = Array.from({ length: 10 }, (_, i) => i + 1);
+
 function EditAssignmentComponent() {
   const { assignment } = Route.useLoaderData();
   const navigate = useNavigate();
@@ -47,6 +51,9 @@ function EditAssignmentComponent() {
       assignmentId: assignment.id,
       title: assignment.title,
       example: assignment.example ?? "",
+      // Issue #84: prefill the dropdown with the stored points, so a
+      // title-only edit cannot reset them.
+      points: assignment.points,
     },
     validators: {
       onSubmit: assignmentUpdateFormSchema,
@@ -76,6 +83,26 @@ function EditAssignmentComponent() {
         <form.Field name="example">
           {(field) => (
             <TextField label="Example" field={field} multiline rows={8} />
+          )}
+        </form.Field>
+        <form.Field name="points">
+          {(field) => (
+            <fieldset className="fieldset">
+              <legend className="fieldset-legend">Points</legend>
+              <select
+                className="select"
+                name={field.name}
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(Number(e.target.value))}
+              >
+                {pointsOptions.map((points) => (
+                  <option key={points} value={points}>
+                    {points}
+                  </option>
+                ))}
+              </select>
+            </fieldset>
           )}
         </form.Field>
         <form.Subscribe selector={(state) => state.isSubmitting}>
