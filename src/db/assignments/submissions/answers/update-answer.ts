@@ -11,7 +11,6 @@ export async function dbGradeSubmissionAnswer(data: {
     .update(submissionAnswersTable)
     .set({
       isCorrect: data.isCorrect,
-      points: data.isCorrect ? 1 : 0,
     })
     .where(
       and(

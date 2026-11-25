@@ -21,3 +21,19 @@ After that, every later push works normally.
 
 Production is not affected. Production uses `drizzle-kit migrate`
 (it runs in `deploy:local`).
+
+## drizzle-kit push and the dropped `points` column (drizzle-kit 0.31.11)
+
+Issue #88 removed the dead `points` column from `submission_answers`.
+`drizzle-kit push` plans a destructive change for a column drop (it
+recreates the table and deletes the rows). Do not run that push.
+
+Migration 0008 applies the drop by hand:
+
+```sql
+ALTER TABLE `submission_answers` DROP COLUMN `points`;
+```
+
+Production runs the migration through `drizzle-kit migrate`
+(`deploy:local`), which applies 0008 without data loss.
+

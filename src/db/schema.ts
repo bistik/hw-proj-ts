@@ -191,7 +191,6 @@ export const submissionAnswersTable = sqliteTable(
   {
     id: int().primaryKey({ autoIncrement: true }),
     answer: text().notNull(),
-    points: int().default(0),
     isCorrect: int("is_correct", { mode: "boolean" }),
     comment: text(),
     questionId: int("question_id").references(() => questionsTable.id, {
