@@ -22,10 +22,6 @@ function StudentCourseDetailComponent() {
   return (
     <div>
       <h2 className="mb-6">{course.title}</h2>
-      {/* The student's accumulated points (issue #89), below the course
-          title: earned sums the points of assignments the student
-          answered correctly; possible sums every assignment's points x
-          question count. */}
       <p className="mb-6">
         Points: {course.points.earned} / {course.points.possible}
       </p>

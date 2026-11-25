@@ -126,18 +126,12 @@ export async function dbGetEnrollmentByCourseAndStudent(
 }
 
 /**
- * Issue #89: the student's accumulated points in one course. The page
- * shows them below the course title as "Points: X / Y".
+ * The student's accumulated points in one course (issue #89).
  *
  * earned sums assignments.points over the student's answers with
- * is_correct = true in the course. The sum is computed at read time
- * from the current assignments.points; no per-answer points are
- * stored (issue #88 removed that column), so an author's points edit
- * or a question delete changes the next read.
- *
+ * is_correct = true, at read time; no per-answer points are stored.
  * possible sums points x question count over all assignments in the
- * course. Ungraded answers (is_correct is null) and wrong answers add
- * nothing to earned, but their questions still count in possible.
+ * course.
  */
 export async function dbGetStudentCoursePoints(
   courseId: number,

@@ -114,9 +114,6 @@ export const getStudentCourse = createServerFn({ method: "GET" })
       );
       if (!enrollment) return null;
 
-      // The student's accumulated points (issue #89): read with the
-      // same enrollment that gates the page, so only the viewing
-      // student's answers count.
       const points = await dbGetStudentCoursePoints(
         data.courseId,
         context.user.id,
