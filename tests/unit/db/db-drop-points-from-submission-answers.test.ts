@@ -14,21 +14,11 @@ import {
   seedUser,
 } from "../helpers/db";
 
-// Issue #88, test-driven development red phase: these tests fail until
-// the dead points column is gone from submission_answers. The
-// contract:
-// - The drizzle schema (src/db/schema.ts) declares no points column
-//   on submission_answers.
-// - createSchema runs the journal migrations (drizzle/*.sql), so the
-//   hand-written drop migration must remove the column from the
-//   migrated table (see the push note on checkOnSubmit in the schema:
-//   push plans a destructive change for column drops, apply by hand
-//   like drizzle/0007).
-// - dbGradeSubmissionAnswer grades only through isCorrect. The
-//   returned row carries no points value.
-// - An insert without a points value succeeds after the migration.
-//   This spec is the guard the issue asks for: it passes today
-//   (the column has a default) and must stay green after the change.
+// Issue #88: the dead points column is gone from submission_answers.
+// - The drizzle schema declares no points column.
+// - The 0008 migration drops it from the migrated table.
+// - Grading writes only isCorrect.
+// - An insert without a points value succeeds.
 
 describe("drop the points column from submission_answers (issue #88)", () => {
   beforeAll(createSchema);

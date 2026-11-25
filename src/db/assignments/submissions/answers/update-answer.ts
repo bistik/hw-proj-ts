@@ -9,8 +9,6 @@ export async function dbGradeSubmissionAnswer(data: {
 }) {
   const [updated] = await db
     .update(submissionAnswersTable)
-    // Issue #88: grade through isCorrect only. The submission_answers
-    // table has no points column.
     .set({
       isCorrect: data.isCorrect,
     })

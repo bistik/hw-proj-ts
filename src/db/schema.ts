@@ -191,8 +191,6 @@ export const submissionAnswersTable = sqliteTable(
   {
     id: int().primaryKey({ autoIncrement: true }),
     answer: text().notNull(),
-    // Issue #88: no points column. The score of an answer is isCorrect;
-    // the assignment holds the points. The drop migration is 0008.
     isCorrect: int("is_correct", { mode: "boolean" }),
     comment: text(),
     questionId: int("question_id").references(() => questionsTable.id, {
