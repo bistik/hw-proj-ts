@@ -1,6 +1,13 @@
 import { db } from "@/db/";
-import { assignmentsTable, coursesTable, lessonsTable } from "../schema";
-import { desc, eq } from "drizzle-orm";
+import {
+  assignmentSubmissionsTable,
+  assignmentsTable,
+  coursesTable,
+  lessonsTable,
+  questionsTable,
+  submissionAnswersTable,
+} from "../schema";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 export async function dbGetCoursesByUser(authorId: string) {
   try {
@@ -116,4 +123,73 @@ export async function dbGetEnrollmentByCourseAndStudent(
       },
     },
   });
+}
+
+/**
+ * Issue #89: the student's accumulated points in one course. The page
+ * shows them below the course title as "Points: X / Y".
+ *
+ * earned sums assignments.points over the student's answers with
+ * is_correct = true in the course. The sum is computed at read time
+ * from the current assignments.points; no per-answer points are
+ * stored (issue #88 removed that column), so an author's points edit
+ * or a question delete changes the next read.
+ *
+ * possible sums points x question count over all assignments in the
+ * course. Ungraded answers (is_correct is null) and wrong answers add
+ * nothing to earned, but their questions still count in possible.
+ */
+export async function dbGetStudentCoursePoints(
+  courseId: number,
+  studentId: string,
+): Promise<{ earned: number; possible: number }> {
+  // One row per (assignment, question) pair: each question contributes
+  // its assignment's current points once. An assignment without
+  // questions contributes nothing, because there is nothing to answer.
+  // coalesce turns the empty-course sum (null) into 0.
+  const [possibleRow] = await db
+    .select({
+      possible: sql`coalesce(sum(${assignmentsTable.points}), 0)`,
+    })
+    .from(assignmentsTable)
+    .innerJoin(
+      questionsTable,
+      eq(questionsTable.assignmentId, assignmentsTable.id),
+    )
+    .where(eq(assignmentsTable.courseId, courseId));
+
+  // The student's correct answers: the answer row joins its question,
+  // the question joins the assignment (for the course scope and the
+  // current points), and the submission row names the student.
+  const [earnedRow] = await db
+    .select({
+      earned: sql`coalesce(sum(${assignmentsTable.points}), 0)`,
+    })
+    .from(submissionAnswersTable)
+    .innerJoin(
+      questionsTable,
+      eq(submissionAnswersTable.questionId, questionsTable.id),
+    )
+    .innerJoin(
+      assignmentsTable,
+      eq(questionsTable.assignmentId, assignmentsTable.id),
+    )
+    .innerJoin(
+      assignmentSubmissionsTable,
+      eq(submissionAnswersTable.submissionId, assignmentSubmissionsTable.id),
+    )
+    .where(
+      and(
+        eq(assignmentsTable.courseId, courseId),
+        eq(assignmentSubmissionsTable.assigneeId, studentId),
+        eq(submissionAnswersTable.isCorrect, true),
+      ),
+    );
+
+  return {
+    // sum() comes back as a string or a number depending on the driver;
+    // Number() normalizes both.
+    earned: Number(earnedRow?.earned ?? 0),
+    possible: Number(possibleRow?.possible ?? 0),
+  };
 }
