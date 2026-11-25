@@ -103,16 +103,19 @@ export async function seedEnrollment(
 /**
  * Adds one assignments row. The optional courseId attaches the
  * assignment to a course for tests that need the course scope (issue
- * #41: delete an assignment). Only columns notNull in src/db/schema.ts
- * are filled.
+ * #41: delete an assignment). The optional points sets the
+ * assignment's points (issue #89: student course points); the default
+ * 1 matches the schema default. Only columns notNull in
+ * src/db/schema.ts are filled.
  */
 export async function seedAssignment(
   assignmentId: number,
   courseId: number | null = null,
+  points: number = 1,
 ): Promise<void> {
   await db.run(sql`INSERT INTO \`assignments\` (
-    \`id\`, \`title\`, \`course_id\`, \`created_at\`, \`updated_at\`
-  ) VALUES (${assignmentId}, 'Test assignment', ${courseId}, 0, 0)`);
+    \`id\`, \`title\`, \`course_id\`, \`points\`, \`created_at\`, \`updated_at\`
+  ) VALUES (${assignmentId}, 'Test assignment', ${courseId}, ${points}, 0, 0)`);
 }
 
 /**
@@ -151,15 +154,46 @@ export async function seedSubmission(
   return rows[0]!.id;
 }
 
-/** Adds one submission_answers row for a (question, submission) pair. */
+/**
+ * Adds one submission_answers row for a (question, submission) pair.
+ * The optional isCorrect sets the answer's grade (issue #89: student
+ * course points): true stores 1, false stores 0, and the default null
+ * stores an ungraded answer. The grade lives only in this column —
+ * issue #88 removed the per-answer points column.
+ */
 export async function seedAnswer(
   questionId: number,
   submissionId: number,
   answer: string,
+  isCorrect: boolean | null = null,
 ): Promise<void> {
+  const isCorrectValue = isCorrect === null ? null : isCorrect ? 1 : 0;
   await db.run(sql`INSERT INTO \`submission_answers\` (
-    \`answer\`, \`question_id\`, \`submission_id\`, \`created_at\`, \`updated_at\`
-  ) VALUES (${answer}, ${questionId}, ${submissionId}, 0, 0)`);
+    \`answer\`, \`is_correct\`, \`question_id\`, \`submission_id\`, \`created_at\`, \`updated_at\`
+  ) VALUES (${answer}, ${isCorrectValue}, ${questionId}, ${submissionId}, 0, 0)`);
+}
+
+/**
+ * Sets the points of one assignments row (issue #89: the author edits
+ * the assignment's points, and the student's totals change at the
+ * next read).
+ */
+export async function updateAssignmentPoints(
+  assignmentId: number,
+  points: number,
+): Promise<void> {
+  await db.run(
+    sql`UPDATE \`assignments\` SET \`points\` = ${points} WHERE \`id\` = ${assignmentId}`,
+  );
+}
+
+/**
+ * Deletes one questions row directly. The schema's foreign key
+ * cascades the row's submission_answers rows (issue #89: after a
+ * question delete, the student's totals stay correct).
+ */
+export async function deleteQuestionRow(questionId: number): Promise<void> {
+  await db.run(sql`DELETE FROM \`questions\` WHERE \`id\` = ${questionId}`);
 }
 
 export type QuestionRow = {
