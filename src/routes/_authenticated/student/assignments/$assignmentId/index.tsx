@@ -1,7 +1,8 @@
 import { getSubmission } from "@/server/assignments/submissions/get-submission";
-import { setSubmissionToNow } from "@/server/assignments/submissions/mutate-submission";
+import { submitAssignment } from "@/server/assignments/submissions/mutate-submission";
 import { getStudentQuestions } from "@/server/questions/get-questions";
 import ConfirmModal from "@/components/confirm-modal";
+import ScoreModal from "@/components/score-modal";
 import {
   createFileRoute,
   Link,
@@ -31,6 +32,12 @@ function StudentAssignmentDetailComponent() {
   const { questions, assignmentSubmission, courseId } = Route.useLoaderData();
   const { assignmentId } = Route.useParams();
   const [submitOpen, setSubmitOpen] = useState(false);
+  // The auto-check result of issue #95: non-null while the score modal
+  // shows, after the student submitted a check_on_submit assignment.
+  const [score, setScore] = useState<{
+    score: number;
+    total: number;
+  } | null>(null);
   const router = useRouter();
 
   // Submittable only when the student already started (a submission record
@@ -98,7 +105,6 @@ function StudentAssignmentDetailComponent() {
                   >
                     Go to question #1
                   </Link>
-                  {/* TODO: wire up the actual assignment submission action. */}
                   {canSubmit && (
                     <button
                       type="button"
@@ -123,17 +129,40 @@ function StudentAssignmentDetailComponent() {
           open={submitOpen}
           message="Submit this assignment?"
           onConfirm={async () => {
-            // Mark the submission as submitted, then reload the route so
-            // the freshly submitted state (submitted_at set) is reflected
-            // and the button disappears. The ConfirmModal keeps the page
+            // Submit, then react to the auto-check result (issue #95):
+            // a checked assignment shows the score modal, a stored-off
+            // one keeps the plain flow. The ConfirmModal keeps the page
             // under its top layer (with a spinner on Okay) until this
             // resolves, so the submit action cannot be double-fired.
-            await setSubmissionToNow({
+            const result = await submitAssignment({
               data: { assignmentId: Number(assignmentId) },
             });
-            await router.invalidate();
+            if (result.checked) {
+              setScore({ score: result.score, total: result.total });
+            } else {
+              // Reload the route so the freshly submitted state
+              // (submitted_at set) is reflected and the button
+              // disappears.
+              await router.invalidate();
+            }
           }}
           onClose={() => setSubmitOpen(false)}
+        />
+      )}
+      {score && (
+        <ScoreModal
+          score={score.score}
+          total={score.total}
+          onClose={() => {
+            // Closing the modal returns the student to the course
+            // page; the navigation unmounts this route (and the modal
+            // with it).
+            setScore(null);
+            void router.navigate({
+              to: "/student/courses/$courseId",
+              params: { courseId: String(courseId) },
+            });
+          }}
         />
       )}
     </div>

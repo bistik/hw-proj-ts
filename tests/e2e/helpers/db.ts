@@ -509,6 +509,40 @@ export async function getAssignmentCheckOnSubmit(
 }
 
 /**
+ * Sets an assignment's check_on_submit column (the issue #86 toggle).
+ * Issue #95: the student's submit flow auto-checks answers only while
+ * this toggle is on, so specs flip it directly instead of walking the
+ * author's create form.
+ */
+export async function setAssignmentCheckOnSubmit(
+  assignmentId: number,
+  checkOnSubmit: boolean,
+): Promise<void> {
+  await client.execute({
+    sql: "UPDATE assignments SET check_on_submit = ? WHERE id = ?",
+    args: [checkOnSubmit ? 1 : 0, assignmentId],
+  });
+}
+
+/**
+ * Reads the stored is_correct grade of one submission_answers row
+ * (issue #95: the auto-check on submit writes it). Returns null when
+ * the row is missing or its grade is not set, so a test can tell an
+ * ungraded answer from a graded-wrong one (false).
+ */
+export async function getAnswerIsCorrect(
+  questionId: number,
+  submissionId: number,
+): Promise<boolean | null> {
+  const result = await client.execute({
+    sql: "SELECT is_correct FROM submission_answers WHERE question_id = ? AND submission_id = ?",
+    args: [questionId, submissionId],
+  });
+  const value = result.rows[0]?.is_correct;
+  return value === undefined || value === null ? null : Boolean(value);
+}
+
+/**
  * Reads the assignment_submissions row with the given id. Returns null
  * when the row is missing — which is the cascade behaviour under test
  * in issue #41 (delete an assignment), so this read helper (unlike the
