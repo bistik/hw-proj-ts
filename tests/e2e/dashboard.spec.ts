@@ -45,7 +45,9 @@ test.describe("dashboard", () => {
     // link, so the accessible name alone would match multiple elements.
     await expect(page.locator('a[href="/student/courses"]')).toBeVisible();
     await expect(page.locator('a[href="/courses/new"]')).toBeVisible();
-    await expect(page.locator('a[href="/lessons/new"]')).toBeVisible();
+    // No a[href="/lessons/new"]: the global new-lesson route is removed
+    // (issue #22); the course-scoped /courses/<id>/lessons/new entry point
+    // lives on the course detail Lessons tab instead.
     await expect(page.locator('a[href="/assignments/new"]')).toBeVisible();
   });
 

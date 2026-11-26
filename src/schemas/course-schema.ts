@@ -32,12 +32,6 @@ export const lessonUpdateFormSchema = lessonFormSchema
       .positive("Please select a valid lesson"),
   });
 
-export const defaultValuesLesson: z.input<typeof lessonFormSchema> = {
-  title: "",
-  content: "",
-  courseId: 0,
-};
-
 export const assignmentFormSchema = z.object({
   title: z.string().min(1, { message: "Title is required" }),
   example: z.string(),
