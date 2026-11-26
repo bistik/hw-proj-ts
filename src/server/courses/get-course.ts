@@ -4,6 +4,7 @@ import {
   dbGetCoursesWithItemCountsByUser,
   dbGetEnrolledCourses,
   dbGetEnrollmentByCourseAndStudent,
+  dbGetStudentCoursePoints,
 } from "@/db/courses/get-course";
 import {
   dbGetCourseItemsByCourse,
@@ -113,6 +114,11 @@ export const getStudentCourse = createServerFn({ method: "GET" })
       );
       if (!enrollment) return null;
 
+      const points = await dbGetStudentCoursePoints(
+        data.courseId,
+        context.user.id,
+      );
+
       // The student page lists one card per course item (issue #32), in
       // course_items.position order: the outline row decides the slot, the
       // lesson/assignment row provides the title (and, for assignments, the
@@ -154,7 +160,7 @@ export const getStudentCourse = createServerFn({ method: "GET" })
         }
       }
 
-      return { id: course.id, title: course.title, items };
+      return { id: course.id, title: course.title, points, items };
     } catch (err) {
       console.error(`Error fetching student course ${data.courseId}`, err);
       throw new Error("Could not fetch student course", { cause: err });

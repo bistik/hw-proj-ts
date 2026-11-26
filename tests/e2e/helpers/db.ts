@@ -222,16 +222,18 @@ export function seedAssignmentExample(title: string): string {
 export async function seedAssignments(
   courseId: number,
   titles: string[],
+  points: number = 1,
 ): Promise<number[]> {
   let i = 0;
   const ids: number[] = [];
   for (const title of titles) {
     i += 1;
     const inserted = await client.execute({
-      sql: "INSERT INTO assignments (title, example, course_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?) RETURNING id",
+      sql: "INSERT INTO assignments (title, example, points, course_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
       args: [
         title,
         seedAssignmentExample(title),
+        points,
         courseId,
         nowPlus(i),
         nowPlus(i),
@@ -343,6 +345,10 @@ export async function seedSubmission(
  * Rounds/regrades read this row to display the student's answer with the
  * question, and the question page's form uses it as the default value.
  *
+ * The optional isCorrect sets the answer's grade the way the author's
+ * review does (issue #89: student course points): true stores 1, false
+ * stores 0, and the default null stores an ungraded answer.
+ *
  * Only columns notNull in src/db/schema.ts are filled; created_at/updated_at
  * are given explicitly like the other seeders (drizzle-kit push emits no
  * DB-level defaults).
@@ -352,15 +358,24 @@ export async function seedSubmissionAnswer(
   email: string,
   questionId: number,
   answer: string,
+  isCorrect: boolean | null = null,
 ): Promise<void> {
   const now = Date.now();
   await client.execute({
-    sql: `INSERT INTO submission_answers (answer, question_id, submission_id, created_at, updated_at)
-          SELECT ?, ?, assignment_submissions.id, ?, ?
+    sql: `INSERT INTO submission_answers (answer, is_correct, question_id, submission_id, created_at, updated_at)
+          SELECT ?, ?, ?, assignment_submissions.id, ?, ?
           FROM assignment_submissions
           JOIN users ON users.id = assignment_submissions.assignee_id
           WHERE assignment_submissions.assignment_id = ? AND users.email = ?`,
-    args: [answer, questionId, now, now, assignmentId, email],
+    args: [
+      answer,
+      isCorrect === null ? null : isCorrect ? 1 : 0,
+      questionId,
+      now,
+      now,
+      assignmentId,
+      email,
+    ],
   });
 }
 

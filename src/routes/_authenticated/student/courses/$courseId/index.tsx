@@ -22,6 +22,9 @@ function StudentCourseDetailComponent() {
   return (
     <div>
       <h2 className="mb-6">{course.title}</h2>
+      <p className="mb-6">
+        Points: {course.points.earned} / {course.points.possible}
+      </p>
       {/* One card per course item, stacked in course_items.position order
           (issue #32), with the daisyUI card markup of the SubmissionCard /
           AnswerCard components. */}
