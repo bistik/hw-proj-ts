@@ -8,6 +8,13 @@ type AnswerCardProps = {
   isCorrect: boolean | null;
   /** Show the Correct/Mistake actions (only for submitted, answered questions). */
   gradable: boolean;
+  /**
+   * The grading in flight for this answer, or null while none runs. The
+   * route scopes the page-wide pending state to this card. While it is
+   * set, both grading buttons disable (issue #93), and the clicked one
+   * shows the loading spinner until the grade lands.
+   */
+  grading: { isCorrect: boolean } | null;
   onGrade: (isCorrect: boolean) => void;
 };
 
@@ -19,6 +26,7 @@ export default function AnswerCard({
   correctAnswer,
   isCorrect,
   gradable,
+  grading,
   onGrade,
 }: AnswerCardProps) {
   return (
@@ -48,18 +56,29 @@ export default function AnswerCard({
         </p>
         {gradable && studentAnswer !== null && (
           <div className="card-actions justify-end">
+            {/* Issue #93: both buttons disable while the grade server fn
+                runs, so a second submission cannot start. The label
+                stays, so the accessible name does not change. */}
             <button
               type="button"
               className="btn bg-success text-success-content hover:opacity-80"
+              disabled={grading !== null}
               onClick={() => onGrade(true)}
             >
+              {grading?.isCorrect === true && (
+                <span className="loading loading-spinner"></span>
+              )}
               Correct
             </button>
             <button
               type="button"
               className="btn bg-error text-error-content hover:opacity-80"
+              disabled={grading !== null}
               onClick={() => onGrade(false)}
             >
+              {grading?.isCorrect === false && (
+                <span className="loading loading-spinner"></span>
+              )}
               Mistake
             </button>
           </div>

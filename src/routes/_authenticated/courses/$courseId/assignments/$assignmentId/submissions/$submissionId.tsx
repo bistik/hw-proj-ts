@@ -4,7 +4,9 @@ import { completeSubmission } from "@/server/assignments/submissions/complete-su
 import AnswerCard from "@/components/submissions/answer-card";
 import SubmissionSummaryCard from "@/components/submissions/summary-card";
 import Breadcrumbs from "@/components/common/breadcrumbs";
+import FormErrorAlert from "@/components/form-error-alert";
 import { Link, createFileRoute, notFound, useRouter } from "@tanstack/react-router";
+import { useState } from "react";
 
 export const Route = createFileRoute(
   "/_authenticated/courses/$courseId/assignments/$assignmentId/submissions/$submissionId",
@@ -39,16 +41,39 @@ function SubmissionReviewComponent() {
   const { courseId, submissionId, review } = Route.useLoaderData();
   const router = useRouter();
 
+  // The grading in flight (issue #93), or null while none runs. The state
+  // lives here, one level above the cards, and each AnswerCard receives
+  // the part scoped to itself. One object holds the question and the
+  // grade together, because they always change at the same time.
+  const [grading, setGrading] = useState<{
+    questionId: number;
+    isCorrect: boolean;
+  } | null>(null);
+  // The error message from the last grading, or null when it worked. The
+  // route shows it through FormErrorAlert, like the outline move error.
+  const [gradeError, setGradeError] = useState<string | null>(null);
+
   const grade = async (questionId: number, isCorrect: boolean) => {
-    await gradeSubmissionAnswer({
-      data: {
-        courseId,
-        submissionId,
-        questionId,
-        isCorrect,
-      },
-    });
-    await router.invalidate();
+    setGrading({ questionId, isCorrect });
+    // A new grading clears the error from the previous one, so the alert
+    // always shows the outcome of the latest attempt.
+    setGradeError(null);
+    try {
+      await gradeSubmissionAnswer({
+        data: {
+          courseId,
+          submissionId,
+          questionId,
+          isCorrect,
+        },
+      });
+      await router.invalidate();
+    } catch (err) {
+      console.error(`Error grading the answer of question ${questionId}`, err);
+      setGradeError("Could not grade the answer. Please try again.");
+    } finally {
+      setGrading(null);
+    }
   };
 
   // Grading (and completing) is offered only while the submission is
@@ -102,6 +127,7 @@ function SubmissionReviewComponent() {
         />
 
         <div className="flex flex-col gap-y-8 mt-8">
+          {gradeError !== null && <FormErrorAlert errorMsg={gradeError} />}
           {review.questions.map((question) => (
             <AnswerCard
               key={question.id}
@@ -111,6 +137,11 @@ function SubmissionReviewComponent() {
               correctAnswer={question.correctAnswer}
               isCorrect={question.isCorrect}
               gradable={open}
+              grading={
+                grading !== null && grading.questionId === question.id
+                  ? { isCorrect: grading.isCorrect }
+                  : null
+              }
               onGrade={(isCorrect) => grade(question.id, isCorrect)}
             />
           ))}
