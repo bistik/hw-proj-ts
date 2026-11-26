@@ -1,6 +1,7 @@
 import {
   dbCreateSubmission,
   dbSetSubmissionToNow,
+  dbSubmitAssignment,
 } from "@/db/assignments/submissions/mutate-submission";
 import { authMiddleware } from "@/middlewares/auth-middleware";
 import { submitAnswerFormSchema } from "@/schemas/course-schema";
@@ -36,5 +37,27 @@ export const setSubmissionToNow = createServerFn({ method: "POST" })
         err,
       );
       throw new Error("Could not submit assignment.");
+    }
+  });
+
+export const submitAssignment = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      assignmentId: z.number().int().positive("Assignment id is required"),
+    }),
+  )
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    try {
+      return await dbSubmitAssignment({
+        assignmentId: data.assignmentId,
+        assigneeId: context.user.id,
+      });
+    } catch (err) {
+      console.error(
+        `Error in submitting assignment ${data.assignmentId} for user ${context.user.id}`,
+        err,
+      );
+      throw new Error("Could not submit assignment.", { cause: err });
     }
   });
