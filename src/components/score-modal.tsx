@@ -8,9 +8,13 @@ import { useEffect, useRef } from "react";
  *
  * Renders the auto-check result as "Your score: <correct>/<total>"
  * over all questions of the assignment, together with a confetti.
- * The confetti is a canvas-confetti burst drawn on the canvas inside
- * the modal (PR #96 review): the dialog carries the top layer, so a
- * full-page canvas would render behind the modal. The canvas carries
+ * The confetti (PR #96 review) is a canvas-confetti fan that fills
+ * the screen behind the modal box: the canvas spans the whole dialog
+ * (the open dialog covers the viewport), the modal box is z-10 so
+ * it paints above the canvas, and pointer-events stay on the dialog
+ * and the box. Two narrow jets fire from the bottom corners and aim
+ * at the center, so the streams cross and open like a fan while the
+ * pieces rise and then fall over the screen. The canvas carries
  * data-testid="confetti", which the e2e spec uses as its selector.
  * The single action is a [Close] button: the parent uses it to
  * navigate back to the student's course page.
@@ -33,28 +37,45 @@ export default function ScoreModal({
   useEffect(() => {
     dialogRef.current?.showModal();
 
-    // Two bursts, one from each side, fired once when the modal opens.
+    // Fire the fan once when the modal opens. The animation runs on
+    // the main thread, so nothing outlives the closed modal.
     if (!confettiRef.current) return;
     const fire = confetti.create(confettiRef.current, {
       resize: true,
       useWorker: false,
     });
-    fire({ particleCount: 70, spread: 70, origin: { x: 0.2, y: 0.6 } });
-    fire({ particleCount: 70, spread: 70, origin: { x: 0.8, y: 0.6 } });
+    // Left jet: from the bottom-left corner, aimed up and to the
+    // center. angle 60 means 60 degrees from the horizontal.
+    fire({
+      particleCount: 90,
+      angle: 60,
+      spread: 25,
+      startVelocity: 65,
+      origin: { x: 0, y: 1 },
+    });
+    // Right jet: mirrored, aimed up and to the center. The two jets
+    // cross above the modal box and open like a fan.
+    fire({
+      particleCount: 90,
+      angle: 120,
+      spread: 25,
+      startVelocity: 65,
+      origin: { x: 1, y: 1 },
+    });
   }, []);
 
   return (
     <dialog ref={dialogRef} className="modal" onClose={onClose}>
-      <div className="modal-box">
+      <canvas
+        ref={confettiRef}
+        data-testid="confetti"
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 h-full w-full"
+      />
+      <div className="modal-box relative z-10">
         <p className="py-4 text-center text-xl font-bold">
           Your score: {score}/{total}
         </p>
-        <canvas
-          ref={confettiRef}
-          data-testid="confetti"
-          aria-hidden="true"
-          className="h-24 w-full"
-        />
         <div className="modal-action">
           <button className="btn btn-primary" onClick={onClose}>
             Close
