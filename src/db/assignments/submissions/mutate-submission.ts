@@ -1,6 +1,6 @@
 import { db } from "@/db/";
 import { assignmentSubmissionsTable, submissionAnswersTable } from "@/db/schema";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 
 export async function dbCreateSubmission(data: {
   assignmentId: number;
@@ -65,7 +65,9 @@ export async function dbSetSubmissionToNow(data: {
  *   the correct answers. An unanswered question has no answer row, so
  *   it contributes no score but still counts into the total.
  * - { checked: false, score: null, total: null } for a stored-off one:
- *   the plain submit keeps the answers ungraded.
+ *   the plain submit keeps the answers ungraded. The same payload is
+ *   returned when the caller has no submission row (PR #96 review): a
+ *   direct POST without a submission must not show a zero-score modal.
  */
 export async function dbSubmitAssignment(data: {
   assignmentId: number;
@@ -100,14 +102,20 @@ export async function dbSubmitAssignment(data: {
       ),
   });
   if (!submission) {
-    return { checked: true, score: 0, total: questions.length };
+    // No submission row: nothing was submitted, so nothing was graded.
+    // The student UI cannot reach this state (the submit button needs
+    // a submission row), but a direct POST can (PR #96 review).
+    return { checked: false, score: null, total: null };
   }
 
   const answers = await db.query.submissionAnswersTable.findMany({
     where: (t, { eq }) => eq(t.submissionId, submission.id),
   });
 
-  let score = 0;
+  // Grade in two batches (PR #96 review): one UPDATE for the correct
+  // set, one for the incorrect set, instead of one UPDATE per answer.
+  const correctIds: number[] = [];
+  const incorrectIds: number[] = [];
   for (const answer of answers) {
     const correctAnswer =
       answer.questionId === null
@@ -117,13 +125,25 @@ export async function dbSubmitAssignment(data: {
     // to check: leave it ungraded.
     if (correctAnswer === undefined) continue;
 
-    const isCorrect = answer.answer.trim() === correctAnswer.trim();
-    if (isCorrect) score += 1;
-    await db
-      .update(submissionAnswersTable)
-      .set({ isCorrect })
-      .where(eq(submissionAnswersTable.id, answer.id));
+    if (answer.answer.trim() === correctAnswer.trim()) {
+      correctIds.push(answer.id);
+    } else {
+      incorrectIds.push(answer.id);
+    }
   }
 
-  return { checked: true, score, total: questions.length };
+  if (correctIds.length > 0) {
+    await db
+      .update(submissionAnswersTable)
+      .set({ isCorrect: true })
+      .where(inArray(submissionAnswersTable.id, correctIds));
+  }
+  if (incorrectIds.length > 0) {
+    await db
+      .update(submissionAnswersTable)
+      .set({ isCorrect: false })
+      .where(inArray(submissionAnswersTable.id, incorrectIds));
+  }
+
+  return { checked: true, score: correctIds.length, total: questions.length };
 }

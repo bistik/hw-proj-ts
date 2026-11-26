@@ -29,6 +29,9 @@ import {
 // - The return value drives the student's score modal:
 //   { checked: true, score, total } for an auto-checked assignment,
 //   { checked: false, score: null, total: null } for a stored-off one.
+//   The same stored-off payload is returned when the caller has no
+//   submission row (PR #96 review): a direct POST must not show a
+//   zero-score modal for something that was never submitted.
 // - A stored-off assignment keeps the plain submit: submitted_at is
 //   set, but no answer row receives a grade.
 
@@ -119,5 +122,27 @@ describe("dbSubmitAssignment (issue #95)", () => {
     expect((await getSubmissionRow(submissionId))?.submitted_at).not.toBeNull();
     // ...but the saved answer stays ungraded.
     expect(await getAnswerIsCorrect(q1, submissionId)).toBe(null);
+  });
+
+  it("returns the stored-off payload when the caller has no submission row", async () => {
+    await seedUser("author-95d");
+    const studentId = "student-95d";
+    await seedUser(studentId);
+    await seedCourse(953, "author-95d");
+    await seedAssignment(9540, 953);
+    await updateAssignmentCheckOnSubmit(9540, true);
+    await seedQuestion(9540, "Capital of Chile", "Santiago", 0);
+    // No seedSubmission: the caller has no submission row. The student
+    // UI cannot reach this state, but a direct POST can (PR #96
+    // review).
+
+    const result = await dbSubmitAssignment({
+      assignmentId: 9540,
+      assigneeId: studentId,
+    });
+
+    // Nothing was submitted, so nothing was graded: the modal must
+    // not show "Your score: 0/1".
+    expect(result).toEqual({ checked: false, score: null, total: null });
   });
 });

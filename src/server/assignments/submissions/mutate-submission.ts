@@ -3,6 +3,8 @@ import {
   dbSetSubmissionToNow,
   dbSubmitAssignment,
 } from "@/db/assignments/submissions/mutate-submission";
+import { dbGetAssignment } from "@/db/assignments/get-assignment";
+import { requireUserEnrolledInCourse } from "@/db/authz";
 import { authMiddleware } from "@/middlewares/auth-middleware";
 import { submitAnswerFormSchema } from "@/schemas/course-schema";
 import { createServerFn } from "@tanstack/react-start";
@@ -49,6 +51,16 @@ export const submitAssignment = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
     try {
+      // Defense in depth (PR #96 review): the submit writes only rows
+      // behind an enrollment-protected submission, but this guard
+      // rejects a non-enrolled caller up front, the same way
+      // upsertAnswer does.
+      const assignment = await dbGetAssignment(data.assignmentId);
+      if (!assignment || !assignment.courseId)
+        throw new Error("Could not find assignment");
+
+      await requireUserEnrolledInCourse(assignment.courseId, context.user.id);
+
       return await dbSubmitAssignment({
         assignmentId: data.assignmentId,
         assigneeId: context.user.id,
