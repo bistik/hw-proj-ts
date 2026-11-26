@@ -122,10 +122,6 @@ function RouteComponent() {
           <Link to="/courses/new" className="link">
             New course
           </Link>
-          {/* No "New lesson" link: the global /lessons/new route is removed
-              (issue #22). Lesson creation is course-scoped, so its entry
-              point is the "Add lesson" link on the course detail Lessons
-              tab. */}
           <Link to="/assignments/new" className="link">
             New assignment
           </Link>
