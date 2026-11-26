@@ -108,4 +108,27 @@ test.describe("add a new lesson", () => {
       breadcrumbs.getByRole("link", { name: "New lesson", exact: true }),
     ).toHaveCount(0);
   });
+
+  // Issue #22: the global /lessons/new route is removed. The
+  // course-scoped route /courses/<id>/lessons/new replaces it.
+  // Acceptance: /lessons/new is a 404.
+  test("the old /lessons/new route is a 404", async ({ page }) => {
+    await loginViaUi(page);
+
+    // The router keeps the URL and renders its 404 page instead of the
+    // global new-lesson form.
+    await page.goto("/lessons/new");
+    await expect(page).toHaveURL(/\/lessons\/new$/);
+    await expect(page.getByText("404 - not found")).toBeVisible();
+
+    // The global form must not render: no Title field, no Save Lesson
+    // button, and no course-select fallback text.
+    await expect(
+      page.locator('fieldset:has-text("Title") input'),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Save Lesson" }),
+    ).toHaveCount(0);
+    await expect(page.getByText("Please create a course first")).toHaveCount(0);
+  });
 });

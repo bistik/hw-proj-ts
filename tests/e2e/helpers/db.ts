@@ -71,8 +71,8 @@ export async function seedCourse(
 }
 
 /**
- * Inserts lessons directly into the e2e database, bypassing the /lessons/new
- * form (walks around form hydration and the "select a course" dropdown).
+ * Inserts lessons directly into the e2e database, bypassing the
+ * /courses/<id>/lessons/new form (walks around form hydration).
  *
  * Only columns notNull in src/db/schema.ts are filled; created_at/updated_at
  * must be given explicitly because drizzle-kit push emits them WITHOUT
