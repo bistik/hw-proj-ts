@@ -78,7 +78,7 @@ test.describe("courses list page", () => {
       const courseId = /\/courses\/(\d+)$/.exec(coursePath)![1];
 
       // Seed items directly in the e2e DB (faster and more robust than
-      // walking the /assignments/new and /lessons/new forms).
+      // walking the /assignments/new and /courses/<id>/lessons/new forms).
       const seed = itemType === "assignments" ? seedAssignments : seedLessons;
       await seed(Number(courseId), [...seededTitles]);
 
