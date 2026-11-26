@@ -188,6 +188,40 @@ export async function updateAssignmentPoints(
 }
 
 /**
+ * Sets the check_on_submit toggle of one assignments row (issue #86
+ * field; issue #95: the submit flow auto-checks answers only while
+ * this toggle is on).
+ */
+export async function updateAssignmentCheckOnSubmit(
+  assignmentId: number,
+  checkOnSubmit: boolean,
+): Promise<void> {
+  await db.run(
+    sql`UPDATE \`assignments\` SET \`check_on_submit\` = ${checkOnSubmit ? 1 : 0} WHERE \`id\` = ${assignmentId}`,
+  );
+}
+
+/**
+ * Reads the stored is_correct grade of one submission_answers row
+ * (issue #95: the auto-check on submit writes it). Returns null when
+ * the row is missing or its grade is not set, so a test can tell an
+ * ungraded answer from a graded-wrong one (false).
+ */
+export async function getAnswerIsCorrect(
+  questionId: number,
+  submissionId: number,
+): Promise<boolean | null> {
+  const rows = (await db.all(sql`SELECT
+    \`is_correct\`
+  FROM \`submission_answers\` WHERE \`question_id\` = ${questionId} AND \`submission_id\` = ${submissionId}`)) as Array<{
+    is_correct: number | null;
+  }>;
+
+  const value = rows[0]?.is_correct;
+  return value === null || value === undefined ? null : Boolean(value);
+}
+
+/**
  * Deletes one questions row directly. The schema's foreign key
  * cascades the row's submission_answers rows (issue #89: after a
  * question delete, the student's totals stay correct).
