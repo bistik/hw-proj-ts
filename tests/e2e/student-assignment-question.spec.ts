@@ -147,6 +147,135 @@ test.describe("student assignment question page", () => {
     ).toHaveCount(0);
   });
 
+  // Issue #92: a student is done submitting the assignment and goes
+  // back to the question page. The answer form flashes briefly and is
+  // then replaced by the static answer display. The form must not
+  // show at all: the student can no longer submit answers.
+  //
+  // The read-only test above does not catch the flash. It asserts
+  // only the final state, and its student never visited the question
+  // page before. This test visits the page while the submission is in
+  // progress first. That visit caches the question route loader with
+  // isSubmitted = false. The later visit must not render the form
+  // from the stale cached state while the loader runs again.
+  //
+  // Test-driven development red phase: no implementation change yet.
+  test("the answer form never flashes when the student returns to the question page after submitting the assignment", async ({
+    page,
+  }) => {
+    const { courseId, assignmentId, questionIds } =
+      await createAssignmentWithQuestionsOwnedByOtherUser(page, [
+        "Flash question",
+      ]);
+
+    // An in-progress submission: the student may still enter answers.
+    await seedSubmission(assignmentId, TEST_USER.email);
+    await seedEnrollment(TEST_USER.email, courseId);
+    await loginViaUi(page, TEST_USER);
+    await page.goto(`/student/courses/${courseId}`);
+    // Like the other tests: hydrate before the assignment link click.
+    await page.waitForLoadState("networkidle");
+    await page
+      .getByRole("link", { name: "Question-page assignment" })
+      .click();
+    await expect(page).toHaveURL(
+      new RegExp(`/student/assignments/${assignmentId}$`),
+    );
+    await page.getByRole("link", { name: "Go to question #1" }).click();
+    await expect(page).toHaveURL(
+      new RegExp(
+        `/student/assignments/${assignmentId}/questions/${questionIds[0]}$`,
+      ),
+    );
+
+    // While the submission is in progress, the form shows and the
+    // student answers the question like a real user. This visit also
+    // caches the question route with isSubmitted = false.
+    await expect(
+      page.getByRole("button", { name: "Submit answer" }),
+    ).toBeVisible();
+    await page.locator("form fieldset input").fill("My final answer");
+    await page.getByRole("button", { name: "Submit answer" }).click();
+    // The only question has no next one: the form resets and the page
+    // stays. Wait for the reset before navigating back.
+    await expect(page.locator("form fieldset input")).toHaveValue("");
+
+    // Submit the assignment through the confirmation modal, like the
+    // plain flow in student-assignment-check-on-submit.spec.ts.
+    await page.getByRole("link", { name: "Back to assignment" }).click();
+    await expect(page).toHaveURL(
+      new RegExp(`/student/assignments/${assignmentId}$`),
+    );
+    const submitButton = page.getByRole("button", {
+      name: "Submit assignment",
+    });
+    await expect(submitButton).toBeVisible();
+    const confirmModal = page
+      .locator("dialog.modal")
+      .filter({ hasText: "Submit this assignment?" });
+    // Hydration in dev can lag the SSR-rendered button; a click that
+    // falls through does nothing (loginViaUi documents the same race),
+    // so retry until the confirmation modal is open.
+    await expect
+      .poll(
+        async () => {
+          await submitButton.click();
+          return confirmModal.isVisible();
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(true);
+    await confirmModal.getByRole("button", { name: "Okay" }).click();
+    // The submission is submitted now: the route reloads and the
+    // submit button disappears.
+    await expect(submitButton).toHaveCount(0);
+
+    // Record every appearance of the answer form during the
+    // navigation back to the question page. A MutationObserver catches
+    // even a one-frame flash. A poll after the click could miss it.
+    await page.evaluate(() => {
+      const w = window as unknown as { __answerFormSeen: boolean };
+      w.__answerFormSeen = false;
+      new MutationObserver(() => {
+        if (
+          document.querySelector("form fieldset input, form fieldset textarea")
+        ) {
+          w.__answerFormSeen = true;
+        }
+      }).observe(document.body, { childList: true, subtree: true });
+    });
+
+    // The student goes back to the question page.
+    await page.getByRole("link", { name: "Go to question #1" }).click();
+    await expect(page).toHaveURL(
+      new RegExp(
+        `/student/assignments/${assignmentId}/questions/${questionIds[0]}$`,
+      ),
+    );
+
+    // The question and the saved answer show as text...
+    await expect(
+      page.getByRole("heading", { name: "Flash question" }),
+    ).toBeVisible();
+    await expect(page.getByText("Your answer: My final answer")).toBeVisible();
+    // ...the final state has no form (scoped like the tests above,
+    // because getByRole("textbox") also matches the navbar search)...
+    await expect(
+      page.locator("form fieldset input, form fieldset textarea"),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Submit answer" }),
+    ).toHaveCount(0);
+    // ...and the form never appeared during the navigation, not even
+    // for one frame.
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { __answerFormSeen?: boolean })
+          .__answerFormSeen,
+      ),
+    ).toBe(false);
+  });
+
   test("a student with an in-progress submission sees the answer form", async ({
     page,
   }) => {
