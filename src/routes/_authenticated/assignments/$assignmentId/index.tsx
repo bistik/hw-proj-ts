@@ -77,6 +77,10 @@ export const Route = createFileRoute(
       getQuestions({ data: assignmentId }),
     ]);
     if (!course) throw notFound();
+    // getQuestions returns null when its author check fails. The
+    // assignment check above already proved authorship, so this guard
+    // only narrows the type. It keeps a null from reaching the list.
+    if (!questions) throw notFound();
 
     return { assignment, course, questions };
   },

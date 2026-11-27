@@ -10,15 +10,27 @@ import { authMiddleware } from "@/middlewares/auth-middleware";
 import { createServerFn } from "@tanstack/react-start";
 import z from "zod";
 import { requireUserEnrolledInCourse } from "@/db/authz";
-import { dbGetAssignment } from "@/db/assignments/get-assignment";
+import {
+  dbGetAssignment,
+  dbGetAssignmentByIdAndAuthor,
+} from "@/db/assignments/get-assignment";
 
 export const getQuestions = createServerFn({
   method: "GET",
 })
   .validator((assignmentId: number) => assignmentId)
   .middleware([authMiddleware])
-  .handler(async ({ data: assignmentId }) => {
+  .handler(async ({ data: assignmentId, context }) => {
     try {
+      // The author check runs first and joins on the course author,
+      // exactly like getAssignmentById (issue #18 review). A caller
+      // who is not the course author gets null, and the questions
+      // query never runs, so no answer column can leak.
+      const assignment = await dbGetAssignmentByIdAndAuthor(
+        assignmentId,
+        context.user.id,
+      );
+      if (!assignment) return null;
       return await dbGetQuestionsByAssignment(assignmentId);
     } catch (err) {
       console.error(
