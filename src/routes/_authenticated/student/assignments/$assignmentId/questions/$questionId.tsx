@@ -231,25 +231,30 @@ function SubmitAnswerComponent() {
           it sits above the form instead of inside it. */}
       {canSubmit && (
         <div className="flex w-full items-center justify-center">
-          <div className="mt-4 flex w-full max-w-md flex-col items-center gap-y-2">
-            <p className="text-center">
-              All the questions in this assignment have been answered. Do you
-              want to submit the assignment?
-            </p>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => setSubmitOpen(true)}
-            >
-              Submit assignment
-            </button>
+          {/* Review on PR #102: the option renders as a card, in the
+              style of the AnswerCard, with space below it so it sits
+              apart from the question form. */}
+          <div className="card mt-4 mb-8 w-full max-w-md border-2 border-base-300 bg-base-100 shadow-md">
+            <div className="card-body items-center gap-y-2 text-center">
+              <p>
+                All the questions in this assignment have been answered. Do you
+                want to submit the assignment?
+              </p>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setSubmitOpen(true)}
+              >
+                Submit assignment
+              </button>
+            </div>
           </div>
         </div>
       )}
       <div className="flex w-full items-center justify-center">
         {isSubmitted ? (
           <div className="mt-4 w-full max-w-md space-y-4">
-            <h3 className="text-2xl">{question.questionText}</h3>
+            <h3 className="text-3xl">{question.questionText}</h3>
             <p>
               {currentAnswer
                 ? `Your answer: ${currentAnswer.answer}`
@@ -272,7 +277,7 @@ function SubmitAnswerComponent() {
             }}
           >
             <div className="mt-4">
-              <h3 className="text-2xl">{question.questionText}</h3>
+              <h3 className="text-3xl">{question.questionText}</h3>
             </div>
             <form.Subscribe selector={(s) => s.errors}>
               {(errors) => {
