@@ -119,6 +119,7 @@ function SubmissionReviewComponent() {
           assigneeEmail={review.assigneeEmail}
           assigneeName={review.assigneeName}
           startedAt={review.startedAt}
+          submittedAt={review.submittedAt}
           completedAt={review.completedAt}
           correctCount={review.correctCount}
           total={review.total}

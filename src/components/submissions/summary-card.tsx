@@ -2,6 +2,8 @@ type SubmissionSummaryCardProps = {
   assigneeName: string;
   assigneeEmail: string;
   startedAt: Date | string;
+  /** Set when the student submitted; renders the submitted date. */
+  submittedAt?: Date | string | null;
   /** Set when the review is closed; renders the completion date. */
   completedAt?: Date | string | null;
   correctCount: number;
@@ -26,6 +28,7 @@ export default function SubmissionSummaryCard({
   assigneeName,
   assigneeEmail,
   startedAt,
+  submittedAt,
   completedAt,
   correctCount,
   total,
@@ -45,6 +48,7 @@ export default function SubmissionSummaryCard({
         <p>{assigneeEmail}</p>
         <p>{assigneeName}</p>
         <p>Started: {formatDate(startedAt)}</p>
+        {submittedAt && <p>Submitted: {formatDate(submittedAt)}</p>}
         {completedAt && <p>Completed: {formatDate(completedAt)}</p>}
         <p>
           {correctCount} of {total}

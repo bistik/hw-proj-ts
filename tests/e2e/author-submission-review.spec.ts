@@ -157,9 +157,13 @@ test.describe("author submission review page", () => {
     await expect(summaryCard).toBeVisible();
     await expect(summaryCard.getByText(TEST_USER.name)).toBeVisible();
     await expect(summaryCard.getByText(/Started/)).toBeVisible();
-    // A date-like value. Requiring the year keeps this check from matching
-    // the score text ("0 of 2"), which also contains digits.
-    await expect(summaryCard.getByText(/\d{4}/)).toBeVisible();
+    // A date-like value on the started line. Requiring the year keeps
+    // this check from matching the score text ("0 of 2"), which also
+    // contains digits. The line is named so the Submitted date (issue
+    // #100) cannot make the match ambiguous.
+    const startedLine = summaryCard.getByText(/^Started: /);
+    await expect(startedLine).toBeVisible();
+    await expect(startedLine).toContainText(/\d{4}/);
 
     // Nothing is graded yet: the score counts zero of the two questions.
     // The "<correct> of <total>" format is part of the contract.
@@ -632,5 +636,110 @@ test.describe("mark a submission as completed", () => {
     await expect(
       page.getByRole("button", { name: "Mark as completed", exact: true }),
     ).toHaveCount(0);
+  });
+});
+
+/**
+ * Issue #100: the submission overview card shows the submitted date.
+ *
+ * The contract (from the issue): the summary card of a submission shows
+ * a "Submitted: <date>" line. The line sits between the "Started" line
+ * and the "Completed" line. An in-progress submission has no submitted
+ * date, so the card must not show the line for it.
+ */
+test.describe("submission overview submitted date", () => {
+  test("the summary card of a submitted submission shows a Submitted date", async ({
+    page,
+  }) => {
+    const { courseId, assignmentId, submissionId } =
+      await setupSubmissionForReview(page, { submitted: true });
+
+    await loginViaUi(page, OTHER_USER);
+    await page.goto(reviewPath(courseId, assignmentId, submissionId));
+
+    const summaryCard = page
+      .locator(".card")
+      .filter({ hasText: TEST_USER.email });
+    await expect(summaryCard).toBeVisible();
+
+    // The card shows when the student submitted. The line starts with
+    // "Submitted: " and holds a date-like value. The year keeps this
+    // check from matching the score text ("0 of 2"), which also holds
+    // digits.
+    const submittedLine = summaryCard.getByText(/^Submitted: /);
+    await expect(submittedLine).toBeVisible();
+    await expect(submittedLine).toContainText(/\d{4}/);
+  });
+
+  test("the Submitted date sits between the Started and the Completed date", async ({
+    page,
+  }) => {
+    const { courseId, assignmentId, submissionId } =
+      await setupSubmissionForReview(page, { submitted: true });
+
+    await loginViaUi(page, OTHER_USER);
+    await page.goto(reviewPath(courseId, assignmentId, submissionId));
+
+    // Complete the review first: only a completed submission shows the
+    // Completed date. Hydration in dev can lag the SSR-rendered button
+    // (the completed-state test documents the same race), so retry the
+    // click until the grading buttons disappear. The click can also
+    // throw once the button unmounts mid-navigation; both count as
+    // progress, not failure.
+    const completeButton = page.getByRole("button", {
+      name: "Mark as completed",
+      exact: true,
+    });
+    await expect
+      .poll(
+        async () => {
+          try {
+            await completeButton.click({ timeout: 2_000 });
+          } catch {
+            // The button is gone: completion already happened.
+          }
+          return page.getByRole("button", { name: "Correct", exact: true })
+            .count();
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(0);
+
+    const summaryCard = page
+      .locator(".card")
+      .filter({ hasText: TEST_USER.email });
+    const startedLine = summaryCard.getByText(/^Started: /);
+    const submittedLine = summaryCard.getByText(/^Submitted: /);
+    const completedLine = summaryCard.getByText(/^Completed: /);
+    await expect(startedLine).toBeVisible();
+    await expect(submittedLine).toBeVisible();
+    await expect(completedLine).toBeVisible();
+
+    // The Submitted line sits below the Started line and above the
+    // Completed line.
+    const startedBox = await startedLine.boundingBox();
+    const submittedBox = await submittedLine.boundingBox();
+    const completedBox = await completedLine.boundingBox();
+    expect(startedBox!.y).toBeLessThan(submittedBox!.y);
+    expect(submittedBox!.y).toBeLessThan(completedBox!.y);
+  });
+
+  test("an in-progress submission shows no Submitted date", async ({
+    page,
+  }) => {
+    // The student did not submit yet, so no submitted date exists. The
+    // card must not show a Submitted line (matching how the grading
+    // buttons are already withheld for an in-progress submission).
+    const { courseId, assignmentId, submissionId } =
+      await setupSubmissionForReview(page, { submitted: false });
+
+    await loginViaUi(page, OTHER_USER);
+    await page.goto(reviewPath(courseId, assignmentId, submissionId));
+
+    const summaryCard = page
+      .locator(".card")
+      .filter({ hasText: TEST_USER.email });
+    await expect(summaryCard).toBeVisible();
+    await expect(summaryCard.getByText(/^Submitted: /)).toHaveCount(0);
   });
 });
