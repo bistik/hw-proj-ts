@@ -157,9 +157,13 @@ test.describe("author submission review page", () => {
     await expect(summaryCard).toBeVisible();
     await expect(summaryCard.getByText(TEST_USER.name)).toBeVisible();
     await expect(summaryCard.getByText(/Started/)).toBeVisible();
-    // A date-like value. Requiring the year keeps this check from matching
-    // the score text ("0 of 2"), which also contains digits.
-    await expect(summaryCard.getByText(/\d{4}/)).toBeVisible();
+    // A date-like value on the started line. Requiring the year keeps
+    // this check from matching the score text ("0 of 2"), which also
+    // contains digits. The line is named so the Submitted date (issue
+    // #100) cannot make the match ambiguous.
+    const startedLine = summaryCard.getByText(/^Started: /);
+    await expect(startedLine).toBeVisible();
+    await expect(startedLine).toContainText(/\d{4}/);
 
     // Nothing is graded yet: the score counts zero of the two questions.
     // The "<correct> of <total>" format is part of the contract.
