@@ -96,11 +96,17 @@ export const getStudentQuestion = createServerFn({ method: "GET" })
       throw new Error("Could not find assignment");
     try {
       await requireUserEnrolledInCourse(assignment.courseId, context.user.id);
-      const result = dbGetQuestionByIdAndAssignment(
-        assignment.id,
-        data.questionId,
-      );
-      return result;
+      // Issue #101: the question route also needs the course id, so its
+      // score modal can redirect back to the course page after a
+      // checked submit. The enrollment guard above already proved the
+      // caller is a member, so sharing it is safe.
+      return {
+        courseId: assignment.courseId,
+        question: await dbGetQuestionByIdAndAssignment(
+          assignment.id,
+          data.questionId,
+        ),
+      };
     } catch (err) {
       console.error(
         `Error fetching student assignment question ${data.questionId}`,

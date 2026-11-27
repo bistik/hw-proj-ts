@@ -1,10 +1,13 @@
+import ConfirmModal from "@/components/confirm-modal";
 import FormErrorAlert from "@/components/form-error-alert";
+import ScoreModal from "@/components/score-modal";
 import { SubmitButton } from "@/components/submit-button";
 import { TextField } from "@/components/text-field";
 import { submitAnswerFormSchema } from "@/schemas/course-schema";
 import { upsertAnswer } from "@/server/assignments/submissions/answers/create-answer";
 import { getStudentAnswer } from "@/server/assignments/submissions/answers/get-answer";
 import { getSubmission } from "@/server/assignments/submissions/get-submission";
+import { submitAssignment } from "@/server/assignments/submissions/mutate-submission";
 import {
   getStudentNextQuestion,
   getStudentPreviousQuestion,
@@ -18,6 +21,7 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
+import { useState } from "react";
 import z from "zod";
 
 export const Route = createFileRoute(
@@ -40,7 +44,7 @@ export const Route = createFileRoute(
       if (!Number.isInteger(questionId) || questionId <= 0) throw notFound();
 
       const [
-        question,
+        questionResult,
         currentAnswer,
         nextQuestion,
         prevQuestion,
@@ -63,12 +67,26 @@ export const Route = createFileRoute(
         }),
       ]);
 
+      const { courseId, question } = questionResult;
       if (!question) throw notFound();
 
       // Read-only once the submission is marked submitted (submitted_at set).
+      const submission = submissionResult.submission;
       const isSubmitted =
-        submissionResult.submission !== null &&
-        submissionResult.submission.submittedAt !== null;
+        submission !== null && submission.submittedAt !== null;
+
+      // Issue #101: the submit option depends on every question of the
+      // assignment, not only on the question on screen. getSubmission
+      // returns one row per question of the assignment, each flagged
+      // answered, so the option shows when the submission is in
+      // progress and no row is unanswered. A submission row must exist
+      // (the submit guard on the overview page is the same), and an
+      // assignment with no questions is never submittable here.
+      const canSubmit =
+        submission !== null &&
+        submission.submittedAt === null &&
+        submissionResult.questions.length > 0 &&
+        submissionResult.questions.every((q) => q.answered);
 
       return {
         question,
@@ -76,6 +94,8 @@ export const Route = createFileRoute(
         prevQuestion,
         currentAnswer,
         isSubmitted,
+        courseId,
+        canSubmit,
       };
     },
   },
@@ -117,11 +137,27 @@ function QuestionPending() {
 }
 
 function SubmitAnswerComponent() {
-  const { question, nextQuestion, prevQuestion, currentAnswer, isSubmitted } =
-    Route.useLoaderData();
+  const {
+    question,
+    nextQuestion,
+    prevQuestion,
+    currentAnswer,
+    isSubmitted,
+    courseId,
+    canSubmit,
+  } = Route.useLoaderData();
   const { assignmentId } = Route.useParams();
   const navigate = useNavigate();
   const router = useRouter();
+  // The issue #101 submit option: open when the student clicked the
+  // question page's "Submit assignment" button.
+  const [submitOpen, setSubmitOpen] = useState(false);
+  // The auto-check result (issue #95): non-null while the score modal
+  // shows, after the student submitted a check_on_submit assignment.
+  const [score, setScore] = useState<{
+    score: number;
+    total: number;
+  } | null>(null);
 
   const handleSubmit = async ({
     value,
@@ -189,6 +225,27 @@ function SubmitAnswerComponent() {
           )}
         </div>
       </div>
+      {/* Issue #101: the submit option, at the top of the answer form.
+          It renders only while the submission is in progress and every
+          question of the assignment has a saved answer (canSubmit), so
+          it sits above the form instead of inside it. */}
+      {canSubmit && (
+        <div className="flex w-full items-center justify-center">
+          <div className="mt-4 flex w-full max-w-md flex-col items-center gap-y-2">
+            <p className="text-center">
+              All the questions in this assignment have been answered. Do you
+              want to submit the assignment?
+            </p>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setSubmitOpen(true)}
+            >
+              Submit assignment
+            </button>
+          </div>
+        </div>
+      )}
       <div className="flex w-full items-center justify-center">
         {isSubmitted ? (
           <div className="mt-4 w-full max-w-md space-y-4">
@@ -262,6 +319,47 @@ function SubmitAnswerComponent() {
           </form>
         )}
       </div>
+      {canSubmit && (
+        <ConfirmModal
+          open={submitOpen}
+          message="Submit this assignment?"
+          onConfirm={async () => {
+            // The same submitAssignment flow as the overview page
+            // (issues #95 and #101): a checked assignment shows the
+            // score modal, a stored-off one reloads this route so the
+            // submitted state (submitted_at set) is reflected and the
+            // option disappears. The ConfirmModal keeps the page under
+            // its top layer (with a spinner on Okay) until this
+            // resolves, so the submit action cannot be double-fired.
+            const result = await submitAssignment({
+              data: { assignmentId: Number(assignmentId) },
+            });
+            if (result.checked) {
+              setScore({ score: result.score, total: result.total });
+            } else {
+              await router.invalidate();
+            }
+          }}
+          onClose={() => setSubmitOpen(false)}
+        />
+      )}
+      {score && (
+        <ScoreModal
+          score={score.score}
+          total={score.total}
+          onClose={() => {
+            // Closing the modal returns the student to the course
+            // page — the same route the overview page redirects to
+            // after submission. The navigation unmounts this route
+            // (and the modal with it).
+            setScore(null);
+            void router.navigate({
+              to: "/student/courses/$courseId",
+              params: { courseId: String(courseId) },
+            });
+          }}
+        />
+      )}
     </div>
   );
 }
