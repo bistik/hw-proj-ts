@@ -23,15 +23,29 @@ import z from "zod";
 export const Route = createFileRoute(
   "/_authenticated/student/assignments/$assignmentId/questions/$questionId",
 )({
-  loader: async ({ params }) => {
-    const assignmentId = Number(params.assignmentId);
-    if (!Number.isInteger(assignmentId) || assignmentId <= 0) throw notFound();
+  // Issue #92: a return visit reuses the cached match. The default
+  // "background" stale reload renders the cached state (isSubmitted =
+  // false) while the loader runs again, so the answer form flashes for
+  // a student who already submitted. The "blocking" mode waits for the
+  // fresh loader data and shows the pending skeleton instead, so the
+  // form never renders from the stale cached state.
+  loader: {
+    staleReloadMode: "blocking",
+    handler: async ({ params }) => {
+      const assignmentId = Number(params.assignmentId);
+      if (!Number.isInteger(assignmentId) || assignmentId <= 0)
+        throw notFound();
 
-    const questionId = Number(params.questionId);
-    if (!Number.isInteger(questionId) || questionId <= 0) throw notFound();
+      const questionId = Number(params.questionId);
+      if (!Number.isInteger(questionId) || questionId <= 0) throw notFound();
 
-    const [question, currentAnswer, nextQuestion, prevQuestion, submissionResult] =
-      await Promise.all([
+      const [
+        question,
+        currentAnswer,
+        nextQuestion,
+        prevQuestion,
+        submissionResult,
+      ] = await Promise.all([
         getStudentQuestion({
           data: { assignmentId, questionId },
         }),
@@ -49,20 +63,21 @@ export const Route = createFileRoute(
         }),
       ]);
 
-    if (!question) throw notFound();
+      if (!question) throw notFound();
 
-    // Read-only once the submission is marked submitted (submitted_at set).
-    const isSubmitted =
-      submissionResult.submission !== null &&
-      submissionResult.submission.submittedAt !== null;
+      // Read-only once the submission is marked submitted (submitted_at set).
+      const isSubmitted =
+        submissionResult.submission !== null &&
+        submissionResult.submission.submittedAt !== null;
 
-    return {
-      question,
-      nextQuestion,
-      prevQuestion,
-      currentAnswer,
-      isSubmitted,
-    };
+      return {
+        question,
+        nextQuestion,
+        prevQuestion,
+        currentAnswer,
+        isSubmitted,
+      };
+    },
   },
   component: SubmitAnswerComponent,
   remountDeps: ({ params }) => [params.questionId],
