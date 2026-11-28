@@ -56,6 +56,12 @@ export async function dbGetQuestionByIdAndAssignment(
       questionText: true,
       assignmentId: true,
       position: true,
+      // Issue #104: the student question page shows the correct
+      // answer once the student submitted the assignment.
+      // getStudentQuestion strips the column for a caller whose
+      // submission is still in progress, so the internal reads here
+      // (next/prev question, answer upsert) never leak it.
+      answer: true,
     },
     where: (questionsTable, { and, eq }) =>
       and(

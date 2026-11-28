@@ -36,6 +36,31 @@ export async function dbGetSubmissionsByCourse(courseId: number) {
   );
 }
 
+/**
+ * Issue #104 gate: reports whether the student's submission of the
+ * assignment is submitted (submitted_at set). A student without a
+ * submission row, or with one still in progress, gets false. The
+ * student question read uses this to keep the question's correct
+ * answer on the server until the student can no longer edit answers.
+ */
+export async function dbIsSubmissionSubmitted(
+  assignmentId: number,
+  assigneeId: string,
+) {
+  const rows = await db
+    .select({ submittedAt: assignmentSubmissionsTable.submittedAt })
+    .from(assignmentSubmissionsTable)
+    .where(
+      and(
+        eq(assignmentSubmissionsTable.assignmentId, assignmentId),
+        eq(assignmentSubmissionsTable.assigneeId, assigneeId),
+      ),
+    )
+    .limit(1);
+
+  return rows[0]?.submittedAt != null;
+}
+
 export async function dbGetSubmissionByAssignmentAndStudent(
   assignmentId: number,
   assigneeId: string,

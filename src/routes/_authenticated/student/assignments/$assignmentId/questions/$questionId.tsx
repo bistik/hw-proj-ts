@@ -260,6 +260,16 @@ function SubmitAnswerComponent() {
                 ? `Your answer: ${currentAnswer.answer}`
                 : "No answer submitted"}
             </p>
+            {/* Issue #104: after the student submitted the assignment,
+                the page shows the question's correct answer below the
+                answer line. getStudentQuestion strips the answer while
+                the submission is in progress, so it is undefined
+                exactly when the student could still copy it into the
+                form. One text node, like the "Your answer:" line above,
+                so getByText finds the whole line. */}
+            {question.answer !== undefined && (
+              <p>Correct answer: {question.answer}</p>
+            )}
             <Link
               to="/student/assignments/$assignmentId"
               params={{ assignmentId: String(question.assignmentId) }}

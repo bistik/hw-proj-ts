@@ -14,6 +14,7 @@ import {
   dbGetAssignment,
   dbGetAssignmentByIdAndAuthor,
 } from "@/db/assignments/get-assignment";
+import { dbIsSubmissionSubmitted } from "@/db/assignments/submissions/get-submission";
 
 export const getQuestions = createServerFn({
   method: "GET",
@@ -99,13 +100,29 @@ export const getStudentQuestion = createServerFn({ method: "GET" })
       // Issue #101: the question route also needs the course id, so its
       // score modal can redirect back to the course page after a
       // checked submit. The enrollment guard above already proved the
-      // caller is a member, so sharing it is safe.
+      // caller is a member, so sharing it here is safe.
+      //
+      // Issue #104: the question page shows the correct answer once
+      // the student submitted the assignment. While the submission is
+      // in progress the answer must not leave the server at all, or a
+      // student could read it from the network payload and copy it
+      // into the still-open answer form. dbIsSubmissionSubmitted is
+      // the gate: the answer column travels only with a submitted
+      // submission, so it is undefined below exactly while the
+      // student may still edit answers.
+      const submitted = await dbIsSubmissionSubmitted(
+        assignment.id,
+        context.user.id,
+      );
+      const question = await dbGetQuestionByIdAndAssignment(
+        assignment.id,
+        data.questionId,
+      );
       return {
         courseId: assignment.courseId,
-        question: await dbGetQuestionByIdAndAssignment(
-          assignment.id,
-          data.questionId,
-        ),
+        question: !question
+          ? null
+          : { ...question, answer: submitted ? question.answer : undefined },
       };
     } catch (err) {
       console.error(
