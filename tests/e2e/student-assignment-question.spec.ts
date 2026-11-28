@@ -340,10 +340,12 @@ test.describe("student assignment question page", () => {
  * the correct answer must not show anywhere on the page: the student
  * could copy it into the still-open answer form.
  *
- * Test-driven development red phase: the loader's question query
- * (dbGetQuestionByIdAndAssignment) does not fetch the answer column
- * today, so both submitted-state tests fail until the feature exists.
- * The in-progress test passes before and after: it pins the leak guard.
+ * The submitted-state tests pin the reveal: the question query
+ * (dbGetQuestionByIdAndAssignment) fetches the answer column, and
+ * getStudentQuestion sends it only for a submitted submission. The
+ * in-progress test pins the leak guard: while the submission is in
+ * progress, the correct answer must reach neither the DOM nor any
+ * network payload.
  */
 test.describe("student question page correct answer (issue #104)", () => {
   const QUESTION = "Correct-answer question";
@@ -488,6 +490,25 @@ test.describe("student question page correct answer (issue #104)", () => {
         [CORRECT_ANSWER],
       );
 
+    // PR #105 review: the DOM check below cannot catch a regression
+    // that sends the answer in the JSON payload but does not render
+    // it. Record every server fn response body of the navigation
+    // (TanStack Start calls server fns at /_serverFn/<id>), then
+    // assert the correct answer travelled in none of them. A body
+    // that fails to load (an aborted request) reads as "", which
+    // holds no answer and cannot weaken the check.
+    const responseBodies: Promise<string>[] = [];
+    page.on("response", (response) => {
+      if (response.url().includes("/_serverFn/")) {
+        responseBodies.push(
+          response
+            .body()
+            .then((body) => body.toString())
+            .catch(() => ""),
+        );
+      }
+    });
+
     // The submission is in progress (submitted_at null): the student
     // may still enter an answer, so the page must not leak the
     // question's correct answer in any form.
@@ -505,5 +526,15 @@ test.describe("student question page correct answer (issue #104)", () => {
     ).toBeVisible();
     await expect(page.getByText(/^Correct answer: /)).toHaveCount(0);
     await expect(page.getByText(CORRECT_ANSWER)).toHaveCount(0);
+
+    // The network check. The question text must appear in at least
+    // one body, so the listener really captured the question
+    // payloads: without this, an empty capture would pass the leak
+    // check without testing anything.
+    const bodies = await Promise.all(responseBodies);
+    expect(bodies.some((body) => body.includes(QUESTION))).toBe(true);
+    for (const body of bodies) {
+      expect(body).not.toContain(CORRECT_ANSWER);
+    }
   });
 });
