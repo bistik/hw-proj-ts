@@ -34,8 +34,10 @@ function NewCourseComponent() {
     defaultValues: defaultCourse,
     onSubmit: handleSubmit,
     validators: {
+      // Whole-schema validation only on submit (issue #64): the
+      // field-scoped onBlur validators on the form.Field elements
+      // below keep a blur scoped to the blurred field.
       onSubmit: courseFormSchema,
-      onBlur: courseFormSchema,
     },
   });
 
@@ -52,10 +54,16 @@ function NewCourseComponent() {
           typeof error === "string" ? <FormErrorAlert errorMsg={error} /> : null
         }
       </form.Subscribe>
-      <form.Field name="title">
+      <form.Field
+        name="title"
+        validators={{ onBlur: courseFormSchema.shape.title }}
+      >
         {(field) => <TextField field={field} label="Title" />}
       </form.Field>
-      <form.Field name="description">
+      <form.Field
+        name="description"
+        validators={{ onBlur: courseFormSchema.shape.description }}
+      >
         {(field) => (
           <TextField field={field} label="Description" multiline rows={5} />
         )}

@@ -60,8 +60,10 @@ function RouteComponent() {
       description: course.description ?? "",
     },
     validators: {
+      // Whole-schema validation only on submit (issue #64): the
+      // field-scoped onBlur validators on the form.Field elements
+      // below keep a blur scoped to the blurred field.
       onSubmit: courseUpdateFormSchema,
-      onBlur: courseUpdateFormSchema,
     },
     onSubmit: handleSubmit,
   });
@@ -82,10 +84,16 @@ function RouteComponent() {
             ) : null
           }
         </form.Subscribe>
-        <form.Field name="title">
+        <form.Field
+          name="title"
+          validators={{ onBlur: courseUpdateFormSchema.shape.title }}
+        >
           {(field) => <TextField field={field} label="Title" />}
         </form.Field>
-        <form.Field name="description">
+        <form.Field
+          name="description"
+          validators={{ onBlur: courseUpdateFormSchema.shape.description }}
+        >
           {(field) => (
             <TextField field={field} label="Description" multiline rows={5} />
           )}

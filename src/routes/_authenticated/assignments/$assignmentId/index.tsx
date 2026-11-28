@@ -195,8 +195,10 @@ function AssignmentDetailComponent() {
       answer: "",
     },
     validators: {
+      // Whole-schema validation only on submit (issue #64): the
+      // field-scoped onBlur validators on the form.Field elements
+      // below keep a blur scoped to the blurred field.
       onSubmit: questionFormSchema,
-      onBlur: questionFormSchema,
     },
     onSubmit: handleSubmit,
   });
@@ -358,10 +360,16 @@ function AssignmentDetailComponent() {
               form.handleSubmit();
             }}
           >
-            <form.Field name="questionText">
+            <form.Field
+              name="questionText"
+              validators={{ onBlur: questionFormSchema.shape.questionText }}
+            >
               {(field) => <TextField field={field} label="Question" multiline />}
             </form.Field>
-            <form.Field name="answer">
+            <form.Field
+              name="answer"
+              validators={{ onBlur: questionFormSchema.shape.answer }}
+            >
               {(field) => <TextField field={field} label="Answer" multiline />}
             </form.Field>
             {/* Issue #51: the pending button disables and shows the daisyUI
