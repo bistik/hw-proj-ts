@@ -79,8 +79,10 @@ function NewAssignmentComponent() {
       checkOnSubmit: false,
     },
     validators: {
+      // Whole-schema validation only on submit (issue #64): the
+      // field-scoped onBlur validators on the form.Field elements
+      // below keep a blur scoped to the blurred field.
       onSubmit: assignmentFormSchema,
-      onBlur: assignmentFormSchema,
     },
     onSubmit: handleSubmit,
   });
@@ -115,15 +117,24 @@ function NewAssignmentComponent() {
             ) : null
           }
         </form.Subscribe>
-        <form.Field name="title">
+        <form.Field
+          name="title"
+          validators={{ onBlur: assignmentFormSchema.shape.title }}
+        >
           {(field) => <TextField field={field} label="Title" />}
         </form.Field>
-        <form.Field name="example">
+        <form.Field
+          name="example"
+          validators={{ onBlur: assignmentFormSchema.shape.example }}
+        >
           {(field) => (
             <TextField field={field} label="Example" multiline rows={8} />
           )}
         </form.Field>
-        <form.Field name="points">
+        <form.Field
+          name="points"
+          validators={{ onBlur: assignmentFormSchema.shape.points }}
+        >
           {(field) => (
             <fieldset className="fieldset">
               <legend className="fieldset-legend">Points</legend>
@@ -147,7 +158,10 @@ function NewAssignmentComponent() {
             fieldset/legend pattern as the Points field. The form always
             submits the checkbox value, so the payload always holds the
             required checkOnSubmit field. */}
-        <form.Field name="checkOnSubmit">
+        <form.Field
+          name="checkOnSubmit"
+          validators={{ onBlur: assignmentFormSchema.shape.checkOnSubmit }}
+        >
           {(field) => (
             <fieldset className="fieldset">
               <legend className="fieldset-legend">

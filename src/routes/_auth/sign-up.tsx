@@ -65,8 +65,12 @@ function RouteComponent() {
     defaultValues: defaultCredentials,
     onSubmit: createUser,
     validators: {
+      // Whole-schema validation only on submit (issue #64): a
+      // form-level onBlur validator would run the whole schema on
+      // every field blur and attach errors to fields the user has
+      // not reached yet. Each form.Field below carries its own
+      // field-scoped onBlur validator instead.
       onSubmit: formSchema,
-      onBlur: formSchema,
     },
   });
   return (
@@ -78,7 +82,10 @@ function RouteComponent() {
       }}
     >
       <h2 className="text-2xl my-4">Sign up</h2>
-      <form.Field name="name">
+      <form.Field
+        name="name"
+        validators={{ onBlur: formSchema.shape.name }}
+      >
         {(field) => {
           const { errors, isTouched } = field.state.meta;
           return (
@@ -99,7 +106,10 @@ function RouteComponent() {
           );
         }}
       </form.Field>
-      <form.Field name="email">
+      <form.Field
+        name="email"
+        validators={{ onBlur: formSchema.shape.email }}
+      >
         {(field) => {
           const { errors, isTouched } = field.state.meta;
           return (
@@ -120,16 +130,22 @@ function RouteComponent() {
           );
         }}
       </form.Field>
-      <form.Field name="password">
+      <form.Field
+        name="password"
+        validators={{ onBlur: formSchema.shape.password }}
+      >
         {(field) => {
           const { errors, isTouched } = field.state.meta;
           return (
             <fieldset className="fieldset">
-              <legend className="fieldset-legend">
-                <span>Password</span>
-              </legend>
+              {/* Direct text in every legend (no span wrapper): the
+                  e2e locators address each input through
+                  legend:text-is(...), and Playwright matches the
+                  smallest element holding the text. */}
+              <legend className="fieldset-legend">Password</legend>
               <input
                 value={field.state.value}
+                onBlur={(e) => field.handleBlur()}
                 onChange={(e) => field.handleChange(e.target.value)}
                 type="password"
                 className="input"
@@ -142,14 +158,16 @@ function RouteComponent() {
           );
         }}
       </form.Field>
+      {/* No field-scoped onBlur validator here: the only rule on
+          confirmPassword is the cross-field refine ("Passwords do not
+          match"), which lives on the whole-schema onSubmit validator. A
+          blur of this field must not run it (issue #64). */}
       <form.Field name="confirmPassword">
         {(field) => {
           const { errors, isTouched } = field.state.meta;
           return (
             <fieldset className="fieldset">
-              <legend className="fieldset-legend">
-                <span>Confirm Password</span>
-              </legend>
+              <legend className="fieldset-legend">Confirm Password</legend>
               <input
                 value={field.state.value}
                 onBlur={(e) => field.handleBlur()}

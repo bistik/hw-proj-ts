@@ -207,7 +207,7 @@ test.describe("new assignment form (issue #64)", () => {
     page,
   }) => {
     // The form renders only when the author owns at least one course.
-    const courseId = await seedCourse(TEST_USER.email, {
+    await seedCourse(TEST_USER.email, {
       title: `Blur title course ${Date.now()}`,
       description: "Course whose assignment form keeps its blur scoped.",
     });

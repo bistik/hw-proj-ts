@@ -36,8 +36,10 @@ function RouteComponent() {
   const form = useForm({
     defaultValues: defaultValuesAssignment,
     validators: {
+      // Whole-schema validation only on submit (issue #64): the
+      // field-scoped onBlur validators on the form.Field elements
+      // below keep a blur scoped to the blurred field.
       onSubmit: assignmentFormSchema,
-      onBlur: assignmentFormSchema,
     },
     onSubmit: handleSubmit,
   });
@@ -57,15 +59,24 @@ function RouteComponent() {
           form.handleSubmit();
         }}
       >
-        <form.Field name="title">
+        <form.Field
+          name="title"
+          validators={{ onBlur: assignmentFormSchema.shape.title }}
+        >
           {(field) => <TextField label="Title" field={field} />}
         </form.Field>
-        <form.Field name="example">
+        <form.Field
+          name="example"
+          validators={{ onBlur: assignmentFormSchema.shape.example }}
+        >
           {(field) => (
             <TextField label="Example" field={field} multiline rows={8} />
           )}
         </form.Field>
-        <form.Field name="points">
+        <form.Field
+          name="points"
+          validators={{ onBlur: assignmentFormSchema.shape.points }}
+        >
           {(field) => (
             <fieldset className="fieldset">
               <legend className="fieldset-legend">Points</legend>
@@ -87,7 +98,10 @@ function RouteComponent() {
         </form.Field>
         {/* Issue #86: the same "Check answers on submit" checkbox as
             the /courses/<id>/assignments/new form. */}
-        <form.Field name="checkOnSubmit">
+        <form.Field
+          name="checkOnSubmit"
+          validators={{ onBlur: assignmentFormSchema.shape.checkOnSubmit }}
+        >
           {(field) => (
             <fieldset className="fieldset">
               <legend className="fieldset-legend">
@@ -108,6 +122,7 @@ function RouteComponent() {
           name="courseId"
           validators={{
             onChange: assignmentFormSchema.shape.courseId,
+            onBlur: assignmentFormSchema.shape.courseId,
           }}
         >
           {(field) => {
