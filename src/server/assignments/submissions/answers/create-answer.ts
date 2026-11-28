@@ -31,6 +31,18 @@ export const upsertAnswer = createServerFn({ method: "POST" })
       });
 
       if (!submission) throw new Error("Could not find assignment-submission.");
+
+      // PR #105 review: a submitted submission is read-only. The
+      // question page shows the correct answer after submit (issue
+      // #104), so an overwrite now would let a direct POST copy the
+      // model answer into the stored answer and get credit for it.
+      // The student UI cannot reach this state (the form is gone
+      // after submit), but a direct POST can, like the submit guard
+      // of PR #96. The check mirrors dbSetSubmissionToNow: a
+      // submitted row must never change.
+      if (submission.submittedAt !== null)
+        throw new Error("The assignment is already submitted.");
+
       const result = await dbUpsertAnswer({
         questionId: data.questionId,
         submissionId: submission.id,

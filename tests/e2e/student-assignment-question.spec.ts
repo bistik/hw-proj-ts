@@ -22,10 +22,15 @@ import { OTHER_USER, TEST_USER } from "./test-user";
  * NOT TEST_USER's: the only route to its student question page must be the
  * enrollment row. The question page lives at /student/assignments/
  * <assignment_id>/questions/<question_id>.
+ *
+ * The optional correctAnswers set each question's stored answer (the
+ * model answer, seedQuestions' third argument). Existing callers that
+ * omit it keep the generated default answers.
  */
 async function createAssignmentWithQuestionsOwnedByOtherUser(
   page: Page,
   questionTexts: string[],
+  correctAnswers?: string[],
 ) {
   await ensureSignedUp(OTHER_USER);
   await loginViaUi(page, OTHER_USER);
@@ -45,7 +50,11 @@ async function createAssignmentWithQuestionsOwnedByOtherUser(
   await seedCourseItems(courseId, [
     { itemType: "assignment", itemId: assignmentId, position: 0 },
   ]);
-  const questionIds = await seedQuestions(assignmentId, questionTexts);
+  const questionIds = await seedQuestions(
+    assignmentId,
+    questionTexts,
+    correctAnswers,
+  );
   await logoutViaUi(page);
   return { courseId, assignmentId, questionIds };
 }
@@ -315,5 +324,217 @@ test.describe("student assignment question page", () => {
       page.getByRole("button", { name: "Submit answer" }),
     ).toBeVisible();
     await expect(page.locator("form fieldset input")).toHaveCount(1);
+  });
+});
+
+/**
+ * Issue #104: after the student submitted the assignment, the question
+ * page shows the question's correct answer.
+ *
+ * The contract (from the issue): on /student/assignments/<id>/questions/
+ * <id>, when the student already submitted the assignment, the page
+ * displays "Correct answer: <answer>" below the "Your answer..." text.
+ * The issue conditions the line on the submitted assignment, not on a
+ * saved answer, so a submitted student who skipped the question sees it
+ * below "No answer submitted" too. While the submission is in progress,
+ * the correct answer must not show anywhere on the page: the student
+ * could copy it into the still-open answer form.
+ *
+ * The submitted-state tests pin the reveal: the question query
+ * (dbGetQuestionByIdAndAssignment) fetches the answer column, and
+ * getStudentQuestion sends it only for a submitted submission. The
+ * in-progress test pins the leak guard: while the submission is in
+ * progress, the correct answer must reach neither the DOM nor any
+ * network payload.
+ */
+test.describe("student question page correct answer (issue #104)", () => {
+  const QUESTION = "Correct-answer question";
+  const CORRECT_ANSWER = "The model answer: photosynthesis";
+  const STUDENT_ANSWER = "My own answer to the question";
+
+  /**
+   * Seeds TEST_USER's enrollment and submission on the assignment and
+   * walks to question #1 like a real student: course page → assignment
+   * card → "Go to question #1". Returns nothing; the tests read their
+   * seeded ids from the closure. Waits for the question page's own DOM
+   * (the heading renders in both the form and the read-only branch), so
+   * the caller's assertions never run against the stale overview DOM.
+   */
+  async function openFirstQuestionAsStudent(
+    page: Page,
+    courseId: number,
+    assignmentId: number,
+    questionId: number,
+    submittedAt: number | null,
+    studentAnswer: string | null,
+  ) {
+    await seedSubmission(assignmentId, TEST_USER.email, submittedAt);
+    if (studentAnswer !== null) {
+      await seedSubmissionAnswer(
+        assignmentId,
+        TEST_USER.email,
+        questionId,
+        studentAnswer,
+      );
+    }
+    await seedEnrollment(TEST_USER.email, courseId);
+    await loginViaUi(page, TEST_USER);
+    await page.goto(`/student/courses/${courseId}`);
+    // Like the tests above: hydrate before the assignment link click.
+    await page.waitForLoadState("networkidle");
+    await page
+      .getByRole("link", { name: "Question-page assignment" })
+      .click();
+    await expect(page).toHaveURL(
+      new RegExp(`/student/assignments/${assignmentId}$`),
+    );
+    await page.getByRole("link", { name: "Go to question #1" }).click();
+    await expect(page).toHaveURL(
+      new RegExp(
+        `/student/assignments/${assignmentId}/questions/${questionId}$`,
+      ),
+    );
+    await expect(
+      page.getByRole("heading", { name: QUESTION }),
+    ).toBeVisible();
+  }
+
+  test("a submitted student sees the correct answer below the saved answer", async ({
+    page,
+  }) => {
+    const { courseId, assignmentId, questionIds } =
+      await createAssignmentWithQuestionsOwnedByOtherUser(
+        page,
+        [QUESTION],
+        [CORRECT_ANSWER],
+      );
+
+    await openFirstQuestionAsStudent(
+      page,
+      courseId,
+      assignmentId,
+      questionIds[0]!,
+      Date.now(),
+      STUDENT_ANSWER,
+    );
+
+    // The saved answer shows as text (the read-only contract of the
+    // sibling tests), scoped by the line prefix because the answer
+    // text also substring-matches nothing else on the page.
+    const yourAnswerLine = page.getByText(/^Your answer: /);
+    await expect(yourAnswerLine).toBeVisible();
+    await expect(yourAnswerLine).toContainText(STUDENT_ANSWER);
+
+    // The issue #104 line: the correct answer below the saved answer.
+    // The line prefix is unique on the page whether the label renders
+    // as one text node (like "Your answer:") or as a bold span (like
+    // the author review's AnswerCard): getByText matches the smallest
+    // element holding the text, so strict mode stays safe either way.
+    const correctAnswerLine = page.getByText(/^Correct answer: /);
+    await expect(correctAnswerLine).toBeVisible();
+    await expect(correctAnswerLine).toContainText(CORRECT_ANSWER);
+
+    // "Below the 'Your answer...' text" (issue #104): the correct
+    // answer line sits under the saved answer line.
+    const yourAnswerBox = await yourAnswerLine.boundingBox();
+    const correctAnswerBox = await correctAnswerLine.boundingBox();
+    expect(yourAnswerBox).not.toBeNull();
+    expect(correctAnswerBox).not.toBeNull();
+    expect(correctAnswerBox!.y).toBeGreaterThan(yourAnswerBox!.y);
+  });
+
+  test("a submitted student who skipped the question still sees the correct answer", async ({
+    page,
+  }) => {
+    const { courseId, assignmentId, questionIds } =
+      await createAssignmentWithQuestionsOwnedByOtherUser(
+        page,
+        [QUESTION],
+        [CORRECT_ANSWER],
+      );
+
+    // The submission is submitted but holds no saved answer for the
+    // question, so the read-only branch renders "No answer submitted".
+    await openFirstQuestionAsStudent(
+      page,
+      courseId,
+      assignmentId,
+      questionIds[0]!,
+      Date.now(),
+      null,
+    );
+
+    const noAnswerLine = page.getByText("No answer submitted");
+    await expect(noAnswerLine).toBeVisible();
+
+    // The issue conditions the correct answer on the submitted
+    // assignment only, so it must show here too, below the answer
+    // line.
+    const correctAnswerLine = page.getByText(/^Correct answer: /);
+    await expect(correctAnswerLine).toBeVisible();
+    await expect(correctAnswerLine).toContainText(CORRECT_ANSWER);
+    const noAnswerBox = await noAnswerLine.boundingBox();
+    const correctAnswerBox = await correctAnswerLine.boundingBox();
+    expect(noAnswerBox).not.toBeNull();
+    expect(correctAnswerBox).not.toBeNull();
+    expect(correctAnswerBox!.y).toBeGreaterThan(noAnswerBox!.y);
+  });
+
+  test("an in-progress submission shows no correct answer", async ({
+    page,
+  }) => {
+    const { courseId, assignmentId, questionIds } =
+      await createAssignmentWithQuestionsOwnedByOtherUser(
+        page,
+        [QUESTION],
+        [CORRECT_ANSWER],
+      );
+
+    // PR #105 review: the DOM check below cannot catch a regression
+    // that sends the answer in the JSON payload but does not render
+    // it. Record every server fn response body of the navigation
+    // (TanStack Start calls server fns at /_serverFn/<id>), then
+    // assert the correct answer travelled in none of them. A body
+    // that fails to load (an aborted request) reads as "", which
+    // holds no answer and cannot weaken the check.
+    const responseBodies: Promise<string>[] = [];
+    page.on("response", (response) => {
+      if (response.url().includes("/_serverFn/")) {
+        responseBodies.push(
+          response
+            .body()
+            .then((body) => body.toString())
+            .catch(() => ""),
+        );
+      }
+    });
+
+    // The submission is in progress (submitted_at null): the student
+    // may still enter an answer, so the page must not leak the
+    // question's correct answer in any form.
+    await openFirstQuestionAsStudent(
+      page,
+      courseId,
+      assignmentId,
+      questionIds[0]!,
+      null,
+      null,
+    );
+
+    await expect(
+      page.getByRole("button", { name: "Submit answer" }),
+    ).toBeVisible();
+    await expect(page.getByText(/^Correct answer: /)).toHaveCount(0);
+    await expect(page.getByText(CORRECT_ANSWER)).toHaveCount(0);
+
+    // The network check. The question text must appear in at least
+    // one body, so the listener really captured the question
+    // payloads: without this, an empty capture would pass the leak
+    // check without testing anything.
+    const bodies = await Promise.all(responseBodies);
+    expect(bodies.some((body) => body.includes(QUESTION))).toBe(true);
+    for (const body of bodies) {
+      expect(body).not.toContain(CORRECT_ANSWER);
+    }
   });
 });
