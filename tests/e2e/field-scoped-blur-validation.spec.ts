@@ -3,26 +3,27 @@ import { loginViaUi } from "./helpers/auth";
 import { seedAssignments, seedCourse, seedQuestions } from "./helpers/db";
 import { TEST_USER } from "./test-user";
 
-// Issue #64: seven forms still run the whole schema in a form-level
-// onBlur validator. One field blur then attaches errors to every field,
-// including fields the user has not reached yet.
+// Issue #64: seven forms ran the whole schema in a form-level onBlur
+// validator. One field blur then attached errors to every field,
+// including fields the user did not reach.
 //
 // TanStack Form marks a field as touched when the user types into it
 // (setFieldValue sets isTouched). The display components gate the error
-// on isTouched. So the stale error shows under a field whose value is
-// already valid, and it stays until that field's own next blur.
+// on isTouched. So a stale error showed under a field whose value was
+// already valid, and it stayed until that field's own next blur.
 //
-// The fix: keep the whole schema on onSubmit only. Give each form.Field
-// a field-scoped onBlur validator (validators={{ onBlur: <schema>.shape.
-// <field> }}), as PR #62 does on the lesson forms. A blur then validates
-// only the blurred field, so no stale error can attach to another field.
+// The fix keeps the whole schema on onSubmit only. Each form.Field now
+// has a field-scoped onBlur validator (validators={{ onBlur: <schema>.
+// shape.<field> }}), as PR #62 does on the lesson forms. A blur
+// validates only the blurred field, so no stale error can attach to
+// another field.
 //
-// This file is the red phase. Two kinds of tests:
-// - Red tests fail while the form-level onBlur validator exists. They
-//   expect no error under a field that was only typed into.
-// - Guard tests pass now and must keep passing after the fix. They pin
-//   what the refactor must not lose: the own-field blur error, the
-//   whole-schema check on submit, and the valid-form roundtrip.
+// These tests pin the fixed behavior:
+// - A blur of one field must not attach an error to another field that
+//   the user did not reach.
+// - The blurred field's own error must show.
+// - Submit must keep the whole-schema check, and a valid form must
+//   still submit.
 
 // Locators for the sign-up form (src/routes/_auth/sign-up.tsx). Each
 // input is addressed through its fieldset legend, because two inputs
@@ -33,16 +34,14 @@ const signUpErrorOf = (page: Page, legend: string) =>
   page.locator(`fieldset:has(legend:text-is("${legend}")) .text-error`);
 
 // Locators for the TextField-based forms (src/components/text-field.tsx):
-// each field renders a fieldset whose legend names it.
+// each field renders a fieldset whose legend names it. Every locator
+// matches the legend exactly: has-text is a substring match on the whole
+// fieldset, and a textarea's initial value is its DOM text content, so
+// a seeded value can contain another legend's text and make a substring
+// locator match two fieldsets.
 const fieldsetInputOf = (page: Page, legend: string) =>
-  page.locator(`fieldset:has-text("${legend}") input`);
+  page.locator(`fieldset:has(legend:text-is("${legend}")) input`);
 const fieldsetTextareaOf = (page: Page, legend: string) =>
-  page.locator(`fieldset:has-text("${legend}") textarea`);
-// Exact-legend matching for the question forms: a textarea's initial
-// value is its DOM text content, so a seeded answer like "Answer for
-// e2e question 1" makes has-text("Question") match the Answer fieldset
-// too. The legend pins the fieldset.
-const fieldsetTextareaByLegendOf = (page: Page, legend: string) =>
   page.locator(`fieldset:has(legend:text-is("${legend}")) textarea`);
 
 test.describe("sign-up form (issue #64)", () => {
@@ -249,9 +248,9 @@ test.describe("new assignment form (issue #64)", () => {
 
     // Choosing a course touches the select, so the stale error would
     // show under it although a course is selected.
-    await page.locator('fieldset:has-text("Course") select').selectOption(
-      String(courseId),
-    );
+    await page
+      .locator('fieldset:has(legend:text-is("Course")) select')
+      .selectOption(String(courseId));
 
     await expect(page.getByText("Please select a valid course")).toHaveCount(0);
   });
@@ -334,10 +333,10 @@ test.describe("add question form (issue #64)", () => {
 
     // The Question blur (at the Answer fill's focus change) runs the
     // whole schema while the answer is still empty.
-    await fieldsetTextareaByLegendOf(page, "Question").fill(
+    await fieldsetTextareaOf(page, "Question").fill(
       "What is the meaning of life?",
     );
-    await fieldsetTextareaByLegendOf(page, "Answer").fill("Forty two");
+    await fieldsetTextareaOf(page, "Answer").fill("Forty two");
 
     await expect(page.getByText("Answer is required")).toHaveCount(0);
   });
@@ -360,8 +359,8 @@ test.describe("add question form (issue #64)", () => {
 
     // The Answer blur (at the Question fill's focus change) runs the
     // whole schema while the question is still empty.
-    await fieldsetTextareaByLegendOf(page, "Answer").fill("Forty two");
-    await fieldsetTextareaByLegendOf(page, "Question").fill(
+    await fieldsetTextareaOf(page, "Answer").fill("Forty two");
+    await fieldsetTextareaOf(page, "Question").fill(
       "What is the meaning of life?",
     );
 
@@ -383,8 +382,8 @@ test.describe("add question form (issue #64)", () => {
     await page.getByRole("radio", { name: "Add question" }).click();
 
     // Blur the empty Question field. Its own error must show.
-    await fieldsetTextareaByLegendOf(page, "Question").click();
-    await fieldsetTextareaByLegendOf(page, "Answer").click();
+    await fieldsetTextareaOf(page, "Question").click();
+    await fieldsetTextareaOf(page, "Answer").click();
 
     await expect(page.getByText("Question text is required")).toBeVisible();
   });
@@ -416,8 +415,8 @@ test.describe("edit question form (issue #64)", () => {
 
     // Clear the question. The next focus change blurs it, and its own
     // error must show.
-    await fieldsetTextareaByLegendOf(page, "Question").fill("");
-    await fieldsetTextareaByLegendOf(page, "Answer").fill("Kept answer.");
+    await fieldsetTextareaOf(page, "Question").fill("");
+    await fieldsetTextareaOf(page, "Answer").fill("Kept answer.");
     await expect(page.getByText("Question text is required")).toBeVisible();
 
     // Guard: submit keeps the whole-schema check, so the empty question
@@ -434,10 +433,10 @@ test.describe("edit question form (issue #64)", () => {
     // the layout settles before the click. A click that lands on a
     // moving button misses it — the same layout-shift defect the
     // issue describes.
-    await fieldsetTextareaByLegendOf(page, "Question").fill(
+    await fieldsetTextareaOf(page, "Question").fill(
       "Fixed question",
     );
-    await fieldsetTextareaByLegendOf(page, "Answer").fill("Kept answer.");
+    await fieldsetTextareaOf(page, "Answer").fill("Kept answer.");
     await page.getByRole("button", { name: "Update question" }).click();
     await expect(page).toHaveURL(
       new RegExp(`/assignments/${assignmentId}$`),
